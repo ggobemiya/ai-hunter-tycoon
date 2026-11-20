@@ -2739,14 +2739,28 @@
 
     const POTION_MAX_STACK = 5;
     const MP_POTION_MAX_STACK = 3;
+    const REBORN_HP_POTION_MAX_STACK = 10;
+    const REBORN_MP_POTION_MAX_STACK = 5;
     const MAX_BUILDING_LEVEL = 10;
     const MAX_EQUIP_TIER = 10;
 
-    // 헌터 레벨 40부터 20레벨 간격(Lv.40: +1, Lv.60: +2, Lv.80: +3)으로 체력 물약 최대 소지 개수 증가
-    function getMaxHpPotionCapacity(level = 1) {
+    // 헌터 최대 체력 물약 소지 개수 계산
+    // 미환생: Lv.40부터 20레벨 간격(Lv.40: 6개, Lv.60: 7개, Lv.80: 8개)으로 증가
+    // 환생 헌터(1환생↑): 레벨에 따른 증가 영향을 받지 않고 최대 10개 고정
+    function getMaxHpPotionCapacity(level = 1, rebirthCount = 0) {
+      const rb = Math.max(0, Math.floor(Number(rebirthCount) || 0));
+      if (rb >= 1) return REBORN_HP_POTION_MAX_STACK;
       const lv = Math.max(1, Number(level) || 1);
       if (lv < 40) return POTION_MAX_STACK;
       return POTION_MAX_STACK + 1 + Math.floor((lv - 40) / 20);
+    }
+
+    // 헌터 최대 MP 물약 소지 개수 계산
+    // 미환생: 기본 3개 / 환생 헌터(1환생↑): 레벨에 따른 증가 영향을 받지 않고 최대 5개 고정
+    function getMaxMpPotionCapacity(level = 1, rebirthCount = 0) {
+      const rb = Math.max(0, Math.floor(Number(rebirthCount) || 0));
+      if (rb >= 1) return REBORN_MP_POTION_MAX_STACK;
+      return MP_POTION_MAX_STACK;
     }
 
     // 헌터 인성(-100 카오스 ~ 0 중립 ~ +100 선인) 등급 및 배지 정보 계산
@@ -2766,12 +2780,17 @@
       }
       return { value: val, label: '카오스', badgeClass: 'align-badge-chaos', color: '#f0abfc' };
     }
-
-    // 20레벨 이상(level >= 20) 헌터 전용 도시락 최대 소지 개수 계산
-    function getMaxBentoCapacity(level = 1) {
+    // 20레벨 이상 또는 1환생 이상 헌터 도시락 최대 소지 개수 계산
+    // 미환생: Lv.20부터 3개 시작, 20레벨당 +1개 (Lv.99 기준 최대 5개)
+    // 환생 헌터(1환생↑): 현재 레벨과 무관하게 Lv.99 기준(5개) + 환생 1회당 +1개씩 증가 (1환생 6개 ~ 5환생 10개)
+    function getMaxBentoCapacity(level = 1, rebirthCount = 0) {
+      const rb = Math.max(0, Math.floor(Number(rebirthCount) || 0));
+      const lv99BaseCap = Math.min(5, 3 + Math.floor((LEVEL_REBIRTH_CONFIG.maxLevel - 20) / 20));
+      if (rb >= 1) {
+        return lv99BaseCap + rb;
+      }
       const lv = Math.max(1, Number(level) || 1);
-      if (lv < 20) return 0;
-      return Math.min(5, 3 + Math.floor((lv - 20) / 20));
+      return lv < 20 ? 0 : Math.min(5, 3 + Math.floor((lv - 20) / 20));
     }
 
     // 마을 회관 레벨별 최대 헌터 정원 (Lv.1: 4명, Lv.2: 6명, Lv.3~Lv.10: 9명 ~ 최대 30명)
@@ -2879,10 +2898,24 @@
       return Boolean(hunter && (hunter.rebirthCount || 0) >= REBIRTH_ALTAR.minRebirth);
     }
 
+    function hasRebirthSupremeInsignia(hunter) {
+      if (!hunter) return false;
+      if (hunter.equippedInsigniaId === 'insignia_rebirth_supreme') return true;
+      return Boolean(hunter.inventory && hunter.inventory.getCount('insignia_rebirth_supreme') > 0);
+    }
+
+    function canCommandRebirthAltarHunt(hunter) {
+      return canHunterEnterRebirthAltar(hunter) && !hasRebirthSupremeInsignia(hunter);
+    }
+
     function commandRebirthAltarHunt(hunter, focusCamera = false) {
       if (!hunter) return false;
       if (!canHunterEnterRebirthAltar(hunter)) {
         showToast(`🔒 '${hunter.name}' 헌터는 1환생 이상만 [초월 환생의 제단]에 출정할 수 있습니다.`);
+        return false;
+      }
+      if (hasRebirthSupremeInsignia(hunter)) {
+        showToast(`✨ '${hunter.name}' 헌터는 이미 [초월 윤회의 인장]을 보유하고 있습니다.`);
         return false;
       }
       if (REBIRTH_ALTAR.boss.hp <= 0) {
@@ -5053,13 +5086,19 @@
       addItem(id, qty = 1) {
         const amount = Math.max(0, Math.floor(qty));
         if (!id || amount <= 0) return false;
+        const def = ITEM_CATALOG[id];
+        const isInsignia = def && def.category === 'insignia';
         const existing = this.items.get(id);
         if (existing) {
+          if (isInsignia) {
+            existing.qty = 1;
+            return false;
+          }
           existing.qty += amount;
           return true;
         }
         if (this.items.size >= this.maxSlots) return false;
-        this.items.set(id, { id, qty: amount });
+        this.items.set(id, { id, qty: isInsignia ? 1 : amount });
         return true;
       }
 
@@ -5164,7 +5203,12 @@
         if (!Array.isArray(rawArr)) return;
         rawArr.forEach(entry => {
           if (entry && entry.id && entry.qty > 0) {
-            this.items.set(entry.id, { id: entry.id, qty: Math.floor(entry.qty) });
+            const def = ITEM_CATALOG[entry.id];
+            const isInsignia = def && def.category === 'insignia';
+            this.items.set(entry.id, {
+              id: entry.id,
+              qty: isInsignia ? 1 : Math.floor(entry.qty)
+            });
           }
         });
       }
@@ -5271,16 +5315,19 @@
           this.inventory.addItem('loot_beginner_crystal', preset.materials);
         }
         this.earnedGold = preset.earnedGold ?? 0;
+        const initMaxHpPot = getMaxHpPotionCapacity(this.level, this.rebirthCount);
+        const initMaxMpPot = getMaxMpPotionCapacity(this.level, this.rebirthCount);
         this.potions = {
           hp: 2,
           mp: 2,
           ...(preset.potions || {}),
-          mp: Math.min(MP_POTION_MAX_STACK, preset.potions?.mp ?? 2)
+          hp: Math.min(initMaxHpPot, Math.max(0, preset.potions?.hp ?? 2)),
+          mp: Math.min(initMaxMpPot, Math.max(0, preset.potions?.mp ?? 2))
         };
-        const initMaxBento = getMaxBentoCapacity(this.level);
+        const initMaxBento = getMaxBentoCapacity(this.level, this.rebirthCount);
         this.bento = Math.min(
           initMaxBento,
-          Math.max(0, preset.bento ?? (this.level >= 20 ? initMaxBento : 0))
+          Math.max(0, preset.bento ?? (initMaxBento > 0 ? initMaxBento : 0))
         );
 
         this.hunger = 80 + Math.random() * 20;
@@ -5394,6 +5441,15 @@
           this.gainExp(hallLv * 30);
         }
 
+        const postRebirthMaxBento = getMaxBentoCapacity(this.level, this.rebirthCount);
+        this.bento = Math.min(postRebirthMaxBento, Math.max(this.bento || 0, 1));
+        const postRebirthMaxHpPot = getMaxHpPotionCapacity(this.level, this.rebirthCount);
+        const postRebirthMaxMpPot = getMaxMpPotionCapacity(this.level, this.rebirthCount);
+        if (this.potions) {
+          this.potions.hp = Math.min(postRebirthMaxHpPot, Math.max(0, this.potions.hp || 0));
+          this.potions.mp = Math.min(postRebirthMaxMpPot, Math.max(0, this.potions.mp || 0));
+        }
+
         this.recalculateVitals(true);
         const advLabel = pickedNode ? ` · [${pickedNode.name}] 전직 완료!` : '';
         interactionManager.spawnBubble(this, `✨ ${this.rebirthCount}환생 달성!${advLabel}`, '#f0abfc');
@@ -5419,11 +5475,11 @@
           this.level += 1;
           leveledUp = true;
           if (this.level === 20) {
-            const maxBento = getMaxBentoCapacity(20);
+            const maxBento = getMaxBentoCapacity(20, this.rebirthCount);
             this.bento = Math.max(this.bento || 0, maxBento);
           }
-          if (this.level >= 40 && this.level % 20 === 0) {
-            const nextHpMax = getMaxHpPotionCapacity(this.level);
+          if ((this.rebirthCount || 0) < 1 && this.level >= 40 && this.level % 20 === 0) {
+            const nextHpMax = getMaxHpPotionCapacity(this.level, this.rebirthCount);
             if (this.potions) {
               this.potions.hp = Math.min(nextHpMax, (this.potions.hp || 0) + 1);
             }
@@ -5860,7 +5916,7 @@
               return;
             }
           }
-          if ((this.potions.hp < POTION_MAX_STACK || this.potions.mp < MP_POTION_MAX_STACK) && this.personalGold >= 35) {
+          if ((this.potions.hp < getMaxHpPotionCapacity(this.level, this.rebirthCount) || this.potions.mp < getMaxMpPotionCapacity(this.level, this.rebirthCount)) && this.personalGold >= 35) {
             const potBld = blds.find(b => b.type === 'potion');
             if (potBld) {
               this.setDestinationWithGatePath(potBld.x, potBld.y + potBld.h / 2 + 16);
@@ -5960,8 +6016,9 @@
         }
 
         // 물약 보충 필요 시 물약 상점 방문 (MP가 0이더라도 마을 귀환 사유가 아님)
-        const maxHpPotCap = getMaxHpPotionCapacity(this.level);
-        if ((this.potions.hp < Math.min(2, maxHpPotCap) || this.potions.mp < 1) && this.personalGold >= 50) {
+        const maxHpPotCap = getMaxHpPotionCapacity(this.level, this.rebirthCount);
+        const maxMpPotCap = getMaxMpPotionCapacity(this.level, this.rebirthCount);
+        if ((this.potions.hp < Math.min(2, maxHpPotCap) || this.potions.mp < Math.min(1, maxMpPotCap)) && this.personalGold >= 50) {
           const potionShop = buildings.find(b => b.type === 'potion');
           if (potionShop) {
             this.setDestinationWithGatePath(potionShop.x, potionShop.y + potionShop.h / 2 + 16);
@@ -6128,8 +6185,8 @@
       }
 
       useAutoPotionsInCombat() {
-        const maxBento = getMaxBentoCapacity(this.level);
-        if (this.level >= 20 && maxBento > 0) {
+        const maxBento = getMaxBentoCapacity(this.level, this.rebirthCount);
+        if (maxBento > 0) {
           this.bento = Math.min(maxBento, Math.max(0, this.bento || 0));
           if (this.bento > 0 && (this.hunger < 45 || this.fatigue >= 65)) {
             this.bento -= 1;
@@ -6145,14 +6202,14 @@
           const heal = Math.round(this.maxHp * 0.45);
           this.hp = Math.min(this.maxHp, this.hp + heal);
           combatEffects.spawnDamagePopup(this.x, this.y, `+${heal} HP`, false, '#4ade80');
-          interactionManager.spawnBubble(this, `🧪 HP 물약 복용 (${this.potions.hp}/${getMaxHpPotionCapacity(this.level)})`, '#86efac');
+          interactionManager.spawnBubble(this, `🧪 HP 물약 복용 (${this.potions.hp}/${getMaxHpPotionCapacity(this.level, this.rebirthCount)})`, '#86efac');
         }
         if (this.mp < this.maxMp * 0.3 && this.potions.mp > 0) {
           this.potions.mp -= 1;
           const restore = Math.round(this.maxMp * 0.5);
           this.mp = Math.min(this.maxMp, this.mp + restore);
           combatEffects.spawnDamagePopup(this.x, this.y - 10, `+${restore} MP`, false, '#38bdf8');
-          interactionManager.spawnBubble(this, `💧 MP 물약 복용 (${this.potions.mp}/5)`, '#7dd3fc');
+          interactionManager.spawnBubble(this, `💧 MP 물약 복용 (${this.potions.mp}/${getMaxMpPotionCapacity(this.level, this.rebirthCount)})`, '#7dd3fc');
         }
       }
 
@@ -7082,10 +7139,10 @@
           this.hp = Math.min(this.maxHp, this.hp + Math.round(this.maxHp * 0.2 * healMult));
           this.fatigue = Math.max(0, this.fatigue - 15);
 
-          const maxBento = getMaxBentoCapacity(this.level);
+          const maxBento = getMaxBentoCapacity(this.level, this.rebirthCount);
           const bentoPrice = 45;
           let boughtBento = 0;
-          if (this.level >= 20 && maxBento > 0) {
+          if (maxBento > 0) {
             this.bento = Math.min(maxBento, prevBento);
             while (this.bento < maxBento && this.personalGold >= bentoPrice) {
               this.personalGold -= bentoPrice;
@@ -7102,7 +7159,8 @@
           }
         } else if (bldType === 'potion') {
           const unitPrice = Math.max(15, 32 - lv * 2);
-          const maxHpPot = getMaxHpPotionCapacity(this.level);
+          const maxHpPot = getMaxHpPotionCapacity(this.level, this.rebirthCount);
+          const maxMpPot = getMaxMpPotionCapacity(this.level, this.rebirthCount);
           this.potions.hp = Math.min(maxHpPot, Math.max(0, this.potions.hp || 0));
           let boughtCount = 0;
           while (this.potions.hp < maxHpPot && this.personalGold >= unitPrice) {
@@ -7110,17 +7168,17 @@
             this.potions.hp += 1;
             boughtCount += 1;
           }
-          this.potions.mp = Math.min(MP_POTION_MAX_STACK, this.potions.mp);
-          while (this.potions.mp < MP_POTION_MAX_STACK && this.personalGold >= unitPrice) {
+          this.potions.mp = Math.min(maxMpPot, Math.max(0, this.potions.mp || 0));
+          while (this.potions.mp < maxMpPot && this.personalGold >= unitPrice) {
             this.personalGold -= unitPrice;
             this.potions.mp += 1;
             boughtCount += 1;
           }
 
-          const maxBento = getMaxBentoCapacity(this.level);
+          const maxBento = getMaxBentoCapacity(this.level, this.rebirthCount);
           const bentoPrice = 45;
           let boughtBento = 0;
-          if (this.level >= 20 && maxBento > 0) {
+          if (maxBento > 0) {
             this.bento = Math.min(maxBento, Math.max(0, this.bento || 0));
             while (this.bento < maxBento && this.personalGold >= bentoPrice) {
               this.personalGold -= bentoPrice;
@@ -7138,8 +7196,8 @@
             baseFee = 25 + lv * 10 + (boughtCount + boughtBento) * 10;
           }
           if (boughtCount > 0 || boughtBento > 0) {
-            const bentoLabel = this.level >= 20 ? ` · 🍱${this.bento}/${maxBento}` : '';
-            interactionManager.spawnBubble(this, `🧪 물약 보충 (HP ${this.potions.hp}/${maxHpPot} · MP ${this.potions.mp}/${MP_POTION_MAX_STACK}${bentoLabel})`, '#86efac');
+            const bentoLabel = maxBento > 0 ? ` · 🍱${this.bento}/${maxBento}` : '';
+            interactionManager.spawnBubble(this, `🧪 물약 보충 (HP ${this.potions.hp}/${maxHpPot} · MP ${this.potions.mp}/${maxMpPot}${bentoLabel})`, '#86efac');
           }
         } else if (bldType === 'temple') {
           const needsCare = this.hp < this.maxHp || this.mp < this.maxMp || this.fatigue > 0;
@@ -8458,13 +8516,15 @@
       setText('hunterCritVal', `${stats.crit}%`);
       setText('hunterBestFloorVal', h.bestDungeonFloor > 0 ? `B${h.bestDungeonFloor}F` : '미기록');
       setText('hunterGoldVal', `${formatGold(h.personalGold)} G`);
-      const maxBento = getMaxBentoCapacity(h.level);
-      const bentoValText = h.level >= 20
+      const maxBento = getMaxBentoCapacity(h.level, h.rebirthCount);
+      const bentoValText = maxBento > 0
         ? `🍱${Math.min(maxBento, Math.max(0, h.bento || 0))}/${maxBento}`
-        : '🍱Lv.20↑';
-      const maxHpPot = getMaxHpPotionCapacity(h.level);
+        : '🍱Lv.20↑/1환생↑';
+      const maxHpPot = getMaxHpPotionCapacity(h.level, h.rebirthCount);
+      const maxMpPot = getMaxMpPotionCapacity(h.level, h.rebirthCount);
       const curHpPot = Math.min(maxHpPot, Math.max(0, h.potions?.hp ?? 0));
-      setText('hunterPotionVal', `❤️${curHpPot}/${maxHpPot} · 💧${Math.min(MP_POTION_MAX_STACK, h.potions?.mp ?? 0)}/${MP_POTION_MAX_STACK} · ${bentoValText}`);
+      const curMpPot = Math.min(maxMpPot, Math.max(0, h.potions?.mp ?? 0));
+      setText('hunterPotionVal', `❤️${curHpPot}/${maxHpPot} · 💧${curMpPot}/${maxMpPot} · ${bentoValText}`);
       const totalInvItems = h.inventory ? h.inventory.getTotalItemCount() : h.materials;
       setText('hunterMatVal', `보관 ${totalInvItems}개`);
       setText('hunterStatusText', `상태: ${h.getStatusDescription()}`);
@@ -8495,8 +8555,8 @@
         }).join('');
 
         const hpPot = Math.min(maxHpPot, Math.max(0, h.potions?.hp ?? 0));
-        const mpPot = Math.min(MP_POTION_MAX_STACK, h.potions?.mp ?? 0);
-        const curBento = h.level >= 20 ? Math.min(maxBento, Math.max(0, h.bento || 0)) : 0;
+        const mpPot = Math.min(maxMpPot, Math.max(0, h.potions?.mp ?? 0));
+        const curBento = maxBento > 0 ? Math.min(maxBento, Math.max(0, h.bento || 0)) : 0;
         const consumableCardsHtml = `
           <div class="inv-slot-card ${hpPot > 0 ? 'has-item' : ''}">
             <div class="inv-slot-icon">❤️</div>
@@ -8507,13 +8567,13 @@
           <div class="inv-slot-card ${mpPot > 0 ? 'has-item' : ''}">
             <div class="inv-slot-icon">💧</div>
             <div class="inv-slot-name">마나 물약</div>
-            <div class="inv-slot-qty">${mpPot} / ${MP_POTION_MAX_STACK}</div>
+            <div class="inv-slot-qty">${mpPot} / ${maxMpPot}</div>
             <div class="inv-slot-sub">MP 50% 자동회복</div>
           </div>
           <div class="inv-slot-card ${curBento > 0 ? 'has-item' : ''}">
             <div class="inv-slot-icon">🍱</div>
             <div class="inv-slot-name">모험가 도시락</div>
-            <div class="inv-slot-qty">${h.level >= 20 ? `${curBento} / ${maxBento}` : 'Lv.20 해금'}</div>
+            <div class="inv-slot-qty">${maxBento > 0 ? `${curBento} / ${maxBento}` : 'Lv.20↑/1환생↑'}</div>
             <div class="inv-slot-sub">포만감·피로 회복</div>
           </div>
         `;
@@ -9007,6 +9067,10 @@
           const id = altarBtn.getAttribute('data-altar-id');
           const target = hunters.find(item => item.id === id);
           if (target) {
+            if (!canCommandRebirthAltarHunt(target)) {
+              showToast(`✨ '${target.name}' 헌터는 이미 [초월 윤회의 인장]을 보유하고 있습니다.`);
+              return;
+            }
             document.getElementById('hunterRosterBackdrop')?.classList.remove('open');
             openHunterPanel(target);
             commandRebirthAltarHunt(target, true);
@@ -9093,7 +9157,12 @@
       }
 
       const jobIcons = { '버서커': '🪓', '레인저': '🏹', '팔라딘': '🛡️', '소서러': '🔮' };
-      const currentIds = hunters.map(h => `${h.id}:${canHunterEnterRebirthAltar(h) ? 1 : 0}`).join(',');
+      const renderRosterRebirthStars = (rebirthCount) => {
+        const count = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Math.floor(Number(rebirthCount) || 0)));
+        if (count <= 0) return '';
+        return `<span style="color:#facc15;font-weight:800;letter-spacing:1px;text-shadow:0 0 6px rgba(250,204,21,0.45);">환생 ${'★'.repeat(count)}</span>`;
+      };
+      const currentIds = hunters.map(h => `${h.id}:${canCommandRebirthAltarHunt(h) ? 1 : 0}`).join(',');
 
       // 헌터 목록 구성이 달라진 경우에만 DOM을 새로 생성 (터치 도중 DOM 파괴 방지)
       if (forceRebuild || body.dataset.renderedIds !== currentIds) {
@@ -9102,7 +9171,6 @@
           const stats = h.getComputedStats();
           const isTrait = h.personality?.kind === 'trait';
           const alignInfo = getAlignmentInfo(h.alignment);
-          const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
           const jIcon = jobIcons[h.baseJob || h.job] || '⚔️';
           const eq = h.equipment || {};
           const wTier = eq.weapon?.tier || 1;
@@ -9111,20 +9179,21 @@
           const accTier = eq.accessory?.tier || 1;
           const avgTier = ((wTier + aTier + hTier + accTier) / 4).toFixed(1);
           const equipTierSummary = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})`;
-          const canAltar = canHunterEnterRebirthAltar(h);
+          const canAltar = canCommandRebirthAltarHunt(h);
           const canDonate = gameState.gold >= 500;
+          const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount);
           return `
             <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}" data-roster-id="${h.id}">
               <div class="roster-card-top">
                 <div class="roster-name-group">
                   <span class="roster-hunter-name">${h.name}</span>
                   <span class="roster-job-badge" data-role="job-lv">${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}</span>
+                  <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label}</span>
                 </div>
                 <span class="roster-personality-badge ${isTrait ? 'personality-tag-trait' : 'personality-tag-penalty'}">${h.personality.icon} ${h.personality.name}</span>
               </div>
               <div class="roster-sub-row">
-                <span class="roster-rebirth-wrap">환생 <span class="rebirth-orbs" data-role="rebirth">${renderRebirthOrbsHtml(h.rebirthCount)}</span></span>
-                <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label} (${alignSign})</span>
+                <span data-role="rebirth">${rebirthStarsHtml}</span>
                 <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${h.personality.effectText}</span>
               </div>
               <div class="roster-mini-bars">
@@ -9180,14 +9249,13 @@
         if (jobLvEl) jobLvEl.textContent = `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`;
 
         const rebirthEl = card.querySelector('[data-role="rebirth"]');
-        if (rebirthEl) rebirthEl.innerHTML = renderRebirthOrbsHtml(h.rebirthCount);
+        if (rebirthEl) rebirthEl.innerHTML = renderRosterRebirthStars(h.rebirthCount);
 
         const alignInfo = getAlignmentInfo(h.alignment);
-        const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
         const alignEl = card.querySelector('[data-role="alignment"]');
         if (alignEl) {
           alignEl.className = alignInfo.badgeClass;
-          alignEl.textContent = `⚖️ ${alignInfo.label} (${alignSign})`;
+          alignEl.textContent = `⚖️ ${alignInfo.label}`;
         }
 
         const hpText = card.querySelector('[data-role="hp-text"]');
@@ -9609,8 +9677,9 @@
               마을에서 마주친 헌터들은 성격에 따라 격려·후원·경쟁을 벌이며 <b>동맹~숙적</b> 관계도를 형성합니다.
             </div>
             <div class="tier-note-card">
-              <h4>🍱 도시락 (포만감 & 피로도 회복)</h4>
-              <b>20레벨 이상</b> 헌터가 물약 상점 또는 주점에서 구매할 수 있으며, 최대 소지 개수는 <b>기본 3개에서 20레벨당 1개씩 늘어나 최대 5개</b>까지 보유합니다. 사냥·던전 중 포만감이 낮아지거나 피로도가 쌓이면 자동으로 섭취하여 <b>포만감과 피로도를 회복</b>합니다.
+              <h4>🍱 도시락 & 🧪 물약 소지 한도 (환생 헌터 특전)</h4>
+              <b>도시락:</b> 미환생 헌터는 <b>Lv.20부터 3개 시작 후 20레벨당 +1개(Lv.99 기준 5개)</b>, <b>1환생 이상 헌터는 레벨과 무관하게 Lv.99 기준(5개) + 환생당 +1개(1환생 6개 ~ 5환생 10개)</b>를 소지합니다.<br/>
+              <b>회복 물약:</b> 미환생 헌터는 체력 물약 기본 5개(Lv.40부터 20레벨당 +1개, 최대 8개)·MP 물약 3개이며, <b>1환생 이상 헌터는 레벨과 무관하게 체력 회복 물약 10개 · MP 회복 물약 5개</b>로 확장됩니다.
             </div>
           </div>
         `;
@@ -14192,13 +14261,18 @@
             const insId = monster.insigniaId ?? ground.miniBossConfig?.insigniaId ?? null;
             const insDef = insId ? ITEM_CATALOG[insId] : null;
             if (insDef && hunter.inventory) {
-              hunter.inventory.addItem(insId, 1);
-              const curIns = hunter.getEquippedInsignia();
-              if (!curIns || (insDef.monsterDmgBonusPct || 0) >= (curIns.monsterDmgBonusPct || 0)) {
-                hunter.equippedInsigniaId = insId;
+              const alreadyOwned = hunter.inventory.getCount(insId) >= 1;
+              if (!alreadyOwned) {
+                hunter.inventory.addItem(insId, 1);
+                const curIns = hunter.getEquippedInsignia();
+                if (!curIns || (insDef.monsterDmgBonusPct || 0) >= (curIns.monsterDmgBonusPct || 0)) {
+                  hunter.equippedInsigniaId = insId;
+                }
+                const dmgPct = Math.round((insDef.monsterDmgBonusPct || 0) * 100);
+                showToast(`🏅 ${hunter.name}이(가) [${insDef.name}] 획득 & 착용! (몬스터 대상 입히는 피해 +${dmgPct}%)`);
+              } else {
+                showToast(`🏅 ${hunter.name}은(는) 이미 [${insDef.name}]을(를) 보유 중입니다. (인장 종류별 최대 1개)`);
               }
-              const dmgPct = Math.round((insDef.monsterDmgBonusPct || 0) * 100);
-              showToast(`🏅 ${hunter.name}이(가) [${insDef.name}] 획득 & 착용! (몬스터 대상 입히는 피해 +${dmgPct}%)`);
             }
           }
           const p = hunter.personality || {};
@@ -14456,7 +14530,8 @@
             hunter.inventory.addItem('loot_top_astral', astralGain);
             const insId = altarBoss.insigniaId || 'insignia_rebirth_supreme';
             const insDef = ITEM_CATALOG[insId];
-            if (insDef) {
+            const alreadyOwnedIns = insDef ? hunter.inventory.getCount(insId) >= 1 : true;
+            if (insDef && !alreadyOwnedIns) {
               hunter.inventory.addItem(insId, 1);
               const curIns = hunter.getEquippedInsignia();
               if (!curIns || (insDef.monsterDmgBonusPct || 0) >= (curIns.monsterDmgBonusPct || 0)) {
@@ -14478,7 +14553,10 @@
           updateResourceHUD();
           refreshHunterPanel();
           interactionManager.spawnBubble(hunter, `✨ 초월 집행자 처치! +${formatGold(hunterGoldGain)}G`, '#f0abfc');
-          showToast(`✨ '${hunter.name}' [초월 윤회의 집행자] 토벌! +${formatGold(hunterGoldGain)}G · 💠별결정 ${astralGain}개 · ✨초월 윤회의 인장(+150% 피해) 획득!`);
+          const insToastSuffix = (hunter.inventory && hunter.inventory.getCount('insignia_rebirth_supreme') === 1)
+            ? ' · ✨초월 윤회의 인장(+150% 피해) 보유'
+            : '';
+          showToast(`✨ '${hunter.name}' [초월 윤회의 집행자] 토벌! +${formatGold(hunterGoldGain)}G · 💠별결정 ${astralGain}개${insToastSuffix}!`);
         }
       },
 
@@ -15499,10 +15577,11 @@
 
           const parsedPotions = safeParseJson(hData.potions, null);
           if (parsedPotions && typeof parsedPotions === 'object') {
-            const maxHpPot = getMaxHpPotionCapacity(restored.level);
+            const maxHpPot = getMaxHpPotionCapacity(restored.level, restored.rebirthCount);
+            const maxMpPot = getMaxMpPotionCapacity(restored.level, restored.rebirthCount);
             restored.potions = {
               hp: Math.min(maxHpPot, Math.max(0, parsedPotions.hp ?? 2)),
-              mp: Math.min(MP_POTION_MAX_STACK, Math.max(0, parsedPotions.mp ?? 2))
+              mp: Math.min(maxMpPot, Math.max(0, parsedPotions.mp ?? 2))
             };
           }
 
@@ -15519,8 +15598,8 @@
 
           const savedGold = typeof hData.personalGold === 'number' ? hData.personalGold : hData.gold;
           if (typeof savedGold === 'number') restored.personalGold = savedGold;
-          const maxBento = getMaxBentoCapacity(restored.level);
-          if (restored.level >= 20 && maxBento > 0) {
+          const maxBento = getMaxBentoCapacity(restored.level, restored.rebirthCount);
+          if (maxBento > 0) {
             restored.bento = typeof hData.bento === 'number'
               ? Math.min(maxBento, Math.max(0, hData.bento))
               : maxBento;
