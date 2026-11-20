@@ -2887,9 +2887,16 @@
       gateX: 0,
       gateY: -475,
       growthInterval: 3.5,
+      duelInterval: 2.2,
       hasMonsters: false,
-      monsters: []
+      monsters: [],
+      activeDuel: null,
+      lastDuelSummary: ''
     };
+
+    function isRebirth5Hunter(hunter) {
+      return Boolean(hunter && (Number(hunter.rebirthCount) || 0) >= 5);
+    }
 
     function canHunterEnterColosseum(hunter) {
       if (!hunter) return false;
@@ -2899,55 +2906,222 @@
     }
 
     function isHunterInsideColosseum(hunter) {
-      if (!hunter || hunter.state === 'IN_DUNGEON') return false;
-      const cb = COLOSSEUM_ARENA.bounds;
-      return (
-        hunter.x >= cb.x + 12 &&
-        hunter.x <= cb.x + cb.w - 12 &&
-        hunter.y >= cb.y + 18 &&
-        hunter.y <= cb.y + cb.h - 10
+  if (!hunter || hunter.state === 'IN_DUNGEON') return false;
+  const cb = COLOSSEUM_ARENA.bounds;
+  return (
+    hunter.x >= cb.x + 12 &&
+    hunter.x <= cb.x + cb.w - 12 &&
+    hunter.y >= cb.y + 18 &&
+    hunter.y <= cb.y + cb.h - 10
+  );
+}
+
+function rewardColosseumTrainingGrowth(hunter) {
+  if (!hunter) return;
+
+  const p = hunter.personality || {};
+  const goldReward = Math.round(650 * (p.personalGoldMult || 1));
+  const villageGoldReward = 450;
+
+  hunter.personalGold = (hunter.personalGold || 0) + goldReward;
+  if (typeof gameState !== 'undefined') {
+    gameState.gold = (gameState.gold || 0) + villageGoldReward;
+  }
+
+  if (hunter.inventory && Math.random() < 0.55) {
+    hunter.inventory.addItem('loot_top_astral', 1 + (p.extraMat || 0));
+  }
+
+  // 환생 5·Lv.99 한계 수련 시 액티브/패시브 스킬 숙련도 및 경험치 성장 반영
+  const activeCount = hunter.skills?.actives?.length || 0;
+  const passiveCount = hunter.skills?.passives?.length || 0;
+  let leveledSkill = null;
+
+  if (activeCount > 0 && Math.random() < 0.65) {
+    const aIdx = Math.floor(Math.random() * activeCount);
+    leveledSkill = hunter.recordSkillUse('actives', aIdx, 2) || leveledSkill;
+  }
+  if (passiveCount > 0) {
+    const pIdx = Math.floor(Math.random() * passiveCount);
+    leveledSkill = hunter.recordSkillUse('passives', pIdx, 2) || leveledSkill;
+  }
+
+  hunter.gainExp(350);
+  hunter.fatigue = Math.min(100, (hunter.fatigue || 0) + 1.8 * (p.fatigueMult || 1));
+  hunter.hunger = Math.max(0, (hunter.hunger || 100) - 1.2 * (p.hungerMult || 1));
+
+  if (leveledSkill) {
+    interactionManager.spawnBubble(
+      hunter,
+      `⚡ [${leveledSkill.name}] 스킬 Lv.${leveledSkill.lv} 달성!`,
+      '#c084fc'
+    );
+  } else if (Math.random() < 0.45) {
+    interactionManager.spawnBubble(
+      hunter,
+      `🏟️ 콜로세움 수련 성장 (+${formatGold(goldReward)}G)`,
+      '#fde047'
+    );
+  }
+}
+
+function awardColosseumVictoryPoint(winner, loser = null) {
+      if (!winner) return;
+      winner.colosseumPoints = Math.max(0, Math.floor(Number(winner.colosseumPoints) || 0)) + 1;
+      winner.colosseumWins = Math.max(0, Math.floor(Number(winner.colosseumWins) || 0)) + 1;
+      if (loser) {
+        loser.colosseumLosses = Math.max(0, Math.floor(Number(loser.colosseumLosses) || 0)) + 1;
+      }
+      COLOSSEUM_ARENA.lastDuelSummary = `🏆 ${winner.name} 승리! (승점 +1 → 총 ${winner.colosseumPoints}점)`;
+      interactionManager.spawnBubble(winner, `🏆 1대1 승리! 승점 +1 (${winner.colosseumPoints}점)`, '#fde047');
+      if (loser) {
+        interactionManager.spawnBubble(loser, '💫 콜로세움 1대1 패배...', '#fca5a5');
+      }
+      if (document.getElementById('hunterRosterBackdrop')?.classList.contains('open')) {
+        renderHunterRosterModal(false);
+      }
+      if (gameState.selectedHunterId === winner.id || (loser && gameState.selectedHunterId === loser.id)) {
+        refreshHunterPanel();
+      }
+    }
+
+    function stepColosseumOneOnOneDuels(dt, hunterList) {
+      if (!Array.isArray(hunterList)) return;
+
+      const contenders = hunterList.filter(
+        h => h && h.hp > 0 && h.state !== 'IN_DUNGEON' && isRebirth5Hunter(h) && isHunterInsideColosseum(h)
       );
-    }
 
-    function rewardColosseumTrainingGrowth(hunter) {
-      if (!hunter || !canHunterEnterColosseum(hunter)) return;
-      const p = hunter.personality || {};
-      const goldGain = Math.round(450 * (p.personalGoldMult || 1));
-      const villageGoldGain = 650;
-      const expGain = 1800;
-
-      hunter.personalGold += goldGain;
-      gameState.gold += villageGoldGain;
-      if (hunter.inventory) {
-        hunter.inventory.addItem('loot_top_astral', 1 + (p.extraMat || 0));
+      if (contenders.length < 2) {
+        COLOSSEUM_ARENA.activeDuel = null;
+        return;
       }
 
-      // 콜로세움 수련으로 스킬 숙련도 성장
-      if (Array.isArray(hunter.skills?.actives) && hunter.skills.actives.length > 0) {
-        const aIdx = Math.floor(Math.random() * hunter.skills.actives.length);
-        hunter.recordSkillUse('actives', aIdx, 1);
-      }
-      if (Array.isArray(hunter.skills?.passives) && hunter.skills.passives.length > 0) {
-        const pIdx = Math.floor(Math.random() * hunter.skills.passives.length);
-        hunter.recordSkillUse('passives', pIdx, 1);
+      const contenderById = new Map(contenders.map(h => [h.id, h]));
+      let duel = COLOSSEUM_ARENA.activeDuel;
+
+      const isDuelValid = duel &&
+        duel.aId !== duel.bId &&
+        contenderById.has(duel.aId) &&
+        contenderById.has(duel.bId);
+
+      if (!isDuelValid) {
+        // 기존 교전 중이던 헌터들의 대상 해제 후 환생 5 헌터 간 새로운 1대1 매칭
+        for (let i = 0; i < contenders.length; i++) {
+          contenders[i].currentTargetHunter = null;
+        }
+        const first = contenders[Math.floor(Math.random() * contenders.length)];
+        const opponents = contenders.filter(h => h.id !== first.id);
+        const second = opponents[Math.floor(Math.random() * opponents.length)];
+        if (!first || !second) {
+          COLOSSEUM_ARENA.activeDuel = null;
+          return;
+        }
+        duel = {
+          aId: first.id,
+          bId: second.id,
+          tickTimer: 1.0
+        };
+        COLOSSEUM_ARENA.activeDuel = duel;
+        first.currentTargetHunter = second;
+        second.currentTargetHunter = first;
+        interactionManager.spawnBubble(first, `⚔️ 1대1 대결 신청! ${second.name}`, '#fde047');
+        interactionManager.spawnBubble(second, `⚔️ 1대1 응전! ${first.name}`, '#fca5a5');
       }
 
-      hunter.gainExp(expGain);
-      hunter.fatigue = Math.max(0, hunter.fatigue - 6);
-      interactionManager.spawnBubble(hunter, `🏟️ 콜로세움 수련 성장! +${formatGold(goldGain)}G`, '#fde047');
-      updateResourceHUD();
-    }
+      const fighterA = contenderById.get(duel.aId);
+      const fighterB = contenderById.get(duel.bId);
+      if (!fighterA || !fighterB) {
+        COLOSSEUM_ARENA.activeDuel = null;
+        return;
+      }
 
-    function resetRebirthAltarBoss(fullHeal = true) {
-      const b = REBIRTH_ALTAR.boss;
-      b.maxHp = 63000;
-      b.x = REBIRTH_ALTAR.bounds.x + REBIRTH_ALTAR.bounds.w * 0.5;
-      b.y = REBIRTH_ALTAR.bounds.y + 114;
-      b.respawn = 0;
-      b.attackCooldown = 1.0;
-      b.attackAnimTimer = 0;
-      if (fullHeal) {
-        b.hp = b.maxHp;
+      fighterA.currentTargetHunter = fighterB;
+      fighterB.currentTargetHunter = fighterA;
+
+      const cb = COLOSSEUM_ARENA.bounds;
+      const dx = fighterB.x - fighterA.x;
+      const dy = fighterB.y - fighterA.y;
+      const dist = Math.hypot(dx, dy);
+
+      // 투기장 중앙 부근으로 접근해 1대1 교전
+      if (dist > 44) {
+        const moveA = Math.min(dist - 36, fighterA.speed * 1.25 * dt);
+        const moveB = Math.min(dist - 36, fighterB.speed * 1.25 * dt);
+        if (moveA > 0) {
+          fighterA.facing = dx >= 0 ? 1 : -1;
+          fighterA.x += (dx / dist) * moveA;
+          fighterA.y += (dy / dist) * moveA;
+          fighterA.x = Math.max(cb.x + 26, Math.min(cb.x + cb.w - 26, fighterA.x));
+          fighterA.y = Math.max(cb.y + 54, Math.min(cb.y + cb.h - 24, fighterA.y));
+          fighterA.walkCycle += dt * 12;
+        }
+        if (moveB > 0) {
+          fighterB.facing = dx >= 0 ? -1 : 1;
+          fighterB.x -= (dx / dist) * moveB;
+          fighterB.y -= (dy / dist) * moveB;
+          fighterB.x = Math.max(cb.x + 26, Math.min(cb.x + cb.w - 26, fighterB.x));
+          fighterB.y = Math.max(cb.y + 54, Math.min(cb.y + cb.h - 24, fighterB.y));
+          fighterB.walkCycle += dt * 12;
+        }
+        return;
+      }
+
+      fighterA.facing = fighterB.x >= fighterA.x ? 1 : -1;
+      fighterB.facing = fighterA.x >= fighterB.x ? 1 : -1;
+
+      duel.tickTimer -= dt;
+      if (duel.tickTimer > 0) return;
+      duel.tickTimer = COLOSSEUM_ARENA.duelInterval;
+
+      const statsA = fighterA.getComputedStats();
+      const statsB = fighterB.getComputedStats();
+      const critA = Math.random() * 100 < statsA.crit;
+      const critB = Math.random() * 100 < statsB.crit;
+
+      const rawDmgA = Math.max(25, Math.round(statsA.atk * (critA ? 1.45 : 1.0) - statsB.def * 0.25));
+      const rawDmgB = Math.max(25, Math.round(statsB.atk * (critB ? 1.45 : 1.0) - statsA.def * 0.25));
+
+      fighterA.attackAnimTimer = 0.28;
+      fighterB.attackAnimTimer = 0.28;
+
+      combatEffects.spawnMeleeSlash({
+        x: (fighterA.x + fighterB.x) * 0.5,
+        y: (fighterA.y + fighterB.y) * 0.5 - 2,
+        facing: fighterA.facing,
+        slashType: 'MELEE',
+        color: '#fde047'
+      });
+
+      fighterB.hp = Math.max(0, fighterB.hp - rawDmgA);
+      fighterA.hp = Math.max(0, fighterA.hp - rawDmgB);
+      combatEffects.spawnDamagePopup(fighterB.x, fighterB.y, rawDmgA, critA, '#fde047');
+      combatEffects.spawnDamagePopup(fighterA.x, fighterA.y, rawDmgB, critB, '#fca5a5');
+
+      // 한쪽 체력이 0이 되면 승패 확정 및 승자 승점 +1 획득
+      if (fighterB.hp <= 0 || fighterA.hp <= 0) {
+        let winner = null;
+        let loser = null;
+        if (fighterB.hp <= 0 && fighterA.hp > 0) {
+          winner = fighterA;
+          loser = fighterB;
+        } else if (fighterA.hp <= 0 && fighterB.hp > 0) {
+          winner = fighterB;
+          loser = fighterA;
+        } else {
+          const scoreA = rawDmgA + (statsA.atk || 0) * 0.1 + Math.random() * 50;
+          const scoreB = rawDmgB + (statsB.atk || 0) * 0.1 + Math.random() * 50;
+          winner = scoreA >= scoreB ? fighterA : fighterB;
+          loser = winner === fighterA ? fighterB : fighterA;
+        }
+
+        winner.hp = Math.max(Math.round(winner.maxHp * 0.4), winner.hp);
+        loser.hp = Math.max(Math.round(loser.maxHp * 0.35), loser.hp);
+        winner.currentTargetHunter = null;
+        loser.currentTargetHunter = null;
+        COLOSSEUM_ARENA.activeDuel = null;
+
+        awardColosseumVictoryPoint(winner, loser);
       }
     }
 
@@ -5366,6 +5540,10 @@
         this.monsterKillAlignmentProgress = Math.max(0, Math.min(2, Math.floor(Number(preset.monsterKillAlignmentProgress) || 0)));
         // 헌터 간 PvP 누적 살인 횟수
         this.pkKills = Math.max(0, Math.floor(Number(preset.pkKills) || 0));
+        // 콜로세움 1대1 전투 승점 포인트 및 전적
+        this.colosseumPoints = Math.max(0, Math.floor(Number(preset.colosseumPoints) || 0));
+        this.colosseumWins = Math.max(0, Math.floor(Number(preset.colosseumWins) || 0));
+        this.colosseumLosses = Math.max(0, Math.floor(Number(preset.colosseumLosses) || 0));
 
         this.maxHp = 500;
         this.maxMp = 160;
@@ -7096,8 +7274,25 @@
             this.pickNextDestination();
           }
         } else if (this.state === 'WALKING') {
-          const dx = (this.targetX ?? this.x) - this.x;
-          const dy = (this.targetY ?? this.y) - this.y;
+          let goalX = this.targetX ?? this.x;
+          let goalY = this.targetY ?? this.y;
+          let isIntermediateWaypoint = false;
+
+          if (Array.isArray(this.waypoints) && this.waypoints.length > 0) {
+            const curWp = this.waypoints[0];
+            const wpDist = Math.hypot((curWp.x ?? this.x) - this.x, (curWp.y ?? this.y) - this.y);
+            if (wpDist < 10) {
+              this.waypoints.shift();
+            }
+            if (this.waypoints.length > 0) {
+              goalX = this.waypoints[0].x ?? goalX;
+              goalY = this.waypoints[0].y ?? goalY;
+              isIntermediateWaypoint = this.waypoints.length > 1;
+            }
+          }
+
+          const dx = goalX - this.x;
+          const dy = goalY - this.y;
           const dist = Math.hypot(dx, dy);
 
           // 사냥터 출정 이동 중 사냥터 경계에 진입하면 끝점까지 가지 않고 즉시 몬스터 탐색 및 교전 전환
@@ -7119,10 +7314,10 @@
             if (ground && !hasRemainingMidWaypoints) {
               const b = ground.bounds;
               const enteredGround = (
-                this.x >= b.x + 24 &&
-                this.x <= b.x + b.w - 24 &&
-                this.y >= b.y + 68 &&
-                this.y <= b.y + b.h - 24
+                this.x >= b.x + 12 &&
+                this.x <= b.x + b.w - 12 &&
+                this.y >= b.y + 42 &&
+                this.y <= b.y + b.h - 14
               );
               if (enteredGround) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
@@ -7130,9 +7325,14 @@
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
                 if (!this.currentTargetMonster || this.currentTargetMonster.hp <= 0) {
-                  this.currentTargetMonster = null;
+                  this.currentTargetMonster = ground.monsters.find(m => m && m.hp > 0) || null;
                 }
-                this.huntTimer = 14 + Math.random() * 6;
+                if (this.currentTargetMonster) {
+                  this.targetX = this.currentTargetMonster.x;
+                  this.targetY = this.currentTargetMonster.y;
+                }
+                this.attackCooldown = 0;
+                this.huntTimer = 18 + Math.random() * 8;
                 interactionManager.spawnBubble(
                   this,
                   pref.matched ? `🌿 사냥 시작! (${pref.label})` : '⚠️ 경험치 90% 감소 구간...',
@@ -7143,7 +7343,7 @@
             }
           }
 
-          if (dist < 6) {
+          if (dist < 12 && !isIntermediateWaypoint) {
             if (this.targetBuildingType === COLOSSEUM_ARENA.id) {
               if (!canHunterEnterColosseum(this)) {
                 this.state = 'IDLE';
@@ -7192,12 +7392,18 @@
               }
               if (ground) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
+                this.waypoints = [];
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
                 if (!this.currentTargetMonster || this.currentTargetMonster.hp <= 0) {
-                  this.currentTargetMonster = null;
+                  this.currentTargetMonster = ground.monsters.find(m => m && m.hp > 0) || null;
                 }
-                this.huntTimer = 14 + Math.random() * 6;
+                if (this.currentTargetMonster) {
+                  this.targetX = this.currentTargetMonster.x;
+                  this.targetY = this.currentTargetMonster.y;
+                }
+                this.attackCooldown = 0;
+                this.huntTimer = 18 + Math.random() * 8;
                 interactionManager.spawnBubble(
                   this,
                   pref.matched ? `🌿 사냥 시작! (${pref.label})` : '⚠️ 경험치 90% 감소 구간...',
@@ -8036,6 +8242,32 @@
 
     window.spawnTestRebirthMercenary = spawnTestRebirthMercenary;
 
+    // 테스트용 환생 5회 · Lv.99 헌터 생성 헬퍼
+    function spawnTestRebirth5Lv99Hunter(options = {}) {
+      const merc = spawnTestRebirthMercenary({
+        rebirthCount: 5,
+        level: LEVEL_REBIRTH_CONFIG.maxLevel,
+        equipTier: Math.max(5, Math.min(MAX_EQUIP_TIER, options.equipTier || 5)),
+        equipEnhance: Math.max(0, Math.min(15, options.equipEnhance ?? 12)),
+        name: options.name || generateRandomHunterName(hunters),
+        ...options
+      });
+      if (merc) {
+        const cb = COLOSSEUM_ARENA.bounds;
+        merc.x = cb.x + 80 + Math.random() * (cb.w - 160);
+        merc.y = cb.y + 70 + Math.random() * (cb.h - 105);
+        merc.targetX = merc.x;
+        merc.targetY = merc.y;
+        merc.waypoints = [];
+        merc.state = 'COLOSSEUM_TRAINING';
+        merc.activeGroundId = COLOSSEUM_ARENA.id;
+        merc.colosseumGrowthTimer = 0;
+      }
+      return merc;
+    }
+
+    window.spawnTestRebirth5Lv99Hunter = spawnTestRebirth5Lv99Hunter;
+
     // 마을 조경 소품 (나무 & 가로등)
     const props = [
       { type: 'tree', x: -490, y: -330 },
@@ -8836,10 +9068,13 @@
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
         const killCount = Math.max(0, Math.floor(Number(h.pkKills) || 0));
+        const colPts = Math.max(0, Math.floor(Number(h.colosseumPoints) || 0));
+        const colWins = Math.max(0, Math.floor(Number(h.colosseumWins) || 0));
         const alignHtml = `
           <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">
             <span style="color:#e2e8f0;font-weight:700;">⚖️ 인성: <b style="color:${alignInfo.color};">${alignSign}</b> <span style="color:#94a3b8;font-size:10px;">(선인 +100 ~ 카오스 -100)</span></span>
             <span style="display:inline-flex;align-items:center;gap:5px;">
+              <span style="color:#fde047;font-weight:800;font-size:11px;">🏟️ 승점 ${colPts}점 (${colWins}승)</span>
               <span style="color:#fca5a5;font-weight:800;font-size:11px;">🗡️ 살인 ${killCount.toLocaleString()}회</span>
               <span class="${alignInfo.badgeClass}">${alignInfo.label}</span>
             </span>
@@ -9398,6 +9633,7 @@
               </div>
               <div class="roster-card-meta">
                 <span data-role="stats">⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%</span>
+                <span data-role="colosseum-pts" style="color:#fde047;font-weight:800;">🏟️ 승점 ${Math.max(0, Math.floor(Number(h.colosseumPoints) || 0))}점</span>
                 <span data-role="gold" style="color:#fde047;font-weight:800;">💰 ${formatGold(h.personalGold)} G</span>
               </div>
               <div class="roster-card-meta" style="color:#fde68a;font-weight:700;">
@@ -9465,6 +9701,9 @@
 
         const statsEl = card.querySelector('[data-role="stats"]');
         if (statsEl) statsEl.textContent = `⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%`;
+
+        const colPtsEl = card.querySelector('[data-role="colosseum-pts"]');
+        if (colPtsEl) colPtsEl.textContent = `🏟️ 승점 ${Math.max(0, Math.floor(Number(h.colosseumPoints) || 0))}점`;
 
         const goldEl = card.querySelector('[data-role="gold"]');
         if (goldEl) goldEl.textContent = `💰 ${formatGold(h.personalGold)} G`;
@@ -11971,12 +12210,15 @@
       ctx.font = 'bold 11.5px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🏟️ 콜로세움 경기장 [환생 5회 · Lv.99 전용 · 몬스터 없음]', arenaCx, badgeY + 12);
+      ctx.fillText('🏟️ 콜로세움 경기장 [환생5 1대1 전투 · 승리 시 승점 +1]', arenaCx, badgeY + 12);
 
       // 하단 경기장 안내 문구
+      const duelStateText = COLOSSEUM_ARENA.activeDuel
+        ? `⚔️ 1대1 전투 진행 중 · 승리 시 승점 +1`
+        : (COLOSSEUM_ARENA.lastDuelSummary || '⚔️ 환생5 헌터 1대1 대결 대기 · 승리 시 승점 +1');
       ctx.fillStyle = '#fde68a';
       ctx.font = 'bold 10.5px sans-serif';
-      ctx.fillText('⚔️ 몬스터 없는 전용 수련장 · 환생5 & Lv.99 헌터 자율 성장', arenaCx, cb.y + cb.h - 11);
+      ctx.fillText(duelStateText, arenaCx, cb.y + cb.h - 11);
       ctx.restore();
 
       // 2. 마을 안전 구역 (확장 부지까지 수용 가능한 넉넉한 크기)
@@ -15070,6 +15312,7 @@
       });
 
       hunters.forEach(h => h.update(dt));
+      stepColosseumOneOnOneDuels(dt, hunters);
       SUPREME_TOWN_GUARD.update(dt);
       ARCANE_TOWN_GUARD.update(dt);
 
@@ -15607,6 +15850,9 @@
           equippedInsigniaId: h.equippedInsigniaId || null,
           monsterKillAlignmentProgress: h.monsterKillAlignmentProgress || 0,
           pkKills: Math.max(0, Math.floor(Number(h.pkKills) || 0)),
+          colosseumPoints: Math.max(0, Math.floor(Number(h.colosseumPoints) || 0)),
+          colosseumWins: Math.max(0, Math.floor(Number(h.colosseumWins) || 0)),
+          colosseumLosses: Math.max(0, Math.floor(Number(h.colosseumLosses) || 0)),
           x: h.x,
           y: h.y,
           skillsJson: JSON.stringify(h.skills)
@@ -15758,6 +16004,15 @@
           }
           if (typeof hData.pkKills === 'number') {
             restored.pkKills = Math.max(0, Math.floor(hData.pkKills));
+          }
+          if (typeof hData.colosseumPoints === 'number') {
+            restored.colosseumPoints = Math.max(0, Math.floor(hData.colosseumPoints));
+          }
+          if (typeof hData.colosseumWins === 'number') {
+            restored.colosseumWins = Math.max(0, Math.floor(hData.colosseumWins));
+          }
+          if (typeof hData.colosseumLosses === 'number') {
+            restored.colosseumLosses = Math.max(0, Math.floor(hData.colosseumLosses));
           }
 
           const parsedPotions = safeParseJson(hData.potions, null);
