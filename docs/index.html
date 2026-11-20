@@ -3765,7 +3765,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         { kind: 'kingslime',  name: '윤회 수호군주',   color: '#7e22ce', stroke: '#fde047', hp: 34000, atk: 430, isRanged: false, range: 34 }
       ],
       getExpMultiplier(hunterLevel) {
-        if ((hunterLevel || 1) >= 1) return 1.5;
         return 1.0;
       },
       monsters: []
@@ -3885,6 +3884,13 @@ function awardColosseumVictoryPoint(winner, loser = null) {
     });
 
     function evaluateHuntingGroundPreference(hunter, ground) {
+      if (canHunterEnterRebirthSanctuary(hunter)) {
+        if (ground?.id === REBIRTH_MID_SANCTUARY.id) {
+          return { score: 100, matched: true, label: '환생 전용 사냥터 (기본 EXP)' };
+        }
+        return { score: 0, matched: false, label: '환생 헌터 전용 구역 이용 권장' };
+      }
+
       const lv = hunter.level;
       if (lv >= ground.minRecLv && lv <= ground.maxRecLv) {
         const expLabel = lv <= 10 ? '초보 보너스 (+50% EXP)' : '적정 사냥터 (기본 EXP)';
@@ -6346,23 +6352,31 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         }
 
         // 초보 사냥터 적정 구간(Lv.1~20)이면 초보 사냥터 우선 출정
-        if (canHunterEnterRebirthSanctuary(this) && Math.random() < 0.35) {
-          const aliveSanctuaryMonsters = REBIRTH_MID_SANCTUARY.monsters.filter(m => m.hp > 0);
-          const pickSanctuaryMon = aliveSanctuaryMonsters.length > 0
-            ? aliveSanctuaryMonsters[Math.floor(Math.random() * aliveSanctuaryMonsters.length)]
-            : null;
-          const sx = pickSanctuaryMon ? pickSanctuaryMon.x : REBIRTH_MID_SANCTUARY.centerX;
-          const sy = pickSanctuaryMon ? pickSanctuaryMon.y : REBIRTH_MID_SANCTUARY.centerY;
-          this.setDestinationWithGatePath(sx, sy);
-          this.targetBuildingName = REBIRTH_MID_SANCTUARY.name;
-          this.targetBuildingType = 'hunting_ground';
-          this.targetGroundId = REBIRTH_MID_SANCTUARY.id;
-          this.state = 'WALKING';
-          interactionManager.spawnBubble(this, '✨ 윤회의 성역(환생 전용) 출정!', '#f0abfc');
-          return;
+        if (!canHunterEnterRebirthSanctuary(this)) {
+          const matchedGround = HUNTING_GROUNDS.find(hg => evaluateHuntingGroundPreference(this, hg).matched);
+          if (matchedGround && Math.random() < 0.72) {
+            const aliveMonsters = matchedGround.monsters.filter(m => m.hp > 0);
+            let gx = matchedGround.centerX;
+            let gy = matchedGround.centerY;
+            if (aliveMonsters.length > 0) {
+              const pickMon = aliveMonsters[Math.floor(Math.random() * aliveMonsters.length)];
+              gx = pickMon.x;
+              gy = pickMon.y;
+            } else {
+              const pad = 80;
+              gx = matchedGround.bounds.x + pad + Math.random() * (matchedGround.bounds.w - pad * 2);
+              gy = matchedGround.bounds.y + 95 + Math.random() * (matchedGround.bounds.h - pad - 95);
+            }
+            this.setDestinationWithGatePath(gx, gy);
+            this.targetBuildingName = matchedGround.name;
+            this.targetBuildingType = 'hunting_ground';
+            this.targetGroundId = matchedGround.id;
+            this.state = 'WALKING';
+            return;
+          }
         }
 
-        // 환생 헌터(1환생 이상)는 일반 사냥터 대신 윤회의 성역에서 사냥하도록 유도
+        // 환생 헌터(1환생 이상)는 레벨 사냥터 대신 윤회의 성역에서 사냥하도록 유도
         if (canHunterEnterRebirthSanctuary(this) && isHealthy) {
           const aliveSanctuaryMonsters = REBIRTH_MID_SANCTUARY.monsters.filter(m => m.hp > 0);
           let sx = REBIRTH_MID_SANCTUARY.centerX;
@@ -6826,9 +6840,9 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             return;
           }
 
-          // 본인이 21레벨에 도달해 초보 사냥터 경험치 90% 감소 패널티가 적용되면 스스로 사냥터 이탈 판단
+          // 환생 헌터(1환생 이상)는 레벨 사냥터 패널티 대신 윤회의 성역 사냥을 유지하고, 일반 헌터만 레벨 구간 이탈 시 이동
           const pref = evaluateHuntingGroundPreference(this, ground);
-          if (!hasActivePvpDuel && !pref.matched) {
+          if (!hasActivePvpDuel && !canHunterEnterRebirthSanctuary(this) && !pref.matched) {
             interactionManager.spawnBubble(this, '🎓 Lv.21 달성! 상위 사냥터/던전으로!', '#38bdf8');
             this.state = 'IDLE';
             this.stateTimer = 0.4;
@@ -12044,7 +12058,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
 
       ctx.fillStyle = '#fde68a';
       ctx.font = '11px sans-serif';
-      ctx.fillText('🔒 환생 1회 이상 헌터 전용 사냥터 · EXP 1.5배 · 고가 별결정 드랍', rmsb.x + 30, rmsb.y + 47);
+      ctx.fillText('🔒 환생 1회 이상 헌터 전용 사냥터 · 기본 EXP · 고가 별결정 드랍', rmsb.x + 30, rmsb.y + 47);
 
       REBIRTH_MID_SANCTUARY.monsters.forEach((m) => {
         if (m.hp <= 0) return;
@@ -14747,9 +14761,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             interactionManager.spawnBubble(hunter, `🌟 패시브 [${updatedPas.name}] Lv.${updatedPas.lv}!`, '#c084fc');
           } else if (hunter.level > prevLv && hunter.level === 21) {
             interactionManager.spawnBubble(hunter, '⚠️ Lv.21! 초보사냥터 EXP -90% 구간', '#fde047');
-          } else {
-            const expTag = expMult > 1 ? '+50% 보너스' : (expMult < 1 ? '-90%' : '기본');
-            interactionManager.spawnBubble(hunter, `⚔️ +${finalExp} EXP (${expTag})`, '#86efac');
           }
         }
       },
