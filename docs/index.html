@@ -785,15 +785,6 @@
       white-space: nowrap;
     }
 
-    .roster-gold-stars {
-      color: #facc15;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: 1px;
-      text-shadow: 0 0 6px rgba(250, 204, 21, 0.55);
-      line-height: 1;
-    }
-
     .roster-personality-effect {
       font-size: 11px;
       font-weight: 700;
@@ -2871,257 +2862,16 @@
       }
     };
 
-    /**
-     * ============================================================================
-     * 마을 상단 콜로세움 경기장 필드 (몬스터 없음 · 환생 5회 & Lv.99 헌터 전용 성장 구역)
-     * ============================================================================
-     */
-    const COLOSSEUM_ARENA = {
-      id: 'colosseum_arena',
-      name: '콜로세움 경기장',
-      reqRebirth: 5,
-      reqLevel: 99,
-      bounds: { x: -240, y: -675, w: 480, h: 200 },
-      centerX: 0,
-      centerY: -575,
-      gateX: 0,
-      gateY: -475,
-      growthInterval: 3.5,
-      duelInterval: 2.2,
-      hasMonsters: false,
-      monsters: [],
-      activeDuel: null,
-      lastDuelSummary: ''
-    };
-
-    function isRebirth5Hunter(hunter) {
-      return Boolean(hunter && (Number(hunter.rebirthCount) || 0) >= 5);
-    }
-
-    function canHunterEnterColosseum(hunter) {
-      if (!hunter) return false;
-      const rebirths = Number(hunter.rebirthCount) || 0;
-      const lv = Number(hunter.level) || 1;
-      return rebirths >= COLOSSEUM_ARENA.reqRebirth && lv >= COLOSSEUM_ARENA.reqLevel;
-    }
-
-    function isHunterInsideColosseum(hunter) {
-  if (!hunter || hunter.state === 'IN_DUNGEON') return false;
-  const cb = COLOSSEUM_ARENA.bounds;
-  return (
-    hunter.x >= cb.x + 12 &&
-    hunter.x <= cb.x + cb.w - 12 &&
-    hunter.y >= cb.y + 18 &&
-    hunter.y <= cb.y + cb.h - 10
-  );
-}
-
-function rewardColosseumTrainingGrowth(hunter) {
-  if (!hunter) return;
-
-  const p = hunter.personality || {};
-  const goldReward = Math.round(650 * (p.personalGoldMult || 1));
-  const villageGoldReward = 450;
-
-  hunter.personalGold = (hunter.personalGold || 0) + goldReward;
-  if (typeof gameState !== 'undefined') {
-    gameState.gold = (gameState.gold || 0) + villageGoldReward;
-  }
-
-  if (hunter.inventory && Math.random() < 0.55) {
-    hunter.inventory.addItem('loot_top_astral', 1 + (p.extraMat || 0));
-  }
-
-  // 환생 5·Lv.99 한계 수련 시 액티브/패시브 스킬 숙련도 및 경험치 성장 반영
-  const activeCount = hunter.skills?.actives?.length || 0;
-  const passiveCount = hunter.skills?.passives?.length || 0;
-  let leveledSkill = null;
-
-  if (activeCount > 0 && Math.random() < 0.65) {
-    const aIdx = Math.floor(Math.random() * activeCount);
-    leveledSkill = hunter.recordSkillUse('actives', aIdx, 2) || leveledSkill;
-  }
-  if (passiveCount > 0) {
-    const pIdx = Math.floor(Math.random() * passiveCount);
-    leveledSkill = hunter.recordSkillUse('passives', pIdx, 2) || leveledSkill;
-  }
-
-  hunter.gainExp(350);
-  hunter.fatigue = Math.min(100, (hunter.fatigue || 0) + 1.8 * (p.fatigueMult || 1));
-  hunter.hunger = Math.max(0, (hunter.hunger || 100) - 1.2 * (p.hungerMult || 1));
-
-  if (leveledSkill) {
-    interactionManager.spawnBubble(
-      hunter,
-      `⚡ [${leveledSkill.name}] 스킬 Lv.${leveledSkill.lv} 달성!`,
-      '#c084fc'
-    );
-  } else if (Math.random() < 0.45) {
-    interactionManager.spawnBubble(
-      hunter,
-      `🏟️ 콜로세움 수련 성장 (+${formatGold(goldReward)}G)`,
-      '#fde047'
-    );
-  }
-}
-
-function awardColosseumVictoryPoint(winner, loser = null) {
-      if (!winner) return;
-      winner.colosseumPoints = Math.max(0, Math.floor(Number(winner.colosseumPoints) || 0)) + 1;
-      winner.colosseumWins = Math.max(0, Math.floor(Number(winner.colosseumWins) || 0)) + 1;
-      if (loser) {
-        loser.colosseumLosses = Math.max(0, Math.floor(Number(loser.colosseumLosses) || 0)) + 1;
-      }
-      COLOSSEUM_ARENA.lastDuelSummary = `🏆 ${winner.name} 승리! (승점 +1 → 총 ${winner.colosseumPoints}점)`;
-      interactionManager.spawnBubble(winner, `🏆 1대1 승리! 승점 +1 (${winner.colosseumPoints}점)`, '#fde047');
-      if (loser) {
-        interactionManager.spawnBubble(loser, '💫 콜로세움 1대1 패배...', '#fca5a5');
-      }
-      if (document.getElementById('hunterRosterBackdrop')?.classList.contains('open')) {
-        renderHunterRosterModal(false);
-      }
-      if (gameState.selectedHunterId === winner.id || (loser && gameState.selectedHunterId === loser.id)) {
-        refreshHunterPanel();
-      }
-    }
-
-    function stepColosseumOneOnOneDuels(dt, hunterList) {
-      if (!Array.isArray(hunterList)) return;
-
-      const contenders = hunterList.filter(
-        h => h && h.hp > 0 && h.state !== 'IN_DUNGEON' && isRebirth5Hunter(h) && isHunterInsideColosseum(h)
-      );
-
-      if (contenders.length < 2) {
-        COLOSSEUM_ARENA.activeDuel = null;
-        return;
-      }
-
-      const contenderById = new Map(contenders.map(h => [h.id, h]));
-      let duel = COLOSSEUM_ARENA.activeDuel;
-
-      const isDuelValid = duel &&
-        duel.aId !== duel.bId &&
-        contenderById.has(duel.aId) &&
-        contenderById.has(duel.bId);
-
-      if (!isDuelValid) {
-        // 기존 교전 중이던 헌터들의 대상 해제 후 환생 5 헌터 간 새로운 1대1 매칭
-        for (let i = 0; i < contenders.length; i++) {
-          contenders[i].currentTargetHunter = null;
-        }
-        const first = contenders[Math.floor(Math.random() * contenders.length)];
-        const opponents = contenders.filter(h => h.id !== first.id);
-        const second = opponents[Math.floor(Math.random() * opponents.length)];
-        if (!first || !second) {
-          COLOSSEUM_ARENA.activeDuel = null;
-          return;
-        }
-        duel = {
-          aId: first.id,
-          bId: second.id,
-          tickTimer: 1.0
-        };
-        COLOSSEUM_ARENA.activeDuel = duel;
-        first.currentTargetHunter = second;
-        second.currentTargetHunter = first;
-        interactionManager.spawnBubble(first, `⚔️ 1대1 대결 신청! ${second.name}`, '#fde047');
-        interactionManager.spawnBubble(second, `⚔️ 1대1 응전! ${first.name}`, '#fca5a5');
-      }
-
-      const fighterA = contenderById.get(duel.aId);
-      const fighterB = contenderById.get(duel.bId);
-      if (!fighterA || !fighterB) {
-        COLOSSEUM_ARENA.activeDuel = null;
-        return;
-      }
-
-      fighterA.currentTargetHunter = fighterB;
-      fighterB.currentTargetHunter = fighterA;
-
-      const cb = COLOSSEUM_ARENA.bounds;
-      const dx = fighterB.x - fighterA.x;
-      const dy = fighterB.y - fighterA.y;
-      const dist = Math.hypot(dx, dy);
-
-      // 투기장 중앙 부근으로 접근해 1대1 교전
-      if (dist > 44) {
-        const moveA = Math.min(dist - 36, fighterA.speed * 1.25 * dt);
-        const moveB = Math.min(dist - 36, fighterB.speed * 1.25 * dt);
-        if (moveA > 0) {
-          fighterA.facing = dx >= 0 ? 1 : -1;
-          fighterA.x += (dx / dist) * moveA;
-          fighterA.y += (dy / dist) * moveA;
-          fighterA.x = Math.max(cb.x + 26, Math.min(cb.x + cb.w - 26, fighterA.x));
-          fighterA.y = Math.max(cb.y + 54, Math.min(cb.y + cb.h - 24, fighterA.y));
-          fighterA.walkCycle += dt * 12;
-        }
-        if (moveB > 0) {
-          fighterB.facing = dx >= 0 ? -1 : 1;
-          fighterB.x -= (dx / dist) * moveB;
-          fighterB.y -= (dy / dist) * moveB;
-          fighterB.x = Math.max(cb.x + 26, Math.min(cb.x + cb.w - 26, fighterB.x));
-          fighterB.y = Math.max(cb.y + 54, Math.min(cb.y + cb.h - 24, fighterB.y));
-          fighterB.walkCycle += dt * 12;
-        }
-        return;
-      }
-
-      fighterA.facing = fighterB.x >= fighterA.x ? 1 : -1;
-      fighterB.facing = fighterA.x >= fighterB.x ? 1 : -1;
-
-      duel.tickTimer -= dt;
-      if (duel.tickTimer > 0) return;
-      duel.tickTimer = COLOSSEUM_ARENA.duelInterval;
-
-      const statsA = fighterA.getComputedStats();
-      const statsB = fighterB.getComputedStats();
-      const critA = Math.random() * 100 < statsA.crit;
-      const critB = Math.random() * 100 < statsB.crit;
-
-      const rawDmgA = Math.max(25, Math.round(statsA.atk * (critA ? 1.45 : 1.0) - statsB.def * 0.25));
-      const rawDmgB = Math.max(25, Math.round(statsB.atk * (critB ? 1.45 : 1.0) - statsA.def * 0.25));
-
-      fighterA.attackAnimTimer = 0.28;
-      fighterB.attackAnimTimer = 0.28;
-
-      combatEffects.spawnMeleeSlash({
-        x: (fighterA.x + fighterB.x) * 0.5,
-        y: (fighterA.y + fighterB.y) * 0.5 - 2,
-        facing: fighterA.facing,
-        slashType: 'MELEE',
-        color: '#fde047'
-      });
-
-      fighterB.hp = Math.max(0, fighterB.hp - rawDmgA);
-      fighterA.hp = Math.max(0, fighterA.hp - rawDmgB);
-      combatEffects.spawnDamagePopup(fighterB.x, fighterB.y, rawDmgA, critA, '#fde047');
-      combatEffects.spawnDamagePopup(fighterA.x, fighterA.y, rawDmgB, critB, '#fca5a5');
-
-      // 한쪽 체력이 0이 되면 승패 확정 및 승자 승점 +1 획득
-      if (fighterB.hp <= 0 || fighterA.hp <= 0) {
-        let winner = null;
-        let loser = null;
-        if (fighterB.hp <= 0 && fighterA.hp > 0) {
-          winner = fighterA;
-          loser = fighterB;
-        } else if (fighterA.hp <= 0 && fighterB.hp > 0) {
-          winner = fighterB;
-          loser = fighterA;
-        } else {
-          const scoreA = rawDmgA + (statsA.atk || 0) * 0.1 + Math.random() * 50;
-          const scoreB = rawDmgB + (statsB.atk || 0) * 0.1 + Math.random() * 50;
-          winner = scoreA >= scoreB ? fighterA : fighterB;
-          loser = winner === fighterA ? fighterB : fighterA;
-        }
-
-        winner.hp = Math.max(Math.round(winner.maxHp * 0.4), winner.hp);
-        loser.hp = Math.max(Math.round(loser.maxHp * 0.35), loser.hp);
-        winner.currentTargetHunter = null;
-        loser.currentTargetHunter = null;
-        COLOSSEUM_ARENA.activeDuel = null;
-
-        awardColosseumVictoryPoint(winner, loser);
+    function resetRebirthAltarBoss(fullHeal = true) {
+      const b = REBIRTH_ALTAR.boss;
+      b.maxHp = 63000;
+      b.x = REBIRTH_ALTAR.bounds.x + REBIRTH_ALTAR.bounds.w * 0.5;
+      b.y = REBIRTH_ALTAR.bounds.y + 114;
+      b.respawn = 0;
+      b.attackCooldown = 1.0;
+      b.attackAnimTimer = 0;
+      if (fullHeal) {
+        b.hp = b.maxHp;
       }
     }
 
@@ -3326,44 +3076,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         }
       }
 
-      // 중급 사냥터 동쪽 경계(x: 1390~1430)에서 환생 전용 사냥터(윤회의 성역) 연결 통로(y: 545~605) 외 구역 벽 충돌 보정
-      if (entity.y >= 365 && entity.y <= 785 && entity.x > 1390 - radius && entity.x < 1430 + radius) {
-        const inRebirthMidPass = entity.y >= 552 && entity.y <= 598;
-        if (!inRebirthMidPass) {
-          entity.x = entity.x <= 1410 ? (1390 - radius) : (1430 + radius);
-        }
-      }
-
-      // 윤회의 성역 소속 몬스터는 성역 경계(x: 1430~2210, y: 365~785) 내부로 엄격히 고정
-      if (entity && entity._homeSanctuaryId === REBIRTH_MID_SANCTUARY.id) {
-        const sb = REBIRTH_MID_SANCTUARY.bounds;
-        const pad = radius + 24;
-        entity.x = Math.max(sb.x + pad, Math.min(sb.x + sb.w - pad, entity.x));
-        entity.y = Math.max(sb.y + 78, Math.min(sb.y + sb.h - pad, entity.y));
-        return;
-      }
-
-      // 환생 헌터(1환생 이상) 전용 [윤회의 성역 (중급 사냥터 옆)] 구역 비환생 헌터 진입 차단
-      const rsb = REBIRTH_MID_SANCTUARY.bounds;
-      const canEnterRebirthSanctuary = entity instanceof Hunter
-        ? canHunterEnterRebirthSanctuary(entity)
-        : false;
-      if (!canEnterRebirthSanctuary) {
-        const pad = radius + 4;
-        if (
-          entity.x >= rsb.x - pad &&
-          entity.x <= rsb.x + rsb.w + pad &&
-          entity.y >= rsb.y - pad &&
-          entity.y <= rsb.y + rsb.h + pad
-        ) {
-          if (entity.x <= rsb.x + rsb.w * 0.5) {
-            entity.x = rsb.x - pad;
-          } else {
-            entity.x = rsb.x + rsb.w + pad;
-          }
-        }
-      }
-
       // 중급 사냥터 남쪽 경계(y: 785~815)에서 상급 사냥터 연결 통로(x: 926~994) 외 구역 벽 충돌 보정
       if (entity.x >= 560 && entity.x <= 1410 && entity.y > 785 - radius && entity.y < 815 + radius) {
         const inHighPass = entity.x >= 936 && entity.x <= 984;
@@ -3377,6 +3089,27 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const inTopPass = entity.y >= -4 && entity.y <= 40;
         if (!inTopPass) {
           entity.x = entity.x <= 1410 ? (1390 - radius) : (1430 + radius);
+        }
+      }
+
+      // 중급 사냥터 동쪽 경계(x: 1390~1430)에서 환생 전용 사냥터(윤회의 성역) 연결 통로(y: 545~605) 및 환생 조건 검증
+      if (entity.y >= 360 && entity.y <= 795 && entity.x > 1390 - radius && entity.x < 1430 + radius) {
+        const isRebornHunter = entity instanceof Hunter && (entity.rebirthCount || 0) >= 1;
+        const inRebirthPass = isRebornHunter && entity.y >= 553 && entity.y <= 597;
+        if (!inRebirthPass) {
+          entity.x = entity.x <= 1410 ? (1390 - radius) : (1430 + radius);
+        }
+      }
+
+      // 최상급 사냥터와 환생 전용 사냥터 사이 남북 경계(x >= 1410, y: 340~365) 차단
+      if (entity.x >= 1410 && entity.y > 340 - radius && entity.y < 365 + radius) {
+        entity.y = entity.y <= 352.5 ? (340 - radius) : (365 + radius);
+      }
+
+      // 환생 전용 사냥터 내부(x >= 1430, y: 365~785)에 미환생 헌터가 들어온 경우 중급 사냥터 입구로 밀어냄
+      if (entity instanceof Hunter && (entity.rebirthCount || 0) < 1) {
+        if (entity.x >= 1430 - radius && entity.y >= 360 && entity.y <= 795) {
+          entity.x = 1390 - radius;
         }
       }
 
@@ -3412,21 +3145,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           } else {
             entity.x = rb.x + rb.w + pad;
           }
-        }
-      }
-
-      // 마을 상단 [콜로세움 경기장]: 환생 5회 & Lv.99 미달 헌터(및 비환생 개체) 입장 원천 차단
-      const cb = COLOSSEUM_ARENA.bounds;
-      const canEnterCol = entity instanceof Hunter ? canHunterEnterColosseum(entity) : false;
-      if (!canEnterCol) {
-        const pad = radius + 4;
-        if (
-          entity.x >= cb.x - pad &&
-          entity.x <= cb.x + cb.w + pad &&
-          entity.y >= cb.y - pad &&
-          entity.y <= cb.y + cb.h + pad
-        ) {
-          entity.y = cb.y + cb.h + pad;
         }
       }
     }
@@ -3474,22 +3192,32 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         hunter.x >= 1382 && hunter.x <= 1438 &&
         (hunter.y < -4 || hunter.y > 40)
       );
+      const inMidEastWall = (
+        hunter.y >= 360 && hunter.y <= 795 &&
+        hunter.x >= 1382 && hunter.x <= 1438 &&
+        ((hunter.rebirthCount || 0) < 1 || hunter.y < 553 || hunter.y > 597)
+      );
       const outOfPlayableBounds = hunter.x < -640 || hunter.x > 2240 || hunter.y < -610 || hunter.y > 1270;
 
-      if (hunter.stuckMoveTimer >= 1.2 || inWallBand || inMidSouthWall || inHighSouthWall || inTopEastWall || outOfPlayableBounds) {
+      if (hunter.stuckMoveTimer >= 1.2 || inWallBand || inMidSouthWall || inHighSouthWall || inTopEastWall || inMidEastWall || outOfPlayableBounds) {
         hunter.stuckMoveTimer = 0;
         if (hunter.x < TOWN_EAST_GATE.wallX) {
           // 마을 쪽 갇힘 -> 중앙 광장 도로로 복귀 후 경로 재계산
           hunter.x = Math.max(-440, Math.min(480, hunter.x));
           hunter.y = TOWN_EAST_GATE.roadCenterY;
-        } else if (hunter.x >= 1410 && hunter.y >= 365 && hunter.y <= 785) {
-          // 중급 사냥터 옆 환생 전용 사냥터(윤회의 성역) 내 안전 구역 복귀
-          hunter.x = Math.max(1465, Math.min(2160, hunter.x));
-          hunter.y = Math.max(415, Math.min(735, hunter.y));
         } else if (hunter.x >= 1410 && hunter.y >= -360 && hunter.y <= 360) {
           // 최상급 사냥터 구역 내 통로로 복귀
           hunter.x = Math.max(1465, Math.min(2160, hunter.x));
           hunter.y = Math.max(-260, Math.min(300, hunter.y));
+        } else if (hunter.x >= 1410 && hunter.y >= 360 && hunter.y <= 795) {
+          // 환생 전용 사냥터 구역 내 통로로 복귀 (미환생 시 중급 사냥터 통로로 복귀)
+          if ((hunter.rebirthCount || 0) >= 1) {
+            hunter.x = Math.max(1465, Math.min(2160, hunter.x));
+            hunter.y = Math.max(410, Math.min(740, hunter.y));
+          } else {
+            hunter.x = 1340;
+            hunter.y = 575;
+          }
         } else if (hunter.y >= 800) {
           // 상급 사냥터 구역 내 통로로 복귀
           hunter.x = Math.max(650, Math.min(1340, hunter.x));
@@ -3626,6 +3354,55 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         monsters: []
       },
       {
+        id: 'rebirth_sanctuary_field',
+        name: '윤회의 성역 (환생 전용 · 1환생↑)',
+        icon: '🌠',
+        zoneType: 'NORMAL_HUNT',
+        minRebirth: 1,
+        minRecLv: 1,
+        maxRecLv: 99,
+        bounds: { x: 1430, y: 365, w: 780, h: 420 },
+        centerX: 1820,
+        centerY: 575,
+        baseExp: 980,
+        baseGold: 520,
+        goldDropRange: { min: 1500, max: 3800 },
+        lootSpec: {
+          itemId: 'loot_rebirth_essence',
+          tierKey: 'rebirth',
+          name: '윤회 성역의 영혼결정',
+          icon: '🌠',
+          dropChance: 0.65,
+          valueMultiplier: 12.0
+        },
+        baseMonsterCount: 4,
+        maxMonsterCount: 12,
+        miniBossConfig: {
+          bossStageRef: 6,
+          kind: 'field_miniboss',
+          bossTheme: 'gray_doppelganger_king',
+          name: '👑 도플갱어 군주 [중간 보스]',
+          insigniaId: null,
+          atkMultiplier: 1.5,
+          color: '#9ca3af',
+          stroke: '#e5e7eb',
+          isRanged: false,
+          range: 46,
+          respawnDelay: 36
+        },
+        monsterTemplates: [
+          { kind: 'doppelganger', doppelJob: '팔라딘', doppelGender: 'M', name: '도플갱어 수호기사', color: '#9ca3af', stroke: '#e5e7eb', hp: 26000, atk: 510, isRanged: false, range: 32 },
+          { kind: 'doppelganger', doppelJob: '버서커', doppelGender: 'F', name: '도플갱어 광전사',   color: '#9ca3af', stroke: '#e5e7eb', hp: 23500, atk: 563, isRanged: false, range: 30 },
+          { kind: 'doppelganger', doppelJob: '소서러', doppelGender: 'F', name: '도플갱어 마도사',   color: '#9ca3af', stroke: '#e5e7eb', hp: 25000, atk: 593, isRanged: true,  range: 168 },
+          { kind: 'doppelganger', doppelJob: '레인저', doppelGender: 'M', name: '도플갱어 추적자',   color: '#9ca3af', stroke: '#e5e7eb', hp: 32000, atk: 645, isRanged: true,  range: 164 }
+        ],
+        // 환생 헌터 전 구간(Lv.1~99) 기본 경험치 적용 (추가 보너스 미적용)
+        getExpMultiplier(hunterLevel) {
+          return 1.0;
+        },
+        monsters: []
+      },
+      {
         id: 'high_field_40_70',
         name: '상급 사냥터 (용암 화산지대 · PvP 무법지대)',
         icon: '🌋',
@@ -3736,50 +3513,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       }
     ];
 
-    // 중급 사냥터(mid_field_20_40) 바로 옆(동쪽)에 개방되는 1환생 이상 헌터 전용 사냥터
-    const REBIRTH_MID_SANCTUARY = {
-      id: 'rebirth_sanctuary_next_mid',
-      name: '윤회의 성역 (환생 전용 사냥터)',
-      icon: '✨',
-      minRebirth: 1,
-      bounds: { x: 1430, y: 365, w: 780, h: 420 },
-      centerX: 1820,
-      centerY: 575,
-      baseExp: 960,
-      baseGold: 520,
-      goldDropRange: { min: 1600, max: 3900 },
-      lootSpec: {
-        itemId: 'loot_top_astral',
-        tierKey: 'top',
-        name: '심연 성좌의 별결정',
-        icon: '💠',
-        dropChance: 0.65,
-        valueMultiplier: 16.0
-      },
-      baseMonsterCount: 4,
-      maxMonsterCount: 12,
-      monsterTemplates: [
-        { kind: 'irongolem',  name: '윤회 각성골렘',   color: '#6d28d9', stroke: '#fde047', hp: 28000, atk: 340, isRanged: false, range: 32 },
-        { kind: 'shadowwolf', name: '환생 혼령늑대',   color: '#4c1d95', stroke: '#f0abfc', hp: 24500, atk: 370, isRanged: false, range: 30 },
-        { kind: 'manaorc',    name: '성역 마도사수',   color: '#5b21b6', stroke: '#38bdf8', hp: 26000, atk: 395, isRanged: true,  range: 165 },
-        { kind: 'kingslime',  name: '윤회 수호군주',   color: '#7e22ce', stroke: '#fde047', hp: 34000, atk: 430, isRanged: false, range: 34 }
-      ],
-      getExpMultiplier(hunterLevel) {
-        return 1.0;
-      },
-      monsters: []
-    };
-
-    function canHunterEnterRebirthSanctuary(hunter) {
-      return Boolean(hunter && (hunter.rebirthCount || 0) >= REBIRTH_MID_SANCTUARY.minRebirth);
-    }
-
-    (function initRebirthMidSanctuaryMonsters() {
-      for (let i = 0; i < REBIRTH_MID_SANCTUARY.baseMonsterCount; i++) {
-        REBIRTH_MID_SANCTUARY.monsters.push(createGroundMonster(REBIRTH_MID_SANCTUARY, i, false));
-      }
-    })();
-
     // 고대 수호자(해금 보스) 위력의 1/5(20%) 능력치를 계산해 필드 중간 보스 생성
     const FIELD_MINIBOSS_SPAWN_CHANCE = 0.001; // 0.1% 확률로 등장
 
@@ -3789,14 +3522,14 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       const guardianCfg = getBossStageConfig(cfg.bossStageRef || 1);
       // 고대 수호자 위력의 1/5 기준 체력에 중간보스 체력 +50%(1.5x) 적용
       const miniHp = Math.max(2250, Math.round((guardianCfg.maxHp / 5) * 1.5));
-      const miniAtk = Math.max(30, Math.round(guardianCfg.atk / 5));
+      const miniAtk = Math.max(30, Math.round((guardianCfg.atk / 5) * (cfg.atkMultiplier || 1)));
       const sx = ground.bounds.x + ground.bounds.w * 0.72;
       const sy = ground.bounds.y + ground.bounds.h * 0.54;
       return {
         isFieldMiniBoss: true,
         kind: 'field_miniboss',
         bossTheme: cfg.bossTheme || 'meadow_slime',
-        insigniaId: cfg.insigniaId || 'insignia_beginner',
+        insigniaId: cfg.insigniaId || null,
         name: cfg.name,
         color: cfg.color || '#f59e0b',
         stroke: cfg.stroke || '#fde047',
@@ -3838,9 +3571,10 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       const sx = ground.bounds.x + pad + Math.random() * (ground.bounds.w - pad * 2);
       const sy = ground.bounds.y + 85 + Math.random() * (ground.bounds.h - pad - 85);
       return {
-        _homeSanctuaryId: ground.id === REBIRTH_MID_SANCTUARY.id ? REBIRTH_MID_SANCTUARY.id : null,
         isFieldMiniBoss: false,
         kind: tpl.kind || 'slime',
+        doppelJob: tpl.doppelJob || null,
+        doppelGender: tpl.doppelGender || (Math.random() < 0.5 ? 'F' : 'M'),
         name: tpl.name,
         color: tpl.color,
         stroke: tpl.stroke,
@@ -3849,6 +3583,9 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         atk: tpl.atk,
         isRanged: !!tpl.isRanged,
         range: tpl.range || 26,
+        facing: Math.random() < 0.5 ? 1 : -1,
+        walkCycle: Math.random() * Math.PI * 2,
+        attackAnimTimer: 0,
         x: sx,
         y: sy,
         spawnX: sx,
@@ -3884,13 +3621,13 @@ function awardColosseumVictoryPoint(winner, loser = null) {
     });
 
     function evaluateHuntingGroundPreference(hunter, ground) {
-      if (canHunterEnterRebirthSanctuary(hunter)) {
-        if (ground?.id === REBIRTH_MID_SANCTUARY.id) {
-          return { score: 100, matched: true, label: '환생 전용 사냥터 (기본 EXP)' };
+      if (ground.minRebirth) {
+        const rebirths = hunter.rebirthCount || 0;
+        if (rebirths < ground.minRebirth) {
+          return { score: 0, matched: false, label: `환생 전용 (${ground.minRebirth}환생 이상 입장 가능)` };
         }
-        return { score: 0, matched: false, label: '환생 헌터 전용 구역 이용 권장' };
+        return { score: 115, matched: true, label: `환생 성역 (${rebirths}환생 전용 · 기본 EXP)` };
       }
-
       const lv = hunter.level;
       if (lv >= ground.minRecLv && lv <= ground.maxRecLv) {
         const expLabel = lv <= 10 ? '초보 보너스 (+50% EXP)' : '적정 사냥터 (기본 EXP)';
@@ -5190,6 +4927,18 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         valueMultiplier: 16.0,
         desc: '초보 사냥터 동쪽 심연 성좌지대에서 채취하는 최고급 성좌 결정'
       },
+      loot_rebirth_essence: {
+        id: 'loot_rebirth_essence',
+        category: 'loot',
+        legacyKey: 'rebirth',
+        name: '윤회 성역의 영혼결정',
+        icon: '🌠',
+        rarity: 'epic',
+        sellable: true,
+        isCraftingMat: true,
+        valueMultiplier: 12.0,
+        desc: '중급 사냥터 동쪽 환생 전용 사냥터 [윤회의 성역]에서 획득하는 영혼 결정'
+      },
       boss_guardian_core: {
         id: 'boss_guardian_core',
         category: 'material',
@@ -5291,7 +5040,8 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       beginner: 'loot_beginner_crystal',
       mid: 'loot_mid_ore',
       high: 'loot_high_heart',
-      top: 'loot_top_astral'
+      top: 'loot_top_astral',
+      rebirth: 'loot_rebirth_essence'
     };
 
     class HunterInventory {
@@ -5359,6 +5109,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           'loot_mid_ore',
           'dungeon_abyss_shard',
           'loot_high_heart',
+          'loot_rebirth_essence',
           'boss_guardian_core',
           'loot_top_astral'
         ];
@@ -5544,12 +5295,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           : null;
         // 몬스터 3마리 사냥당 인성 +1 누적용 카운터
         this.monsterKillAlignmentProgress = Math.max(0, Math.min(2, Math.floor(Number(preset.monsterKillAlignmentProgress) || 0)));
-        // 헌터 간 PvP 누적 살인 횟수
-        this.pkKills = Math.max(0, Math.floor(Number(preset.pkKills) || 0));
-        // 콜로세움 1대1 전투 승점 포인트 및 전적
-        this.colosseumPoints = Math.max(0, Math.floor(Number(preset.colosseumPoints) || 0));
-        this.colosseumWins = Math.max(0, Math.floor(Number(preset.colosseumWins) || 0));
-        this.colosseumLosses = Math.max(0, Math.floor(Number(preset.colosseumLosses) || 0));
 
         this.maxHp = 500;
         this.maxMp = 160;
@@ -5578,13 +5323,14 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           beginner: this.inventory ? this.inventory.getCount('loot_beginner_crystal') : 0,
           mid: this.inventory ? this.inventory.getCount('loot_mid_ore') : 0,
           high: this.inventory ? this.inventory.getCount('loot_high_heart') : 0,
-          top: this.inventory ? this.inventory.getCount('loot_top_astral') : 0
+          top: this.inventory ? this.inventory.getCount('loot_top_astral') : 0,
+          rebirth: this.inventory ? this.inventory.getCount('loot_rebirth_essence') : 0
         };
       }
 
       set lootInventory(obj) {
         if (!this.inventory || !obj) return;
-        ['beginner', 'mid', 'high', 'top'].forEach(k => {
+        ['beginner', 'mid', 'high', 'top', 'rebirth'].forEach(k => {
           const itemId = LOOT_TIER_TO_ITEM_ID[k];
           const cur = this.inventory.getCount(itemId);
           const next = Math.max(0, Math.floor(obj[k] || 0));
@@ -5701,25 +5447,23 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const destInTown = destX < TOWN_EAST_GATE.wallX;
         const path = [];
 
-        // 1) 출발지가 사냥터 안쪽(중급/환생전용성역/상급/최상급)인 경우 먼저 초보 사냥터 중앙 도로까지 탈출 경로 추가
-        const startInRebirthMidField = !startInTown && this.x >= 1410 && this.y >= 365 && this.y <= 785;
-        const destInRebirthMidField = !destInTown && destX >= 1410 && destY >= 365 && destY <= 785;
+        // 1) 출발지가 사냥터 안쪽(중급/상급/최상급/환생 성역)인 경우 연결 통로를 거쳐 초보 사냥터 도로로 이동
         const startInTopField = !startInTown && this.x >= 1410 && this.y >= -360 && this.y <= 360;
         const destInTopField = !destInTown && destX >= 1410 && destY >= -360 && destY <= 360;
-        const startInSouthField = !startInTown && this.y >= 352.5;
-        const destInSouthField = !destInTown && destY >= 352.5;
-
-        if (startInRebirthMidField && !destInRebirthMidField) {
-          path.push({ x: 1455, y: 575 });
-          path.push({ x: 1365, y: 575 });
-          path.push({ x: 960, y: 575 });
-          path.push({ x: 960, y: 353 });
-          path.push({ x: 960, y: 120 });
-        }
+        const startInRebirthField = !startInTown && this.x >= 1410 && this.y > 360 && this.y <= 795;
+        const destInRebirthField = !destInTown && destX >= 1410 && destY > 360 && destY <= 795;
+        const startInSouthField = !startInTown && (this.y >= 352.5 || startInRebirthField);
+        const destInSouthField = !destInTown && (destY >= 352.5 || destInRebirthField);
 
         if (startInTopField && !destInTopField) {
           path.push({ x: 1455, y: 18 });
           path.push({ x: 1365, y: 18 });
+        }
+
+        if (startInRebirthField && !destInRebirthField) {
+          path.push({ x: 1455, y: 575 });
+          path.push({ x: 1365, y: 575 });
+          path.push({ x: 960, y: 575 });
         }
 
         if (startInSouthField && (!destInSouthField || destInTown)) {
@@ -5729,7 +5473,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           }
           path.push({ x: 960, y: 390 });
           path.push({ x: 960, y: 310 });
-        } else if (startInSouthField && destInSouthField && !startInRebirthMidField && !destInRebirthMidField) {
+        } else if (startInSouthField && destInSouthField && !startInRebirthField && !destInRebirthField) {
           // 중급 <-> 상급 사냥터 간 직접 이동 시 연결 통로 경유
           if (this.y < 800 && destY >= 800) {
             path.push({ x: 960, y: 760 });
@@ -5751,27 +5495,27 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           }
         }
 
-        // 3) 목적지가 환생 전용 사냥터(중급 옆), 최상급 또는 중급/상급 사냥터인 경우 진입 연결 통로 경유
-        if (!startInRebirthMidField && destInRebirthMidField) {
-          path.push({ x: 960, y: 120 });
-          path.push({ x: 960, y: 353 });
-          path.push({ x: 960, y: 575 });
-          path.push({ x: 1365, y: 575 });
-          path.push({ x: 1455, y: 575 });
-        }
-
+        // 3) 목적지가 최상급 또는 중급/상급/환생 전용 사냥터인 경우 진입 연결 통로 경유
         if (!startInTopField && destInTopField) {
           path.push({ x: 1365, y: 18 });
           path.push({ x: 1455, y: 18 });
         }
 
-        if ((!startInSouthField || startInTown) && destInSouthField && !destInRebirthMidField) {
+        if ((!startInSouthField || startInTown) && destInSouthField) {
           path.push({ x: 960, y: 310 });
           path.push({ x: 960, y: 390 });
-          if (destY >= 800) {
+          if (destInRebirthField) {
+            path.push({ x: 960, y: 575 });
+            path.push({ x: 1365, y: 575 });
+            path.push({ x: 1455, y: 575 });
+          } else if (destY >= 800) {
             path.push({ x: 960, y: 760 });
             path.push({ x: 960, y: 840 });
           }
+        } else if (!startInRebirthField && destInRebirthField) {
+          path.push({ x: 960, y: 575 });
+          path.push({ x: 1365, y: 575 });
+          path.push({ x: 1455, y: 575 });
         }
 
         path.push({ x: destX, y: destY });
@@ -6017,9 +5761,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       }
 
       getStatusDescription() {
-        if (this.state === 'COLOSSEUM_TRAINING') {
-          return '🏟️ 콜로세움 경기장 전용 한계 수련 중 (5환생 · Lv.99)';
-        }
         if (this.state === 'REBIRTH_ALTAR_HUNT') {
           return '✨ 초월 환생의 제단 최상급 중간보스 교전 중!';
         }
@@ -6177,30 +5918,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         }
 
         const buildings = village.getAllBuildings();
-        // [콜로세움 경기장 전용 성장 루트] 환생 5회 & Lv.99 헌터는 마을 상단 콜로세움 경기장에서 자율 수련 성장
-        if (canHunterEnterColosseum(this) && BOSS_SANCTUM.status === 'CLOSED') {
-          if (this.hp < this.maxHp * 0.45 || this.fatigue >= 85) {
-            const restBld = buildings.find(b => b.type === 'temple') || buildings.find(b => b.type === 'inn');
-            if (restBld) {
-              this.setDestinationWithGatePath(restBld.x, restBld.y + restBld.h / 2 + 16);
-              this.targetBuildingName = restBld.name;
-              this.targetBuildingType = restBld.type;
-              this.targetGroundId = null;
-              this.state = 'WALKING';
-              return;
-            }
-          }
-          const cb = COLOSSEUM_ARENA.bounds;
-          const ax = cb.x + 65 + Math.random() * (cb.w - 130);
-          const ay = cb.y + 68 + Math.random() * (cb.h - 105);
-          this.setDestinationWithGatePath(ax, ay);
-          this.targetBuildingName = COLOSSEUM_ARENA.name;
-          this.targetBuildingType = COLOSSEUM_ARENA.id;
-          this.targetGroundId = COLOSSEUM_ARENA.id;
-          this.state = 'WALKING';
-          return;
-        }
-
         // Lv.99 도달 및 환생 가능 상태라면 최우선으로 환생소 방문
         if (this.level >= LEVEL_REBIRTH_CONFIG.maxLevel && this.rebirthCount < LEVEL_REBIRTH_CONFIG.maxRebirths) {
           const rebirthHall = buildings.find(b => b.type === 'rebirth_hall');
@@ -6351,55 +6068,12 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           }
         }
 
-        // 초보 사냥터 적정 구간(Lv.1~20)이면 초보 사냥터 우선 출정
-        if (!canHunterEnterRebirthSanctuary(this)) {
-          const matchedGround = HUNTING_GROUNDS.find(hg => evaluateHuntingGroundPreference(this, hg).matched);
-          if (matchedGround && Math.random() < 0.72) {
-            const aliveMonsters = matchedGround.monsters.filter(m => m.hp > 0);
-            let gx = matchedGround.centerX;
-            let gy = matchedGround.centerY;
-            if (aliveMonsters.length > 0) {
-              const pickMon = aliveMonsters[Math.floor(Math.random() * aliveMonsters.length)];
-              gx = pickMon.x;
-              gy = pickMon.y;
-            } else {
-              const pad = 80;
-              gx = matchedGround.bounds.x + pad + Math.random() * (matchedGround.bounds.w - pad * 2);
-              gy = matchedGround.bounds.y + 95 + Math.random() * (matchedGround.bounds.h - pad - 95);
-            }
-            this.setDestinationWithGatePath(gx, gy);
-            this.targetBuildingName = matchedGround.name;
-            this.targetBuildingType = 'hunting_ground';
-            this.targetGroundId = matchedGround.id;
-            this.state = 'WALKING';
-            return;
-          }
-        }
-
-        // 환생 헌터(1환생 이상)는 레벨 사냥터 대신 윤회의 성역에서 사냥하도록 유도
-        if (canHunterEnterRebirthSanctuary(this) && isHealthy) {
-          const aliveSanctuaryMonsters = REBIRTH_MID_SANCTUARY.monsters.filter(m => m.hp > 0);
-          let sx = REBIRTH_MID_SANCTUARY.centerX;
-          let sy = REBIRTH_MID_SANCTUARY.centerY;
-          if (aliveSanctuaryMonsters.length > 0) {
-            const pickSanctuaryMon = aliveSanctuaryMonsters[Math.floor(Math.random() * aliveSanctuaryMonsters.length)];
-            sx = pickSanctuaryMon.x;
-            sy = pickSanctuaryMon.y;
-          } else {
-            const sb = REBIRTH_MID_SANCTUARY.bounds;
-            sx = sb.x + 80 + Math.random() * (sb.w - 160);
-            sy = sb.y + 95 + Math.random() * (sb.h - 150);
-          }
-          this.setDestinationWithGatePath(sx, sy);
-          this.targetBuildingName = REBIRTH_MID_SANCTUARY.name;
-          this.targetBuildingType = 'hunting_ground';
-          this.targetGroundId = REBIRTH_MID_SANCTUARY.id;
-          this.state = 'WALKING';
-          interactionManager.spawnBubble(this, '✨ 윤회의 성역 사냥 출정!', '#f0abfc');
-          return;
-        }
-
-        const matchedGround = HUNTING_GROUNDS.find(hg => evaluateHuntingGroundPreference(this, hg).matched);
+        // 현재 레벨 및 환생 단계에 가장 적합한 사냥터 우선 출정 (1환생 이상 헌터는 윤회의 성역 최우선 평가)
+        const matchedGrounds = HUNTING_GROUNDS
+          .map(hg => ({ hg, pref: evaluateHuntingGroundPreference(this, hg) }))
+          .filter(entry => entry.pref.matched)
+          .sort((a, b) => b.pref.score - a.pref.score);
+        const matchedGround = matchedGrounds.length > 0 ? matchedGrounds[0].hg : null;
         if (matchedGround && Math.random() < 0.72) {
           const aliveMonsters = matchedGround.monsters.filter(m => m.hp > 0);
           let gx = matchedGround.centerX;
@@ -6539,67 +6213,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         }
         if (this.state !== 'USING_FACILITY') {
           this.facilityStuckTimer = 0;
-        }
-
-        // [콜로세움 경기장 자율 수련 상태] 몬스터 없이 5환생·Lv.99 헌터 전용 성장 주기 수행
-        if (this.state === 'COLOSSEUM_TRAINING') {
-          if (!canHunterEnterColosseum(this)) {
-            this.state = 'IDLE';
-            this.stateTimer = 0.4;
-            this.targetBuildingName = '';
-            this.targetBuildingType = '';
-            this.targetGroundId = null;
-            return;
-          }
-          if (this.hp < this.maxHp * 0.35 || this.fatigue >= 88) {
-            this.state = 'IDLE';
-            this.stateTimer = 0.3;
-            this.targetBuildingName = '';
-            this.targetBuildingType = '';
-            this.targetGroundId = null;
-            return;
-          }
-
-          const cb = COLOSSEUM_ARENA.bounds;
-          const dx = (this.targetX ?? COLOSSEUM_ARENA.centerX) - this.x;
-          const dy = (this.targetY ?? COLOSSEUM_ARENA.centerY) - this.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > 6) {
-            this.facing = dx >= 0 ? 1 : -1;
-            this.x += (dx / dist) * this.speed * 1.1 * dt;
-            this.y += (dy / dist) * this.speed * 1.1 * dt;
-            this.x = Math.max(cb.x + 24, Math.min(cb.x + cb.w - 24, this.x));
-            this.y = Math.max(cb.y + 52, Math.min(cb.y + cb.h - 22, this.y));
-            this.walkCycle += dt * 11;
-          } else {
-            this.walkCycle += dt * 4.5;
-            if (Math.random() < 0.015) {
-              this.facing = Math.random() < 0.5 ? -1 : 1;
-              this.targetX = cb.x + 65 + Math.random() * (cb.w - 130);
-              this.targetY = cb.y + 68 + Math.random() * (cb.h - 105);
-            }
-          }
-
-          this.attackCooldown = (this.attackCooldown || 0) - dt;
-          if (this.attackCooldown <= 0) {
-            this.attackCooldown = 1.1;
-            this.attackAnimTimer = 0.28;
-            const combat = this.getCombatProfile();
-            combatEffects.spawnMeleeSlash({
-              x: this.x + this.facing * 16,
-              y: this.y - 2,
-              facing: this.facing,
-              slashType: combat.slashType,
-              color: '#fde047'
-            });
-          }
-
-          this.colosseumGrowthTimer = (this.colosseumGrowthTimer || 0) + dt;
-          if (this.colosseumGrowthTimer >= COLOSSEUM_ARENA.growthInterval) {
-            this.colosseumGrowthTimer = 0;
-            rewardColosseumTrainingGrowth(this);
-          }
-          return;
         }
         if (this.skills?.actives) {
           for (let i = 0; i < this.skills.actives.length; i++) {
@@ -6811,18 +6424,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
 
         // [사냥터 야외 필드 전투 상태]
         if (this.state === 'HUNTING_FIELD') {
-          const ground = this.activeGroundId === REBIRTH_MID_SANCTUARY.id
-            ? REBIRTH_MID_SANCTUARY
-            : HUNTING_GROUNDS.find(g => g.id === this.activeGroundId);
-          if (ground && ground.id === REBIRTH_MID_SANCTUARY.id && !canHunterEnterRebirthSanctuary(this)) {
-            this.state = 'IDLE';
-            this.stateTimer = 0.4;
-            this.activeGroundId = null;
-            this.currentTargetMonster = null;
-            this.currentTargetHunter = null;
-            interactionManager.spawnBubble(this, '🔒 1환생 이상 전용 구역!', '#fca5a5');
-            return;
-          }
+          const ground = HUNTING_GROUNDS.find(g => g.id === this.activeGroundId);
           const hasActivePvpDuel = Boolean(
             this.currentTargetHunter &&
             this.currentTargetHunter.hp > 0 &&
@@ -6840,9 +6442,9 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             return;
           }
 
-          // 환생 헌터(1환생 이상)는 레벨 사냥터 패널티 대신 윤회의 성역 사냥을 유지하고, 일반 헌터만 레벨 구간 이탈 시 이동
+          // 본인이 21레벨에 도달해 초보 사냥터 경험치 90% 감소 패널티가 적용되면 스스로 사냥터 이탈 판단
           const pref = evaluateHuntingGroundPreference(this, ground);
-          if (!hasActivePvpDuel && !canHunterEnterRebirthSanctuary(this) && !pref.matched) {
+          if (!hasActivePvpDuel && !pref.matched) {
             interactionManager.spawnBubble(this, '🎓 Lv.21 달성! 상위 사냥터/던전으로!', '#38bdf8');
             this.state = 'IDLE';
             this.stateTimer = 0.4;
@@ -7288,50 +6890,17 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             this.pickNextDestination();
           }
         } else if (this.state === 'WALKING') {
-          let goalX = this.targetX ?? this.x;
-          let goalY = this.targetY ?? this.y;
-          let isIntermediateWaypoint = false;
-
-          if (Array.isArray(this.waypoints) && this.waypoints.length > 0) {
-            const curWp = this.waypoints[0];
-            const wpDist = Math.hypot((curWp.x ?? this.x) - this.x, (curWp.y ?? this.y) - this.y);
-            if (wpDist < 10) {
-              this.waypoints.shift();
-            }
-            if (this.waypoints.length > 0) {
-              goalX = this.waypoints[0].x ?? goalX;
-              goalY = this.waypoints[0].y ?? goalY;
-              isIntermediateWaypoint = this.waypoints.length > 1;
-            }
-          }
-
-          const dx = goalX - this.x;
-          const dy = goalY - this.y;
-          const dist = Math.hypot(dx, dy);
-
           // 사냥터 출정 이동 중 사냥터 경계에 진입하면 끝점까지 가지 않고 즉시 몬스터 탐색 및 교전 전환
           if (this.targetBuildingType === 'hunting_ground' && this.targetGroundId) {
-            const ground = this.targetGroundId === REBIRTH_MID_SANCTUARY.id
-              ? REBIRTH_MID_SANCTUARY
-              : HUNTING_GROUNDS.find(g => g.id === this.targetGroundId);
-            if (ground && ground.id === REBIRTH_MID_SANCTUARY.id && !canHunterEnterRebirthSanctuary(this)) {
-              this.waypoints = [];
-              this.targetBuildingName = '';
-              this.targetBuildingType = '';
-              this.targetGroundId = null;
-              this.state = 'IDLE';
-              this.stateTimer = 0.5;
-              interactionManager.spawnBubble(this, '🔒 1환생 이상만 입장 가능!', '#fca5a5');
-              return;
-            }
-            const hasRemainingMidWaypoints = ground && (ground.id === 'mid_field_20_40' || ground.id === 'top_field_70_99' || ground.id === REBIRTH_MID_SANCTUARY.id) && (this.waypoints?.length || 0) > 1;
+            const ground = HUNTING_GROUNDS.find(g => g.id === this.targetGroundId);
+            const hasRemainingMidWaypoints = ground && (ground.id === 'mid_field_20_40' || ground.id === 'top_field_70_99' || ground.id === 'rebirth_sanctuary_field') && (this.waypoints?.length || 0) > 1;
             if (ground && !hasRemainingMidWaypoints) {
               const b = ground.bounds;
               const enteredGround = (
-                this.x >= b.x + 12 &&
-                this.x <= b.x + b.w - 12 &&
-                this.y >= b.y + 42 &&
-                this.y <= b.y + b.h - 14
+                this.x >= b.x + 24 &&
+                this.x <= b.x + b.w - 24 &&
+                this.y >= b.y + 68 &&
+                this.y <= b.y + b.h - 24
               );
               if (enteredGround) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
@@ -7339,14 +6908,9 @@ function awardColosseumVictoryPoint(winner, loser = null) {
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
                 if (!this.currentTargetMonster || this.currentTargetMonster.hp <= 0) {
-                  this.currentTargetMonster = ground.monsters.find(m => m && m.hp > 0) || null;
+                  this.currentTargetMonster = null;
                 }
-                if (this.currentTargetMonster) {
-                  this.targetX = this.currentTargetMonster.x;
-                  this.targetY = this.currentTargetMonster.y;
-                }
-                this.attackCooldown = 0;
-                this.huntTimer = 18 + Math.random() * 8;
+                this.huntTimer = 14 + Math.random() * 6;
                 interactionManager.spawnBubble(
                   this,
                   pref.matched ? `🌿 사냥 시작! (${pref.label})` : '⚠️ 경험치 90% 감소 구간...',
@@ -7357,23 +6921,20 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             }
           }
 
-          if (dist < 12 && !isIntermediateWaypoint) {
-            if (this.targetBuildingType === COLOSSEUM_ARENA.id) {
-              if (!canHunterEnterColosseum(this)) {
-                this.state = 'IDLE';
-                this.stateTimer = 0.5;
-                this.targetBuildingName = '';
-                this.targetBuildingType = '';
-                this.targetGroundId = null;
-                showToast(`🔒 '${this.name}' 헌터는 환생 5회 & Lv.99 달성 시 [콜로세움 경기장]에 입장할 수 있습니다.`);
-                return;
-              }
-              this.state = 'COLOSSEUM_TRAINING';
-              this.activeGroundId = COLOSSEUM_ARENA.id;
-              this.colosseumGrowthTimer = 0;
-              this.attackCooldown = 0.6;
-              interactionManager.spawnBubble(this, '🏟️ 콜로세움 한계 수련 돌입!', '#fde047');
-              return;
+          const curGoal = (this.waypoints && this.waypoints.length > 0)
+            ? this.waypoints[0]
+            : { x: this.targetX, y: this.targetY };
+          const dx = curGoal.x - this.x;
+          const dy = curGoal.y - this.y;
+          const dist = Math.hypot(dx, dy);
+
+          if (dist < 4) {
+            this.x = curGoal.x;
+            this.y = curGoal.y;
+
+            if (this.waypoints && this.waypoints.length > 0) {
+              this.waypoints.shift();
+              if (this.waypoints.length > 0) return;
             }
 
             if (this.targetBuildingType === REBIRTH_ALTAR.id) {
@@ -7392,32 +6953,15 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             }
 
             if (this.targetBuildingType === 'hunting_ground' && this.targetGroundId) {
-              const ground = this.targetGroundId === REBIRTH_MID_SANCTUARY.id
-                ? REBIRTH_MID_SANCTUARY
-                : HUNTING_GROUNDS.find(g => g.id === this.targetGroundId);
-              if (ground && ground.id === REBIRTH_MID_SANCTUARY.id && !canHunterEnterRebirthSanctuary(this)) {
-                this.state = 'IDLE';
-                this.stateTimer = 0.5;
-                this.targetBuildingName = '';
-                this.targetBuildingType = '';
-                this.targetGroundId = null;
-                interactionManager.spawnBubble(this, '🔒 1환생 이상만 입장 가능!', '#fca5a5');
-                return;
-              }
+              const ground = HUNTING_GROUNDS.find(g => g.id === this.targetGroundId);
               if (ground) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
-                this.waypoints = [];
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
                 if (!this.currentTargetMonster || this.currentTargetMonster.hp <= 0) {
-                  this.currentTargetMonster = ground.monsters.find(m => m && m.hp > 0) || null;
+                  this.currentTargetMonster = null;
                 }
-                if (this.currentTargetMonster) {
-                  this.targetX = this.currentTargetMonster.x;
-                  this.targetY = this.currentTargetMonster.y;
-                }
-                this.attackCooldown = 0;
-                this.huntTimer = 18 + Math.random() * 8;
+                this.huntTimer = 14 + Math.random() * 6;
                 interactionManager.spawnBubble(
                   this,
                   pref.matched ? `🌿 사냥 시작! (${pref.label})` : '⚠️ 경험치 90% 감소 구간...',
@@ -7969,7 +7513,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       }
 
       _clampTargetBounds() {
-        this.targetX = Math.max(-750, Math.min(2050, this.targetX));
+        this.targetX = Math.max(-750, Math.min(2150, this.targetX));
         this.targetY = Math.max(-680, Math.min(1260, this.targetY));
       }
 
@@ -8256,32 +7800,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
 
     window.spawnTestRebirthMercenary = spawnTestRebirthMercenary;
 
-    // 테스트용 환생 5회 · Lv.99 헌터 생성 헬퍼
-    function spawnTestRebirth5Lv99Hunter(options = {}) {
-      const merc = spawnTestRebirthMercenary({
-        rebirthCount: 5,
-        level: LEVEL_REBIRTH_CONFIG.maxLevel,
-        equipTier: Math.max(5, Math.min(MAX_EQUIP_TIER, options.equipTier || 5)),
-        equipEnhance: Math.max(0, Math.min(15, options.equipEnhance ?? 12)),
-        name: options.name || generateRandomHunterName(hunters),
-        ...options
-      });
-      if (merc) {
-        const cb = COLOSSEUM_ARENA.bounds;
-        merc.x = cb.x + 80 + Math.random() * (cb.w - 160);
-        merc.y = cb.y + 70 + Math.random() * (cb.h - 105);
-        merc.targetX = merc.x;
-        merc.targetY = merc.y;
-        merc.waypoints = [];
-        merc.state = 'COLOSSEUM_TRAINING';
-        merc.activeGroundId = COLOSSEUM_ARENA.id;
-        merc.colosseumGrowthTimer = 0;
-      }
-      return merc;
-    }
-
-    window.spawnTestRebirth5Lv99Hunter = spawnTestRebirth5Lv99Hunter;
-
     // 마을 조경 소품 (나무 & 가로등)
     const props = [
       { type: 'tree', x: -490, y: -330 },
@@ -8427,15 +7945,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           }
         }
       }
-
-      for (let mIdx = REBIRTH_MID_SANCTUARY.monsters.length - 1; mIdx >= 0; mIdx--) {
-        const m = REBIRTH_MID_SANCTUARY.monsters[mIdx];
-        if (!m || m.hp <= 0) continue;
-        const hitRadius = m.kind === 'kingslime' ? 25 : 20;
-        if (Math.hypot(wx - m.x, wy - m.y) <= hitRadius) {
-          return { monster: m, ground: REBIRTH_MID_SANCTUARY };
-        }
-      }
       return null;
     }
 
@@ -8473,8 +7982,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           baseGold: REBIRTH_ALTAR.boss.rewardHunterGold,
           monsters: [REBIRTH_ALTAR.boss]
         };
-      } else if (gameState.selectedMonsterGroundId === REBIRTH_MID_SANCTUARY.id) {
-        ground = REBIRTH_MID_SANCTUARY;
       } else {
         ground = HUNTING_GROUNDS.find(g => g.id === gameState.selectedMonsterGroundId);
       }
@@ -8969,7 +8476,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const gsLv = gsBld ? gsBld.level : 1;
         const baseSellUnit = 45 + gsLv * 15;
 
-        const lootIds = ['loot_beginner_crystal', 'loot_mid_ore', 'loot_high_heart', 'loot_top_astral'];
+        const lootIds = ['loot_beginner_crystal', 'loot_mid_ore', 'loot_high_heart', 'loot_rebirth_essence', 'loot_top_astral'];
         let totalExpectedLootGold = 0;
         const lootCardsHtml = lootIds.map(id => {
           const def = ITEM_CATALOG[id];
@@ -8982,8 +8489,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               <div class="inv-slot-icon">${def.icon}</div>
               <div class="inv-slot-name">${def.name}</div>
               <div class="inv-slot-qty">${qty}개</div>
-              <div class="inv-slot-sub">단가 ${formatGold(unitVal)}G</div>
-              <div class="inv-slot-sub" style="color:${qty > 0 ? '#86efac' : '#64748b'};font-weight:700;">합계 ${formatGold(sumVal)}G</div>
+              <div class="inv-slot-sub">${qty > 0 ? `예상 ${formatGold(sumVal)}G` : `단가 ${formatGold(unitVal)}G`}</div>
             </div>
           `;
         }).join('');
@@ -9081,17 +8587,10 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const isTrait = h.personality.kind === 'trait';
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
-        const killCount = Math.max(0, Math.floor(Number(h.pkKills) || 0));
-        const colPts = Math.max(0, Math.floor(Number(h.colosseumPoints) || 0));
-        const colWins = Math.max(0, Math.floor(Number(h.colosseumWins) || 0));
         const alignHtml = `
           <div style="margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;align-items:center;font-size:11.5px;">
             <span style="color:#e2e8f0;font-weight:700;">⚖️ 인성: <b style="color:${alignInfo.color};">${alignSign}</b> <span style="color:#94a3b8;font-size:10px;">(선인 +100 ~ 카오스 -100)</span></span>
-            <span style="display:inline-flex;align-items:center;gap:5px;">
-              <span style="color:#fde047;font-weight:800;font-size:11px;">🏟️ 승점 ${colPts}점 (${colWins}승)</span>
-              <span style="color:#fca5a5;font-weight:800;font-size:11px;">🗡️ 살인 ${killCount.toLocaleString()}회</span>
-              <span class="${alignInfo.badgeClass}">${alignInfo.label}</span>
-            </span>
+            <span class="${alignInfo.badgeClass}">${alignInfo.label}</span>
           </div>
         `;
         const equippedIns = h.getEquippedInsignia();
@@ -9596,12 +9095,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       const jobIcons = { '버서커': '🪓', '레인저': '🏹', '팔라딘': '🛡️', '소서러': '🔮' };
       const currentIds = hunters.map(h => `${h.id}:${canHunterEnterRebirthAltar(h) ? 1 : 0}`).join(',');
 
-      const formatRebirthGoldStars = (rebirthCount) => {
-        const count = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Math.floor(Number(rebirthCount) || 0)));
-        if (count <= 0) return '<span style="color:#64748b;font-size:10.5px;font-weight:600;">없음</span>';
-        return `<span class="roster-gold-stars" title="환생 ${count}회">${'★'.repeat(count)}</span>`;
-      };
-
       // 헌터 목록 구성이 달라진 경우에만 DOM을 새로 생성 (터치 도중 DOM 파괴 방지)
       if (forceRebuild || body.dataset.renderedIds !== currentIds) {
         body.dataset.renderedIds = currentIds;
@@ -9609,7 +9102,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           const stats = h.getComputedStats();
           const isTrait = h.personality?.kind === 'trait';
           const alignInfo = getAlignmentInfo(h.alignment);
-          const killCount = Math.max(0, Math.floor(Number(h.pkKills) || 0));
+          const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
           const jIcon = jobIcons[h.baseJob || h.job] || '⚔️';
           const eq = h.equipment || {};
           const wTier = eq.weapon?.tier || 1;
@@ -9626,13 +9119,12 @@ function awardColosseumVictoryPoint(winner, loser = null) {
                 <div class="roster-name-group">
                   <span class="roster-hunter-name">${h.name}</span>
                   <span class="roster-job-badge" data-role="job-lv">${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}</span>
-                  <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label}</span>
                 </div>
                 <span class="roster-personality-badge ${isTrait ? 'personality-tag-trait' : 'personality-tag-penalty'}">${h.personality.icon} ${h.personality.name}</span>
               </div>
               <div class="roster-sub-row">
-                <span class="roster-rebirth-wrap">환생 <span data-role="rebirth">${formatRebirthGoldStars(h.rebirthCount)}</span></span>
-                <span data-role="pk-kills" style="color:#fca5a5;font-weight:800;font-size:10.5px;white-space:nowrap;">🗡️ 살인 ${killCount.toLocaleString()}회</span>
+                <span class="roster-rebirth-wrap">환생 <span class="rebirth-orbs" data-role="rebirth">${renderRebirthOrbsHtml(h.rebirthCount)}</span></span>
+                <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label} (${alignSign})</span>
                 <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${h.personality.effectText}</span>
               </div>
               <div class="roster-mini-bars">
@@ -9647,7 +9139,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               </div>
               <div class="roster-card-meta">
                 <span data-role="stats">⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%</span>
-                <span data-role="colosseum-pts" style="color:#fde047;font-weight:800;">🏟️ 승점 ${Math.max(0, Math.floor(Number(h.colosseumPoints) || 0))}점</span>
                 <span data-role="gold" style="color:#fde047;font-weight:800;">💰 ${formatGold(h.personalGold)} G</span>
               </div>
               <div class="roster-card-meta" style="color:#fde68a;font-weight:700;">
@@ -9689,18 +9180,14 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         if (jobLvEl) jobLvEl.textContent = `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`;
 
         const rebirthEl = card.querySelector('[data-role="rebirth"]');
-        if (rebirthEl) rebirthEl.innerHTML = formatRebirthGoldStars(h.rebirthCount);
+        if (rebirthEl) rebirthEl.innerHTML = renderRebirthOrbsHtml(h.rebirthCount);
 
         const alignInfo = getAlignmentInfo(h.alignment);
-        const killCount = Math.max(0, Math.floor(Number(h.pkKills) || 0));
+        const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
         const alignEl = card.querySelector('[data-role="alignment"]');
         if (alignEl) {
           alignEl.className = alignInfo.badgeClass;
-          alignEl.textContent = `⚖️ ${alignInfo.label}`;
-        }
-        const pkKillsEl = card.querySelector('[data-role="pk-kills"]');
-        if (pkKillsEl) {
-          pkKillsEl.textContent = `🗡️ 살인 ${killCount.toLocaleString()}회`;
+          alignEl.textContent = `⚖️ ${alignInfo.label} (${alignSign})`;
         }
 
         const hpText = card.querySelector('[data-role="hp-text"]');
@@ -9715,9 +9202,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
 
         const statsEl = card.querySelector('[data-role="stats"]');
         if (statsEl) statsEl.textContent = `⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%`;
-
-        const colPtsEl = card.querySelector('[data-role="colosseum-pts"]');
-        if (colPtsEl) colPtsEl.textContent = `🏟️ 승점 ${Math.max(0, Math.floor(Number(h.colosseumPoints) || 0))}점`;
 
         const goldEl = card.querySelector('[data-role="gold"]');
         if (goldEl) goldEl.textContent = `💰 ${formatGold(h.personalGold)} G`;
@@ -9990,9 +9474,12 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           ...HUNTING_GROUNDS.filter(g => g.miniBossConfig).map((g) => {
             const gCfg = getBossStageConfig(g.miniBossConfig.bossStageRef || 1);
             const estHp = Math.max(2250, Math.round((gCfg.maxHp / 5) * 1.5));
-            const estAtk = Math.max(30, Math.round(gCfg.atk / 5));
-            const insDef = ITEM_CATALOG[g.miniBossConfig.insigniaId];
-            const insPct = insDef ? Math.round((insDef.monsterDmgBonusPct || 0) * 100) : 25;
+            const estAtk = Math.max(30, Math.round((gCfg.atk / 5) * (g.miniBossConfig.atkMultiplier || 1)));
+            const insDef = g.miniBossConfig.insigniaId ? ITEM_CATALOG[g.miniBossConfig.insigniaId] : null;
+            const insPct = insDef ? Math.round((insDef.monsterDmgBonusPct || 0) * 100) : 0;
+            const rewardDesc = insDef
+              ? `<b>${insDef.icon} ${insDef.name} (몬스터 피해 +${insPct}%)</b> 및 고액 전리품을 지급합니다.`
+              : `고액 전리품(<b>${g.lootSpec?.icon || '🌠'} ${g.lootSpec?.name || '영혼결정'}</b>) 및 대량 골드·경험치를 지급합니다.`;
             return `
               <div class="facility-guide-card">
                 <div class="facility-guide-head">
@@ -10000,7 +9487,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
                   <span class="facility-guide-cost">${g.icon} ${g.name.split(' (')[0]}</span>
                 </div>
                 <div class="facility-guide-stat">예상 HP ${estHp.toLocaleString()} · ATK ${estAtk.toLocaleString()} · 리젠 ${g.miniBossConfig.respawnDelay}s</div>
-                <div class="facility-guide-role">일반 몬스터 출현/리젠 시 <b>0.1%</b> 확률로 등장하며, 처치 시 <b>${insDef ? `${insDef.icon} ${insDef.name}` : '지역 인장'} (몬스터 피해 +${insPct}%)</b> 및 고액 전리품을 지급합니다.</div>
+                <div class="facility-guide-role">일반 몬스터 출현/리젠 시 <b>0.1%</b> 확률로 등장하며, 처치 시 ${rewardDesc}</div>
               </div>
             `;
           }),
@@ -10097,8 +9584,8 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         body.innerHTML = `
           <div class="tier-note-grid">
             <div class="tier-note-card">
-              <h4>🌿 초보 사냥터 (Lv.1 ~ Lv.20)</h4>
-              마을 동쪽 관문 밖 초보 사냥터는 <b>Lv.1~10 구간에서 경험치 +50% 보너스</b>, <b>Lv.11~20 구간에서 기본 경험치</b>를 제공하며, <b>Lv.21 이상</b>이 되면 경험치가 <b>90% 감소</b>하여 헌터가 스스로 던전·훈련소로 이동합니다.
+              <h4>🌿 초보 사냥터 & 🌠 윤회의 성역 (환생 전용)</h4>
+              마을 동쪽 관문 밖 초보 사냥터는 <b>Lv.1~10 구간 경험치 +50% 보너스</b>, <b>Lv.11~20 구간 기본 경험치</b>를 제공하며, <b>중급 사냥터(안개 협곡) 동쪽 옆</b>에는 <b>1환생 이상 헌터만 입장 가능한 전용 사냥터 [🌠 윤회의 성역]</b>이 위치해 전 레벨(Lv.1~99) 기본 경험치와 윤회 성역의 영혼결정을 드랍합니다.
             </div>
             <div class="tier-note-card">
               <h4>🌟 Lv.99 환생 시스템 (최대 5구슬)</h4>
@@ -11071,177 +10558,13 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       ctx.save();
       ctx.translate(m.x, m.y);
 
-      if (m._homeSanctuaryId === REBIRTH_MID_SANCTUARY.id) {
-        const isMoving = Math.hypot((m.wanderX ?? m.x) - m.x, (m.wanderY ?? m.y) - m.y) > 4 || !!m.provoked;
-        const isAttacking = (m.attackAnimTimer || 0) > 0;
-        const stride = isMoving ? Math.sin(t * 2.8) : 0;
-        const attackProg = isAttacking ? (1 - m.attackAnimTimer / 0.34) : 0;
-        const armSwing = isAttacking ? Math.sin(attackProg * Math.PI) : 0;
-        const giantBob = isMoving ? Math.abs(Math.sin(t * 2.2)) * 2.6 : 0;
-        const auraPulse = 0.45 + Math.sin(t * 2.4) * 0.14;
-
-        const giantPalette = kind === 'kingslime'
-          ? { body: '#6d28d9', armor: '#4c1d95', trim: '#fde047', core: '#f472b6', glow: 'rgba(244, 114, 182, 0.55)', scale: 1.24 }
-          : kind === 'manaorc'
-            ? { body: '#4338ca', armor: '#312e81', trim: '#7dd3fc', core: '#38bdf8', glow: 'rgba(56, 189, 248, 0.52)', scale: 1.14 }
-            : kind === 'shadowwolf'
-              ? { body: '#581c87', armor: '#3b0764', trim: '#f0abfc', core: '#e879f9', glow: 'rgba(232, 121, 249, 0.52)', scale: 1.15 }
-              : { body: '#5b21b6', armor: '#3b0764', trim: '#fde047', core: '#c084fc', glow: 'rgba(192, 132, 252, 0.52)', scale: 1.18 };
-
-        // 바닥 윤회 마법진 & 거인 그림자
-        ctx.save();
-        ctx.translate(0, 16);
-        ctx.scale(1, 0.42);
-        ctx.strokeStyle = `rgba(240, 171, 252, ${auraPulse})`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(0, 0, 26 * giantPalette.scale, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
-        ctx.beginPath();
-        ctx.ellipse(0, 16, 20 * giantPalette.scale, 7.5, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.save();
-        ctx.scale(giantPalette.scale, giantPalette.scale);
-        ctx.translate(0, -giantBob);
-
-        // 1) 거인 다리 (좌·우 교차 보행)
-        ctx.save();
-        ctx.translate(-7.5, 5);
-        ctx.rotate(stride * 0.45);
-        ctx.fillStyle = giantPalette.armor;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.roundRect(-4.5, 0, 9, 12, 3.5);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(7.5, 5);
-        ctx.rotate(-stride * 0.45);
-        ctx.fillStyle = giantPalette.armor;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.roundRect(-4.5, 0, 9, 12, 3.5);
-        ctx.fill();
-        ctx.stroke();
-        ctx.restore();
-
-        // 2) 거인 팔 (공격 시에만 스윙/내려찍기 동작, 이동 중에는 정지 유지)
-        ctx.save();
-        ctx.translate(-14, -10);
-        ctx.rotate(isAttacking ? (-0.55 - armSwing * 0.75) : 0.08);
-        ctx.fillStyle = giantPalette.body;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.roundRect(-5, -2, 8.5, 17, 4);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = giantPalette.trim;
-        ctx.beginPath();
-        ctx.arc(-0.8, 14, 4.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        ctx.save();
-        ctx.translate(14, -10);
-        ctx.rotate(isAttacking ? (0.55 + armSwing * 0.75) : -0.08);
-        ctx.fillStyle = giantPalette.body;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.roundRect(-3.5, -2, 8.5, 17, 4);
-        ctx.fill();
-        ctx.stroke();
-        ctx.fillStyle = giantPalette.trim;
-        ctx.beginPath();
-        ctx.arc(0.8, 14, 4.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // 3) 거인 상체 갑주 & 어깨 견갑
-        ctx.fillStyle = giantPalette.body;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 2.2;
-        ctx.beginPath();
-        ctx.roundRect(-13.5, -15, 27, 22, 7);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = giantPalette.armor;
-        ctx.beginPath();
-        ctx.arc(-13.5, -12, 6, Math.PI, 0);
-        ctx.arc(13.5, -12, 6, Math.PI, 0);
-        ctx.fill();
-        ctx.stroke();
-
-        // 흉부 빛나는 윤회 코어 보석
-        ctx.fillStyle = giantPalette.core;
-        ctx.shadowColor = giantPalette.core;
-        ctx.shadowBlur = 10;
-        ctx.beginPath();
-        ctx.arc(0, -4, 4.8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        // 4) 거인 머리 & 판타지 윤회 뿔/왕관 장식
-        ctx.fillStyle = giantPalette.armor;
-        ctx.strokeStyle = giantPalette.trim;
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        ctx.arc(0, -22, 8.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // 판타지 초승달 뿔 / 왕관
-        ctx.fillStyle = giantPalette.trim;
-        ctx.beginPath();
-        ctx.moveTo(-7, -27);
-        ctx.lineTo(-13, -38);
-        ctx.lineTo(-3, -29);
-        ctx.lineTo(0, -39);
-        ctx.lineTo(3, -29);
-        ctx.lineTo(13, -38);
-        ctx.lineTo(7, -27);
-        ctx.closePath();
-        ctx.fill();
-
-        // 빛나는 안광
-        ctx.fillStyle = '#fef08a';
-        ctx.beginPath();
-        ctx.arc(-3.2, -22, 1.8, 0, Math.PI * 2);
-        ctx.arc(3.2, -22, 1.8, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
-
-        const hpRatio = Math.max(0, m.hp / m.maxHp);
-        const barY = -52;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(-24, barY, 48, 5.5);
-        ctx.fillStyle = m.provoked ? '#f472b6' : '#c084fc';
-        ctx.fillRect(-23, barY + 1, 46 * hpRatio, 3.5);
-
-        ctx.fillStyle = '#f5d0fe';
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText(m.name, 0, barY - 5);
-        ctx.restore();
-        return;
-      }
-
       if (m.isFieldMiniBoss || kind === 'field_miniboss') {
         const theme = m.bossTheme || 'meadow_slime';
-        const auraColor = theme === 'volcano_overlord'
-          ? 'rgba(249, 115, 22, 0.58)'
-          : (theme === 'canyon_golem' ? 'rgba(56, 189, 248, 0.52)' : 'rgba(74, 222, 128, 0.52)');
+        const auraColor = theme === 'gray_doppelganger_king'
+          ? 'rgba(209, 213, 219, 0.58)'
+          : (theme === 'volcano_overlord'
+              ? 'rgba(249, 115, 22, 0.58)'
+              : (theme === 'canyon_golem' ? 'rgba(56, 189, 248, 0.52)' : 'rgba(74, 222, 128, 0.52)'));
 
         // 중간 보스 전용 필드 테마 오라
         ctx.strokeStyle = auraColor;
@@ -11258,103 +10581,101 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         ctx.save();
         ctx.translate(0, -bounce * 0.8);
 
-        if (theme === 'meadow_slime') {
-          // 1) 초보 사냥터: 🌿 초원의 수호왕 슬라임 (거대 반투명 에메랄드 슬라임 + 꽃잎/새싹 + 황금 왕관)
-          const r = 24;
-          ctx.fillStyle = '#10b981';
-          ctx.strokeStyle = '#a7f3d0';
-          ctx.lineWidth = 2.5;
+        if (theme === 'gray_doppelganger_king') {
+          // 0) 윤회의 성역 중간 보스: 👑 회색 도플갱어 군주 (거대화 헌터 실루엣 + 은회색 망토/왕관/대검)
+          ctx.scale(1.42, 1.42);
+          const facing = m.facing || -1;
+
+          // 다리
+          ctx.fillStyle = '#1f2937';
+          ctx.fillRect(-5.5, 10, 4, 6);
+          ctx.fillRect(1.5, 10, 4, 6);
+
+          // 회색 군주 망토
+          ctx.fillStyle = '#374151';
           ctx.beginPath();
-          ctx.arc(0, 2, r, Math.PI, 0);
-          ctx.quadraticCurveTo(r + 2, r * 0.82, 0, r * 0.82);
-          ctx.quadraticCurveTo(-r - 2, r * 0.82, -r, 2);
+          ctx.moveTo(-7, -2);
+          ctx.lineTo(-facing * 14, 14);
+          ctx.lineTo(facing * 6, 14);
+          ctx.lineTo(7, -2);
           ctx.closePath();
           ctx.fill();
-          ctx.stroke();
 
-          // 내부 풀잎 결정 코어 & 젤리 광택
-          ctx.fillStyle = 'rgba(254, 240, 138, 0.55)';
-          ctx.beginPath();
-          ctx.arc(0, 4, 8, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
-          ctx.beginPath();
-          ctx.ellipse(-9, -7, 6, 3.2, -0.45, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 왕관
-          ctx.fillStyle = '#facc15';
-          ctx.strokeStyle = '#854d0e';
+          // 중갑 갑옷 & 견갑
+          ctx.fillStyle = '#6b7280';
+          ctx.strokeStyle = '#e5e7eb';
           ctx.lineWidth = 1.6;
           ctx.beginPath();
-          ctx.moveTo(-12, -r + 2);
-          ctx.lineTo(-14, -r - 10);
-          ctx.lineTo(-5, -r - 4);
-          ctx.lineTo(0, -r - 13);
-          ctx.lineTo(5, -r - 4);
-          ctx.lineTo(14, -r - 10);
-          ctx.lineTo(12, -r + 2);
+          ctx.roundRect(-9.5, -4.5, 19, 16.5, 4);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#9ca3af';
+          ctx.fillRect(-6, -2.5, 12, 7.5);
+          [-10.5, 10.5].forEach((sx) => {
+            ctx.beginPath();
+            ctx.arc(sx, -2, 4.4, Math.PI, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          });
+
+          // 머리 & 회색 머리카락
+          ctx.fillStyle = '#d1d5db';
+          ctx.beginPath();
+          ctx.arc(0, -10, 6.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.fillStyle = '#4b5563';
+          ctx.beginPath();
+          ctx.arc(0, -11.5, 7.1, Math.PI, 0);
+          ctx.fill();
+
+          // 안광
+          ctx.fillStyle = '#f8fafc';
+          ctx.fillRect(facing * 2.3 - 1.2, -10.3, 2.4, 2.1);
+
+          // 은회색 투구 & 왕관
+          ctx.fillStyle = '#9ca3af';
+          ctx.strokeStyle = '#f3f4f6';
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.arc(0, -12, 7.3, Math.PI * 1.05, -0.05 * Math.PI);
           ctx.closePath();
           ctx.fill();
           ctx.stroke();
 
-          // 눈
-          ctx.fillStyle = '#064e3b';
+          ctx.fillStyle = '#e5e7eb';
           ctx.beginPath();
-          ctx.arc(-6.5, 2, 2.3, 0, Math.PI * 2);
-          ctx.arc(6.5, 2, 2.3, 0, Math.PI * 2);
-          ctx.fill();
-        } else if (theme === 'canyon_golem') {
-          // 2) 중급 사냥터: ⛰️ 협곡의 강철 거신병 (중장갑 석철 골렘 + 룬 흉갑 + 푸른 아크 코어 + 철왕관)
-          ctx.fillStyle = '#334155';
-          ctx.fillRect(-15, 10, 10, 9);
-          ctx.fillRect(5, 10, 10, 9);
-
-          ctx.fillStyle = '#64748b';
-          ctx.strokeStyle = '#cbd5e1';
-          ctx.lineWidth = 2.6;
-          ctx.beginPath();
-          ctx.roundRect(-21, -21, 42, 34, 8);
-          ctx.fill();
-          ctx.stroke();
-
-          // 육중한 강철 양팔 & 어깨 흉벽
-          ctx.fillStyle = '#475569';
-          ctx.strokeStyle = '#38bdf8';
-          ctx.lineWidth = 1.8;
-          ctx.beginPath();
-          ctx.roundRect(-29, -19, 10, 24, 4);
-          ctx.roundRect(19, -19, 10, 24, 4);
-          ctx.fill();
-          ctx.stroke();
-
-          // 흉부 푸른 마력 룬 코어
-          ctx.fillStyle = '#0ea5e9';
-          ctx.beginPath();
-          ctx.moveTo(0, -10);
-          ctx.lineTo(8, -2);
-          ctx.lineTo(0, 6);
-          ctx.lineTo(-8, -2);
+          ctx.moveTo(-7, -15);
+          ctx.lineTo(-8, -22);
+          ctx.lineTo(-3, -18);
+          ctx.lineTo(0, -24);
+          ctx.lineTo(3, -18);
+          ctx.lineTo(8, -22);
+          ctx.lineTo(7, -15);
           ctx.closePath();
           ctx.fill();
 
-          // 강철 흉벽 왕관
-          ctx.fillStyle = '#e2e8f0';
-          ctx.fillRect(-14, -27, 6, 6);
-          ctx.fillRect(-3, -30, 6, 9);
-          ctx.fillRect(8, -27, 6, 6);
-
-          // 바이저 안광
-          ctx.fillStyle = '#38bdf8';
-          ctx.fillRect(-11, -15, 22, 3.5);
-        } else {
-          // 3) 상급 사냥터: 🌋 용암 심연의 패왕군주 (흑요석 갑주 + 용암 균열 + 쌍뿔 화염왕관 + 용암 코어)
-          // 화염 날개/망토 실루엣
-          ctx.fillStyle = 'rgba(234, 88, 12, 0.78)';
+          // 회색 대검
+          ctx.save();
+          ctx.translate(facing * 10, 2);
+          ctx.rotate(facing * 0.42);
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-1.5, 0, 3, 6);
+          ctx.fillStyle = '#d1d5db';
+          ctx.fillRect(-6, -2.2, 12, 3);
+          ctx.fillStyle = '#f3f4f6';
           ctx.beginPath();
-          ctx.moveTo(-18, -16);
-          ctx.lineTo(-32, -28);
+          ctx.moveTo(-2.8, -2);
+          ctx.lineTo(-2.3, -24);
+          ctx.lineTo(0, -28);
+          ctx.lineTo(2.3, -24);
+          ctx.lineTo(2.8, -2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+        } else if (theme === 'meadow_slime') {
           ctx.lineTo(-26, 6);
           ctx.moveTo(18, -16);
           ctx.lineTo(32, -28);
@@ -11409,13 +10730,273 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const barY = -44;
         ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
         ctx.fillRect(-32, barY, 64, 6);
-        ctx.fillStyle = theme === 'volcano_overlord' ? '#f97316' : (theme === 'canyon_golem' ? '#38bdf8' : '#22c55e');
+        ctx.fillStyle = theme === 'gray_doppelganger_king'
+          ? '#d1d5db'
+          : (theme === 'volcano_overlord' ? '#f97316' : (theme === 'canyon_golem' ? '#38bdf8' : '#22c55e'));
         ctx.fillRect(-31, barY + 1, 62 * hpRatio, 4);
 
-        ctx.fillStyle = '#fde047';
+        ctx.fillStyle = theme === 'gray_doppelganger_king' ? '#e5e7eb' : '#fde047';
         ctx.font = 'bold 10.5px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(m.name, 0, barY - 5);
+        ctx.restore();
+        return;
+      }
+
+      if (kind === 'doppelganger') {
+        // 윤회의 성역 전용: 헌터와 똑같이 생긴 회색 도플갱어 렌더링
+        const facing = m.facing || -1;
+        const walkPhase = m.walkCycle || (t * 4 + m.spawnX * 0.05);
+        const stepBob = Math.abs(Math.sin(walkPhase)) * 2.6;
+        const isFemale = m.doppelGender === 'F';
+        const dJob = m.doppelJob || '팔라딘';
+
+        // 발밑 은회색 환영 잔상 링
+        ctx.strokeStyle = 'rgba(209, 213, 219, 0.45)';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.ellipse(0, 14, 14 + Math.sin(t * 2.6) * 1.4, 6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 바닥 그림자
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.36)';
+        ctx.beginPath();
+        ctx.ellipse(0, 14, 11, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(0, -stepBob);
+
+        // 1. 다리 (헌터와 동일한 보행 스윙)
+        const legSwing = Math.sin(walkPhase) * 3;
+        ctx.fillStyle = '#1f2937';
+        ctx.fillRect(-5.5, 10 + legSwing * 0.4, 4, 6);
+        ctx.fillRect(1.5, 10 - legSwing * 0.4, 4, 6);
+
+        // 2. 회색 망토
+        ctx.fillStyle = '#4b5563';
+        ctx.beginPath();
+        ctx.moveTo(-6, -2);
+        ctx.lineTo(-facing * 12, 13);
+        ctx.lineTo(facing * 5, 13);
+        ctx.lineTo(6, -2);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. 여성형 긴 회색 뒷머리 레이어
+        if (isFemale) {
+          ctx.fillStyle = '#6b7280';
+          ctx.beginPath();
+          ctx.roundRect(-8.5, -13, 17, 23, [8, 8, 5, 5]);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(17, 24, 39, 0.6)';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // 4. 회색 갑옷 몸통 (여성: 슬림 흉갑 + 플레어 스커트 / 남성: 역삼각형 중갑)
+        if (isFemale) {
+          ctx.fillStyle = '#9ca3af';
+          ctx.beginPath();
+          ctx.roundRect(-7.5, -4, 15, 11, 4);
+          ctx.fill();
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#d1d5db';
+          ctx.beginPath();
+          ctx.moveTo(-7.5, 6);
+          ctx.lineTo(7.5, 6);
+          ctx.lineTo(10.5, 13.5);
+          ctx.lineTo(-10.5, 13.5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#e5e7eb';
+          ctx.fillRect(-4.2, -2, 8.4, 5.5);
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-7.5, 5.5, 15, 2.2);
+          ctx.fillStyle = '#f3f4f6';
+          ctx.fillRect(-2, 5, 4, 3.2);
+        } else {
+          ctx.fillStyle = '#9ca3af';
+          ctx.beginPath();
+          ctx.roundRect(-9.5, -4.5, 19, 16.5, 4);
+          ctx.fill();
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#d1d5db';
+          ctx.fillRect(-6, -2.5, 12, 7.5);
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-9, 7, 18, 2.8);
+          ctx.fillStyle = '#f3f4f6';
+          ctx.fillRect(-2.5, 6.5, 5, 3.8);
+        }
+
+        // 어깨 견갑
+        ctx.fillStyle = '#d1d5db';
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1.2;
+        const shoulderOffset = isFemale ? 8.5 : 10.5;
+        [-shoulderOffset, shoulderOffset].forEach((sx) => {
+          ctx.beginPath();
+          ctx.arc(sx, -2, 4.1, Math.PI, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+
+        // 5. 회색빛 피부 얼굴 & 머리카락 & 투구
+        ctx.fillStyle = '#d1d5db';
+        ctx.beginPath();
+        ctx.arc(0, -10, 6.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#6b7280';
+        ctx.beginPath();
+        ctx.arc(0, -11.5, 7.1, Math.PI, 0);
+        ctx.fill();
+
+        if (isFemale) {
+          ctx.fillRect(-7.2, -11.5, 2.4, 9.5);
+          ctx.fillRect(4.8, -11.5, 2.4, 9.5);
+          ctx.beginPath();
+          ctx.arc(-8.2, -6, 2.3, 0, Math.PI * 2);
+          ctx.arc(8.2, -6, 2.3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-6.8, -11.5, 2, 4.5);
+          ctx.fillRect(4.8, -11.5, 2, 4.5);
+        }
+
+        // 도플갱어 눈 (서늘한 은백색 안광)
+        const eyeX = facing * 2.3;
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(eyeX, -9.8, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 회색 투구 & 뿔 장식
+        ctx.fillStyle = '#9ca3af';
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.arc(0, -12, 7.3, Math.PI * 1.05, -0.05 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#e5e7eb';
+        ctx.beginPath();
+        ctx.moveTo(-6, -15);
+        ctx.lineTo(-9, -20);
+        ctx.lineTo(-3, -17);
+        ctx.moveTo(6, -15);
+        ctx.lineTo(9, -20);
+        ctx.lineTo(3, -17);
+        ctx.fill();
+
+        // 6. 직업별 회색 무기 렌더링 (헌터 무기 모형 동일)
+        ctx.save();
+        ctx.translate(facing * 10, 2);
+        const swingAngle = Math.sin(walkPhase) * 0.14;
+        const baseAngle = dJob === '레인저' ? 0.15 : (dJob === '소서러' ? 0.28 : 0.42);
+        ctx.rotate(facing * (baseAngle + swingAngle));
+        const bladeLen = 23;
+
+        if (dJob === '버서커') {
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-1.8, -bladeLen, 3.6, bladeLen + 6);
+          ctx.fillStyle = '#e5e7eb';
+          ctx.strokeStyle = '#1f2937';
+          ctx.lineWidth = 1.3;
+          ctx.beginPath();
+          ctx.moveTo(-2, -bladeLen + 2);
+          ctx.quadraticCurveTo(-12, -bladeLen + 1, -13, -bladeLen + 8);
+          ctx.quadraticCurveTo(-12, -bladeLen + 15, -2, -bladeLen + 13);
+          ctx.lineTo(2, -bladeLen + 13);
+          ctx.quadraticCurveTo(12, -bladeLen + 15, 13, -bladeLen + 8);
+          ctx.quadraticCurveTo(12, -bladeLen + 1, 2, -bladeLen + 2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else if (dJob === '레인저') {
+          ctx.strokeStyle = '#d1d5db';
+          ctx.lineWidth = 2.6;
+          ctx.beginPath();
+          ctx.moveTo(-facing * 3, -bladeLen * 0.85);
+          ctx.quadraticCurveTo(facing * 9.5, -bladeLen * 0.35, -facing * 3, 5);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#9ca3af';
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.moveTo(-facing * 3, -bladeLen * 0.85);
+          ctx.lineTo(-facing * 3, 5);
+          ctx.stroke();
+
+          const arrowY = -bladeLen * 0.4;
+          ctx.strokeStyle = '#e5e7eb';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(-facing * 5, arrowY);
+          ctx.lineTo(facing * 11, arrowY);
+          ctx.stroke();
+
+          ctx.fillStyle = '#f3f4f6';
+          ctx.beginPath();
+          ctx.moveTo(facing * 14.5, arrowY);
+          ctx.lineTo(facing * 10, arrowY - 2.8);
+          ctx.lineTo(facing * 10, arrowY + 2.8);
+          ctx.closePath();
+          ctx.fill();
+        } else if (dJob === '소서러') {
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-1.5, -bladeLen + 4, 3, bladeLen + 2);
+          ctx.strokeStyle = '#d1d5db';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.arc(0, -bladeLen + 1, 5.5, 0.2 * Math.PI, 0.8 * Math.PI, true);
+          ctx.stroke();
+
+          ctx.fillStyle = '#f3f4f6';
+          ctx.beginPath();
+          ctx.arc(0, -bladeLen - 1, 4 + Math.sin(t * 6) * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#374151';
+          ctx.fillRect(-1.5, 0, 3, 6);
+          ctx.fillStyle = '#9ca3af';
+          ctx.fillRect(-6, -2.2, 12, 3);
+          ctx.fillStyle = '#e5e7eb';
+          ctx.beginPath();
+          ctx.moveTo(-2.6, -2);
+          ctx.lineTo(-2.1, -bladeLen + 5);
+          ctx.lineTo(0, -bladeLen);
+          ctx.lineTo(2.1, -bladeLen + 5);
+          ctx.lineTo(2.6, -2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+        ctx.restore();
+
+        // HP 바 & 이름표 (헌터 이름표와 동일한 위치)
+        const hpRatio = Math.max(0, m.hp / m.maxHp);
+        const barY = -36;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        ctx.fillRect(-20, barY, 40, 5);
+        ctx.fillStyle = m.provoked ? '#e5e7eb' : '#9ca3af';
+        ctx.fillRect(-19, barY + 1, 38 * hpRatio, 3);
+
+        ctx.fillStyle = '#e5e7eb';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(m.name, 0, barY - 4);
         ctx.restore();
         return;
       }
@@ -11906,20 +11487,21 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         const isMid = hg.id === 'mid_field_20_40';
         const isHigh = hg.id === 'high_field_40_70';
         const isTop = hg.id === 'top_field_70_99';
-        ctx.fillStyle = isTop ? '#17132b' : (isHigh ? '#2a1215' : (isMid ? '#1e293b' : '#365314'));
+        const isRebirthField = hg.id === 'rebirth_sanctuary_field';
+        ctx.fillStyle = isRebirthField ? '#251338' : (isTop ? '#17132b' : (isHigh ? '#2a1215' : (isMid ? '#1e293b' : '#365314')));
         ctx.beginPath();
         ctx.roundRect(b.x, b.y, b.w, b.h, 24);
         ctx.fill();
 
-        // 최상급 사냥터(심연 성좌지대) 성좌 별빛 & 아스트랄 타일 배경
-        if (isTop) {
+        // 최상급 사냥터(심연 성좌지대) 및 환생 전용 사냥터(윤회의 성역) 별빛/룬 타일 배경
+        if (isTop || isRebirthField) {
           ctx.save();
           ctx.beginPath();
           ctx.roundRect(b.x, b.y, b.w, b.h, 24);
           ctx.clip();
 
           const starCols = 14;
-          const starRows = 12;
+          const starRows = isRebirthField ? 8 : 12;
           const cellW = b.w / starCols;
           const cellH = b.h / starRows;
           for (let r = 0; r < starRows; r++) {
@@ -11928,12 +11510,21 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               const sy = b.y + r * cellH + cellH * 0.5;
               const hash = Math.abs(Math.sin(r * 31.7 + c * 91.3));
               if (hash > 0.62) {
-                ctx.fillStyle = hash > 0.86 ? 'rgba(250, 204, 21, 0.34)' : 'rgba(167, 139, 250, 0.32)';
+                ctx.fillStyle = isRebirthField
+                  ? (hash > 0.86 ? 'rgba(250, 204, 21, 0.36)' : 'rgba(232, 121, 249, 0.34)')
+                  : (hash > 0.86 ? 'rgba(250, 204, 21, 0.34)' : 'rgba(167, 139, 250, 0.32)');
                 ctx.beginPath();
                 ctx.arc(sx, sy, hash > 0.86 ? 2.4 : 1.6, 0, Math.PI * 2);
                 ctx.fill();
               }
             }
+          }
+          if (isRebirthField) {
+            ctx.strokeStyle = 'rgba(232, 121, 249, 0.22)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(b.x + b.w * 0.5, b.y + b.h * 0.55, 86, 0, Math.PI * 2);
+            ctx.stroke();
           }
           ctx.restore();
         }
@@ -11984,7 +11575,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         ctx.save();
         ctx.beginPath();
         ctx.roundRect(b.x, b.y, b.w, b.h, 24);
-        ctx.strokeStyle = isTop ? '#a855f7' : (isHigh ? '#f97316' : (isMid ? '#38bdf8' : '#84cc16'));
+        ctx.strokeStyle = isRebirthField ? '#e879f9' : (isTop ? '#a855f7' : (isHigh ? '#f97316' : (isMid ? '#38bdf8' : '#84cc16')));
         ctx.lineWidth = 3;
         ctx.setLineDash([10, 6]);
         ctx.stroke();
@@ -11995,26 +11586,31 @@ function awardColosseumVictoryPoint(winner, loser = null) {
         ctx.beginPath();
         ctx.roundRect(b.x + 18, b.y + 16, 430, 44, 10);
         ctx.fill();
-        ctx.strokeStyle = isTop ? '#a855f7' : (isHigh ? '#f97316' : (isMid ? '#38bdf8' : '#84cc16'));
+        ctx.strokeStyle = isRebirthField ? '#e879f9' : (isTop ? '#a855f7' : (isHigh ? '#f97316' : (isMid ? '#38bdf8' : '#84cc16')));
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
-        ctx.fillStyle = isTop ? '#d8b4fe' : (isHigh ? '#fdba74' : (isMid ? '#7dd3fc' : '#bef264'));
+        ctx.fillStyle = isRebirthField ? '#f5d0fe' : (isTop ? '#d8b4fe' : (isHigh ? '#fdba74' : (isMid ? '#7dd3fc' : '#bef264')));
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText(`${hg.icon} ${hg.name} [적정 Lv.${hg.minRecLv}~${hg.maxRecLv}]`, b.x + 30, b.y + 30);
+        const levelBracketText = isRebirthField
+          ? `[1환생 이상 전용 · Lv.1~99]`
+          : `[적정 Lv.${hg.minRecLv}~${hg.maxRecLv}]`;
+        ctx.fillText(`${hg.icon} ${hg.name} ${levelBracketText}`, b.x + 30, b.y + 30);
 
         ctx.fillStyle = '#fde68a';
         ctx.font = '11px sans-serif';
         ctx.fillText(
-          isTop
-            ? 'Lv.70~99 기본 EXP · ⚔️ 헌터간 PvP 허용 무법지대 · 선공 몬스터'
-            : (isHigh
-                ? 'Lv.40~70 기본 EXP · ⚔️ 헌터간 PvP 허용 무법지대 · 선공 몬스터'
-                : (isMid
-                    ? 'Lv.20~40 기본 EXP 적용 · 고보상 전리품 드랍'
-                    : 'Lv.1~10 EXP +50% · Lv.11~20 기본 EXP · Lv.21 이상 EXP -90% 패널티')),
+          isRebirthField
+            ? '🔒 1환생↑ 헌터 전용 · 전 구간 기본 EXP 적용 · 윤회 성역의 영혼결정 드랍'
+            : (isTop
+                ? 'Lv.70~99 기본 EXP · ⚔️ 헌터간 PvP 허용 무법지대 · 선공 몬스터'
+                : (isHigh
+                    ? 'Lv.40~70 기본 EXP · ⚔️ 헌터간 PvP 허용 무법지대 · 선공 몬스터'
+                    : (isMid
+                        ? 'Lv.20~40 기본 EXP 적용 · 고보상 전리품 드랍'
+                        : 'Lv.1~10 EXP +50% · Lv.11~20 기본 EXP · Lv.21 이상 EXP -90% 패널티'))),
           b.x + 30,
           b.y + 47
         );
@@ -12024,45 +11620,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           if (m.hp <= 0) return;
           drawFieldMonster(ctx, m);
         });
-      });
-
-      // [중급 사냥터 바로 옆(동쪽) 개방: 1환생 이상 헌터 전용 '윤회의 성역']
-      const rmsb = REBIRTH_MID_SANCTUARY.bounds;
-      ctx.fillStyle = '#1b1133';
-      ctx.beginPath();
-      ctx.roundRect(rmsb.x, rmsb.y, rmsb.w, rmsb.h, 24);
-      ctx.fill();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(rmsb.x, rmsb.y, rmsb.w, rmsb.h, 24);
-      ctx.strokeStyle = '#f0abfc';
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 6]);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
-      ctx.beginPath();
-      ctx.roundRect(rmsb.x + 18, rmsb.y + 16, 440, 44, 10);
-      ctx.fill();
-      ctx.strokeStyle = '#e879f9';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.fillStyle = '#f5d0fe';
-      ctx.font = 'bold 13px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('✨ 윤회의 성역 (중급 사냥터 옆 · 1환생↑ 전용)', rmsb.x + 30, rmsb.y + 30);
-
-      ctx.fillStyle = '#fde68a';
-      ctx.font = '11px sans-serif';
-      ctx.fillText('🔒 환생 1회 이상 헌터 전용 사냥터 · 기본 EXP · 고가 별결정 드랍', rmsb.x + 30, rmsb.y + 47);
-
-      REBIRTH_MID_SANCTUARY.monsters.forEach((m) => {
-        if (m.hp <= 0) return;
-        drawFieldMonster(ctx, m);
       });
 
       // [초보 사냥터 북쪽 보스 레이드 전용 구역: 고대 수호자의 성소]
@@ -12170,71 +11727,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       ctx.textAlign = 'center';
       ctx.fillText('🔒 1환생 이상 전용 · ✨제단출정 지시', rb.x + rb.w / 2, rb.y + rb.h - 9);
 
-      // [마을 상단 콜로세움 경기장 필드: 몬스터 없음 · 환생 5회 & Lv.99 헌터 전용]
-      const cb = COLOSSEUM_ARENA.bounds;
-      const arenaCx = cb.x + cb.w / 2;
-      const arenaCy = cb.y + cb.h / 2 + 8;
-      const pulseT = performance.now() * 0.0025;
-
-      // 경기장 외벽 & 원형 투기장 바닥
-      ctx.fillStyle = '#1e293b';
-      ctx.beginPath();
-      ctx.roundRect(cb.x, cb.y, cb.w, cb.h, 24);
-      ctx.fill();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.roundRect(cb.x + 8, cb.y + 8, cb.w - 16, cb.h - 16, 20);
-      ctx.fillStyle = '#292524';
-      ctx.fill();
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // 중앙 원형 투기장 라인 & 황금 문장
-      ctx.save();
-      ctx.translate(arenaCx, arenaCy);
-      ctx.scale(1.45, 0.52);
-      ctx.strokeStyle = `rgba(250, 204, 21, ${0.45 + Math.sin(pulseT) * 0.12})`;
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 56, 0, Math.PI * 2);
-      ctx.stroke();
-
-      ctx.strokeStyle = 'rgba(251, 191, 36, 0.25)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 32, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
-      // 상단 경기장 명판 배지
-      const badgeW = 360;
-      const badgeX = arenaCx - badgeW / 2;
-      const badgeY = cb.y - 30;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, badgeW, 24, 8);
-      ctx.fill();
-      ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 1.6;
-      ctx.stroke();
-
-      ctx.fillStyle = '#fde047';
-      ctx.font = 'bold 11.5px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🏟️ 콜로세움 경기장 [환생5 1대1 전투 · 승리 시 승점 +1]', arenaCx, badgeY + 12);
-
-      // 하단 경기장 안내 문구
-      const duelStateText = COLOSSEUM_ARENA.activeDuel
-        ? `⚔️ 1대1 전투 진행 중 · 승리 시 승점 +1`
-        : (COLOSSEUM_ARENA.lastDuelSummary || '⚔️ 환생5 헌터 1대1 대결 대기 · 승리 시 승점 +1');
-      ctx.fillStyle = '#fde68a';
-      ctx.font = 'bold 10.5px sans-serif';
-      ctx.fillText(duelStateText, arenaCx, cb.y + cb.h - 11);
-      ctx.restore();
-
       // 2. 마을 안전 구역 (확장 부지까지 수용 가능한 넉넉한 크기)
       ctx.fillStyle = '#3f624d';
       ctx.beginPath();
@@ -12280,19 +11772,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       ctx.setLineDash([]);
       ctx.fillStyle = '#94a3b8';
 
-      // 중급 사냥터 동쪽 경계(x: 1390)에서 옆쪽 환생 전용 사냥터(x: 1430, 윤회의 성역)로 이어지는 연결 길
-      ctx.fillStyle = '#78716c';
-      ctx.fillRect(1384, 557, 52, 36);
-      ctx.strokeStyle = '#f0abfc';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([5, 4]);
-      ctx.beginPath();
-      ctx.moveTo(1388, 575);
-      ctx.lineTo(1432, 575);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#94a3b8';
-
       // 초보 사냥터 동쪽 경계(x: 1390)를 지나 최상급 사냥터(x: 1430)로 이어지는 연결 길
       ctx.fillStyle = '#78716c';
       ctx.fillRect(1384, 0, 52, 36);
@@ -12302,6 +11781,19 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       ctx.beginPath();
       ctx.moveTo(1388, 18);
       ctx.lineTo(1432, 18);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#94a3b8';
+
+      // 중급 사냥터 동쪽 경계(x: 1390)를 지나 환생 전용 사냥터 윤회의 성역(x: 1430)으로 이어지는 연결 길
+      ctx.fillStyle = '#78716c';
+      ctx.fillRect(1384, 557, 52, 36);
+      ctx.strokeStyle = '#e879f9';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath();
+      ctx.moveTo(1388, 575);
+      ctx.lineTo(1432, 575);
       ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#94a3b8';
@@ -12379,15 +11871,15 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       ctx.textAlign = 'left';
       ctx.fillText('🌿 초보 사냥터 길 →', 618, 18);
 
-      ctx.fillStyle = '#f5d0fe';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText('✨ 윤회의 성역(1환생↑) →', 1376, 548);
-
       ctx.fillStyle = '#d8b4fe';
       ctx.font = 'bold 12px sans-serif';
       ctx.textAlign = 'right';
       ctx.fillText('🌌 최상급 사냥터 →', 1376, -10);
+
+      ctx.fillStyle = '#f5d0fe';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText('🌠 윤회의 성역 (1환생↑) →', 1376, 548);
     }
 
     // 빈 건설 부지(Plot) 렌더링
@@ -14697,8 +14189,8 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           monster.respawn = monster.isFieldMiniBoss ? (monster.respawnDelay || 25) : scaling.respawnDelay;
           const isMiniBoss = !!monster.isFieldMiniBoss;
           if (isMiniBoss) {
-            const insId = monster.insigniaId || ground.miniBossConfig?.insigniaId || 'insignia_beginner';
-            const insDef = ITEM_CATALOG[insId];
+            const insId = monster.insigniaId ?? ground.miniBossConfig?.insigniaId ?? null;
+            const insDef = insId ? ITEM_CATALOG[insId] : null;
             if (insDef && hunter.inventory) {
               hunter.inventory.addItem(insId, 1);
               const curIns = hunter.getEquippedInsignia();
@@ -14761,6 +14253,9 @@ function awardColosseumVictoryPoint(winner, loser = null) {
             interactionManager.spawnBubble(hunter, `🌟 패시브 [${updatedPas.name}] Lv.${updatedPas.lv}!`, '#c084fc');
           } else if (hunter.level > prevLv && hunter.level === 21) {
             interactionManager.spawnBubble(hunter, '⚠️ Lv.21! 초보사냥터 EXP -90% 구간', '#fde047');
+          } else {
+            const expTag = expMult > 1 ? '+50% 보너스' : (expMult < 1 ? '-90%' : '기본');
+            interactionManager.spawnBubble(hunter, `⚔️ +${finalExp} EXP (${expTag})`, '#86efac');
           }
         }
       },
@@ -14814,7 +14309,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           defender.currentTargetHunter = null;
 
           attacker.currentTargetHunter = null;
-          attacker.pkKills = Math.max(0, Math.floor(Number(attacker.pkKills) || 0)) + 1;
           attacker.gainExp(120);
 
           // 헌터를 죽일 경우 인성 -5 하락
@@ -15200,8 +14694,7 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       }
 
       // 사냥터 헌터 수(최대 5명) 체크 후 몬스터 수 동적 증감 및 리스폰 타이머 갱신
-      const allHuntZones = [...HUNTING_GROUNDS, REBIRTH_MID_SANCTUARY];
-      allHuntZones.forEach((hg) => {
+      HUNTING_GROUNDS.forEach((hg) => {
         const scaling = getHuntingGroundScaling(hg, hunters);
 
         // 헌터 수 증가 시 최대 몬스터 수까지 추가 스폰 (0.1% 확률로 중간 보스 등장 판정)
@@ -15226,9 +14719,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               hg.monsters[mIdx] = respawned;
             }
           } else if (m.hp > 0) {
-            if ((m.attackAnimTimer || 0) > 0) {
-              m.attackAnimTimer = Math.max(0, m.attackAnimTimer - dt);
-            }
             // 중급 사냥터(mid_field_20_40) 이상 구역은 근처 헌터를 발견 시 먼저 선공
             const isAggressiveZone = hg.id !== 'beginner_field';
             if (isAggressiveZone && !m.provoked) {
@@ -15263,24 +14753,25 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               const dx = aggroTarget.x - m.x;
               const dy = aggroTarget.y - m.y;
               const dist = Math.hypot(dx, dy);
+              if (Math.abs(dx) > 0.5) m.facing = dx >= 0 ? 1 : -1;
               const stopDist = m.isRanged ? (m.range || 148) : 24;
               if (dist > stopDist) {
                 m.x += (dx / dist) * 38 * dt;
                 m.y += (dy / dist) * 38 * dt;
+                m.walkCycle = (m.walkCycle || 0) + dt * 10;
               } else if (m.isRanged) {
                 // 원거리 몬스터(숲 고블린궁수 / 마력 오크사수): 사거리 내 헌터에게 투사체 발사
                 m.attackCooldown = (m.attackCooldown || 0) - dt;
                 if (m.attackCooldown <= 0) {
                   m.attackCooldown = 1.25;
-                  m.attackAnimTimer = 0.34;
                   combatEffects.spawnProjectile({
                     isMonsterProj: true,
                     target: aggroTarget,
                     x: m.x,
                     y: m.y - 4,
                     speed: 310,
-                    projType: 'GOBLIN_ARROW',
-                    color: m.kind === 'manaorc' ? '#d8b4fe' : '#a3e635',
+                    projType: m.kind === 'doppelganger' ? (m.doppelJob === '소서러' ? 'MAGIC_ORB' : 'ARROW') : 'GOBLIN_ARROW',
+                    color: m.kind === 'doppelganger' ? '#e5e7eb' : (m.kind === 'manaorc' ? '#d8b4fe' : '#a3e635'),
                     dmg: m.atk || 62
                   });
                 }
@@ -15289,7 +14780,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
                 m.attackCooldown = (m.attackCooldown || 0) - dt;
                 if (m.attackCooldown <= 0) {
                   m.attackCooldown = 1.15;
-                  m.attackAnimTimer = 0.34;
                   const stats = aggroTarget.getComputedStats();
                   const takenDmg = Math.max(10, Math.round((m.atk || 50) * 0.85 - stats.def * 0.22));
                   aggroTarget.hp = Math.max(1, aggroTarget.hp - takenDmg);
@@ -15304,17 +14794,15 @@ function awardColosseumVictoryPoint(winner, loser = null) {
               const dy = (m.wanderY ?? m.y) - m.y;
               const dist = Math.hypot(dx, dy);
               if (dist > 4) {
+                if (Math.abs(dx) > 0.5) m.facing = dx >= 0 ? 1 : -1;
                 m.x += (dx / dist) * 20 * dt;
                 m.y += (dy / dist) * 20 * dt;
+                m.walkCycle = (m.walkCycle || 0) + dt * 7;
               } else if (m.wanderTimer <= 0) {
                 m.wanderTimer = 1.6 + Math.random() * 2.8;
                 const pad = 55;
-                const minWanderX = hg.id === REBIRTH_MID_SANCTUARY.id ? hg.bounds.x + 65 : hg.bounds.x + pad;
-                const maxWanderX = hg.id === REBIRTH_MID_SANCTUARY.id ? hg.bounds.x + hg.bounds.w - 65 : hg.bounds.x + hg.bounds.w - pad;
-                const minWanderY = hg.id === REBIRTH_MID_SANCTUARY.id ? hg.bounds.y + 88 : hg.bounds.y + 85;
-                const maxWanderY = hg.id === REBIRTH_MID_SANCTUARY.id ? hg.bounds.y + hg.bounds.h - 55 : hg.bounds.y + hg.bounds.h - pad;
-                m.wanderX = Math.max(minWanderX, Math.min(maxWanderX, m.spawnX + (Math.random() - 0.5) * 180));
-                m.wanderY = Math.max(minWanderY, Math.min(maxWanderY, m.spawnY + (Math.random() - 0.5) * 180));
+                m.wanderX = Math.max(hg.bounds.x + pad, Math.min(hg.bounds.x + hg.bounds.w - pad, m.spawnX + (Math.random() - 0.5) * 180));
+                m.wanderY = Math.max(hg.bounds.y + 85, Math.min(hg.bounds.y + hg.bounds.h - pad, m.spawnY + (Math.random() - 0.5) * 180));
               }
             }
             enforceTownWallCollision(m, 12);
@@ -15323,7 +14811,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
       });
 
       hunters.forEach(h => h.update(dt));
-      stepColosseumOneOnOneDuels(dt, hunters);
       SUPREME_TOWN_GUARD.update(dt);
       ARCANE_TOWN_GUARD.update(dt);
 
@@ -15860,10 +15347,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           bestDungeonFloor: h.bestDungeonFloor || 0,
           equippedInsigniaId: h.equippedInsigniaId || null,
           monsterKillAlignmentProgress: h.monsterKillAlignmentProgress || 0,
-          pkKills: Math.max(0, Math.floor(Number(h.pkKills) || 0)),
-          colosseumPoints: Math.max(0, Math.floor(Number(h.colosseumPoints) || 0)),
-          colosseumWins: Math.max(0, Math.floor(Number(h.colosseumWins) || 0)),
-          colosseumLosses: Math.max(0, Math.floor(Number(h.colosseumLosses) || 0)),
           x: h.x,
           y: h.y,
           skillsJson: JSON.stringify(h.skills)
@@ -16012,18 +15495,6 @@ function awardColosseumVictoryPoint(winner, loser = null) {
           }
           if (typeof hData.monsterKillAlignmentProgress === 'number') {
             restored.monsterKillAlignmentProgress = Math.max(0, Math.min(2, Math.floor(hData.monsterKillAlignmentProgress)));
-          }
-          if (typeof hData.pkKills === 'number') {
-            restored.pkKills = Math.max(0, Math.floor(hData.pkKills));
-          }
-          if (typeof hData.colosseumPoints === 'number') {
-            restored.colosseumPoints = Math.max(0, Math.floor(hData.colosseumPoints));
-          }
-          if (typeof hData.colosseumWins === 'number') {
-            restored.colosseumWins = Math.max(0, Math.floor(hData.colosseumWins));
-          }
-          if (typeof hData.colosseumLosses === 'number') {
-            restored.colosseumLosses = Math.max(0, Math.floor(hData.colosseumLosses));
           }
 
           const parsedPotions = safeParseJson(hData.potions, null);
