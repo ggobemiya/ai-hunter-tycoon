@@ -5585,8 +5585,6 @@
         this.dungeonProgress = 0;
         this.dungeonDuration = 0;
         this.dungeonTimer = 0;
-        this.dungeonCooldown = 0;
-        this.consecutiveDungeonRuns = 0;
         this.bestDungeonFloor = preset.bestDungeonFloor || 0;
 
         this.personalGold = preset.personalGold ?? 150;
@@ -6537,18 +6535,10 @@
           }
         }
 
-        // 마을 시설 또는 던전 무작위 방문 (던전 쿨타임 및 연속 진입 제한 적용)
-        const allowDungeonVisit = (this.dungeonCooldown || 0) <= 0 && (this.consecutiveDungeonRuns || 0) < 2;
-        const candidates = buildings.filter(b => {
-          if (b.type === 'dungeon' && !allowDungeonVisit) return false;
-          if (b.type === 'townhall') return Math.random() < 0.25;
-          return true;
-        });
+        // 마을 시설 또는 던전 무작위 방문
+        const candidates = buildings.filter(b => b.type !== 'townhall' || Math.random() < 0.25);
         if (candidates.length > 0) {
           const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-          if (chosen.type !== 'dungeon') {
-            this.consecutiveDungeonRuns = 0;
-          }
           this.setDestinationWithGatePath(chosen.x, chosen.y + chosen.h / 2 + 16);
           this.targetBuildingName = chosen.name;
           this.targetBuildingType = chosen.type;
@@ -6640,9 +6630,6 @@
 
         if (this.attackAnimTimer > 0) {
           this.attackAnimTimer = Math.max(0, this.attackAnimTimer - dt);
-        }
-        if ((this.dungeonCooldown || 0) > 0) {
-          this.dungeonCooldown = Math.max(0, this.dungeonCooldown - dt);
         }
         if ((this.miniBossBuffTimer || 0) > 0) {
           this.miniBossBuffTimer = Math.max(0, this.miniBossBuffTimer - dt);
@@ -7312,8 +7299,6 @@
             this.stateTimer = 0.6;
             this.dungeonFloor = 0;
             this.dungeonProgress = 0;
-            this.dungeonCooldown = 18;
-            this.consecutiveDungeonRuns = (this.consecutiveDungeonRuns || 0) + 1;
           }
           return;
         }
@@ -7456,14 +7441,6 @@
             if (this.targetBuildingType === 'dungeon') {
               const dungeonBld = village.getAllBuildings().find(b => b.type === 'dungeon');
               if (dungeonBld) {
-                if ((this.dungeonCooldown || 0) > 0 || (this.consecutiveDungeonRuns || 0) >= 2) {
-                  this.state = 'IDLE';
-                  this.stateTimer = 0.4;
-                  this.targetBuildingName = '';
-                  this.targetBuildingType = '';
-                  this.pickNextDestination();
-                  return;
-                }
                 const floor = DUNGEON_DIFFICULTY.pickChallengeFloor(this, dungeonBld.level);
                 const exploreMult = this.personality?.exploreSpeedMult || 1;
                 this.state = 'IN_DUNGEON';
