@@ -1614,6 +1614,21 @@
       color: #fde68a;
     }
 
+    .hunter-colosseum-badge-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, rgba(127, 29, 29, 0.28), rgba(146, 64, 14, 0.24));
+      border: 1px solid rgba(251, 191, 36, 0.34);
+      border-radius: 9px;
+      padding: 6px 10px;
+      margin-bottom: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fef08a;
+    }
+
     .hunter-donate-row {
       display: flex;
       align-items: center;
@@ -1977,6 +1992,79 @@
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 6px;
+    }
+
+    /* 결투장 토너먼트 모달 전용 스타일 */
+    .colosseum-tab-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .colosseum-round-card {
+      background: rgba(30, 41, 59, 0.78);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .colosseum-match-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      border-radius: 9px;
+      padding: 7px 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .colosseum-match-row:hover {
+      border-color: #fbbf24;
+      background: rgba(30, 41, 59, 0.95);
+    }
+
+    .colosseum-match-row.active {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
+    }
+
+    .colosseum-log-box {
+      background: rgba(2, 6, 23, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 11px;
+      padding: 10px 12px;
+      max-height: 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 11.5px;
+      line-height: 1.45;
+    }
+
+    .colosseum-arena-wrap {
+      background: rgba(2, 6, 23, 0.96);
+      border: 1px solid rgba(251, 191, 36, 0.42);
+      border-radius: 14px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    #colosseumArenaCanvas {
+      width: 100%;
+      height: 270px;
+      border-radius: 10px;
+      background: radial-gradient(circle at 50% 45%, #1e1b4b 0%, #090d16 100%);
+      display: block;
     }
 
     .hunter-status-line {
@@ -2439,6 +2527,33 @@
     </div>
   </div>
 
+  <!-- 왕국 결투장 토너먼트 & 준결승·결승 관람 모달 -->
+  <div class="tier-modal-backdrop" id="colosseumModalBackdrop" style="z-index: 44;">
+    <div class="tier-modal" style="width: min(96vw, 920px); max-height: 92vh;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🏟️</span>
+          <span id="colosseumModalTitle">왕국 결투장 · 제 1회 1:1 토너먼트</span>
+          <span class="badge-lv" id="colosseumScheduleBadge">다음 개막 --:--</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
+          <button type="button" class="btn-close" id="btnCloseColosseumModal">✕</button>
+        </div>
+      </div>
+      <div class="panel-desc" style="margin-bottom: 8px;">
+        • <b>선발 기준:</b> 환생 횟수 → 레벨 상위 순 최대 50명 자동 출전 · <b>공정 장비:</b> 전원 <b>1T +15강 풀강화 장비 세트</b> 장착 보정<br/>
+        • <b>개막 시각:</b> 현실 시간 <b>매시 정각(1시간마다)</b> 자동 개막 · <b>상금/승점:</b> 우승 <b>5,000만G (+10점)</b> / 준우승 <b>2,000만G (+5점)</b> / 참가상 <b>500만G (+2점)</b> · <b>기록:</b> 최근 최대 5경기 보관
+      </div>
+      <div class="colosseum-tab-bar" id="colosseumTabBar">
+        <button type="button" class="help-tab-btn active" data-col-tab="participants">📋 출전 명단 (최대 50명 · 1T+15)</button>
+        <button type="button" class="help-tab-btn" data-col-tab="bracket">🏆 랜덤 1:1 대진표 & 텍스트 경기 기록</button>
+        <button type="button" class="help-tab-btn" data-col-tab="spectator">⚔️ 준결승 · 결승전 라이브 관람</button>
+        <button type="button" class="help-tab-btn" data-col-tab="history">🗂️ 최근 5경기 기록 & 승점 랭킹</button>
+      </div>
+      <div class="tier-modal-body" id="colosseumModalBody"></div>
+    </div>
+  </div>
+
   <!-- 종합 도움말 & 헌터 장비 티어표 모달 -->
   <div class="tier-modal-backdrop" id="helpModalBackdrop">
     <div class="tier-modal">
@@ -2593,6 +2708,11 @@
           <span>💰 <b id="hunterGoldVal">0 G</b></span>
           <span>🧪 <b id="hunterPotionVal">❤️0/5 · 💧0/3</b></span>
           <span>🎒 <b id="hunterMatVal">0개</b></span>
+        </div>
+
+        <div class="hunter-colosseum-badge-row" id="hunterColosseumSummaryRow">
+          <span>🏟️ 결투장: <b id="hunterColosseumPtsVal">0점</b> (<span id="hunterColosseumRecordVal">우승 0 · 준우승 0 · 출전 0</span>)</span>
+          <span>상금 <b id="hunterColosseumPrizeVal">0 G</b></span>
         </div>
 
         <div class="hunter-donate-row" id="hunterDonateRow">
@@ -6399,6 +6519,23 @@
           }
         }
 
+        // 윤회 성역의 영혼결정 등 매입 가능한 전리품을 3개 이상 보유한 경우 잡화상점 방문 우선 판매
+        const sellableCount = this.inventory
+          ? this.inventory.getEntriesByCategory().reduce((sum, e) => (e.def && e.def.sellable ? sum + (e.qty || 0) : sum), 0)
+          : 0;
+        if (sellableCount >= 3) {
+          const generalStore = buildings.find(b => b.type === 'generalstore');
+          if (generalStore) {
+            this.setDestinationWithGatePath(generalStore.x, generalStore.y + generalStore.h / 2 + 16);
+            this.targetBuildingName = generalStore.name;
+            this.targetBuildingType = generalStore.type;
+            this.targetGroundId = null;
+            this.state = 'WALKING';
+            interactionManager.spawnBubble(this, '🛍️ 전리품·영혼결정 판매하러 잡화상점으로!', '#fde047');
+            return;
+          }
+        }
+
         // 마을에 있을 때 모든 상태가 정상이고 골드 여유가 있다면 장비 강화 최우선
         const inTown = this.x < TOWN_EAST_GATE.wallX;
         const isHealthy = this.hp >= this.maxHp * 0.7 && this.mp >= this.maxMp * 0.5 && this.hunger >= 50 && this.fatigue <= 60;
@@ -7679,14 +7816,18 @@
           for (const slot of slots) {
             const cond = this.checkTierUpgradeCondition(slot, lv);
             if (cond.canUpgrade) {
+              const rebirthEssenceBefore = this.inventory ? this.inventory.getCount('loot_rebirth_essence') : 0;
               this.personalGold -= cond.rule.goldCost;
               this.inventory.consumeCraftingMaterials(cond.rule.matCost);
+              const rebirthEssenceAfter = this.inventory ? this.inventory.getCount('loot_rebirth_essence') : 0;
+              const usedRebirthEssence = Math.max(0, rebirthEssenceBefore - rebirthEssenceAfter);
               this.equipment[slot].tier = cond.nextTier;
               this.equipment[slot].enhance = 0;
               this.recalculateVitals(false);
               baseFee = 70 + lv * 30;
-              interactionManager.spawnBubble(this, `⚒️ T${cond.nextTier} 장비 승급 성공!`, '#fde047');
-              showToast(`⚒️ ${this.name} [${this.getEquipDisplayName(slot)}] T${cond.nextTier} 승급 완료!`);
+              const essenceNote = usedRebirthEssence > 0 ? ` (🌠영혼결정 ${usedRebirthEssence}개 투입)` : '';
+              interactionManager.spawnBubble(this, `⚒️ T${cond.nextTier} 장비 승급 성공!${essenceNote}`, '#fde047');
+              showToast(`⚒️ ${this.name} [${this.getEquipDisplayName(slot)}] T${cond.nextTier} 승급 완료!${essenceNote}`);
               break;
             }
           }
@@ -7907,6 +8048,14 @@
         desc: '천공의 섬에서 획득한 날개 아이템에 성역의 별빛을 벼려 +15강까지 강화하는 전용 대장간입니다.',
         getStatText: (lv) => `날개 강화 성공률 +${(lv * 2.5).toFixed(1)}% · 공명세 ${lv * 120}G`,
         helpGuide: { role: '헌터 착용 날개(+1~+15강) 전용 강화 및 성역 제련 세금 수입' }
+      },
+      colosseum: {
+        type: 'colosseum', name: '결투장', icon: '🏟️', w: 146, h: 100,
+        wallColor: '#fef3c7', roofColor: '#b91c1c', roofStyle: 'fortress', hasChimney: false,
+        maxLevel: 1, buildCost: 30000000, baseUpgradeCost: 1000, prosperityPerLv: 110,
+        desc: '5티어 보스 처치 후 건설 가능한 왕국 결투장입니다. 환생·레벨 상위 순 최대 50명이 전원 1T +15강 풀강화 장비 세트를 장착하고 현실 시간 매시 정각(1시간마다) 랜덤 1:1 토너먼트를 펼칩니다. (우승 5,000만G/10점 · 준우승 2,000만G/5점 · 참가 500만G/2점 · 최근 5경기 기록)',
+        getStatText: () => `5티어 보스 처치 해금 · 최대 50인 · 1T+15 · 1시간마다 개막`,
+        helpGuide: { role: '5티어 보스 처치 후 건설 가능 · 참가자 명단, 텍스트 중계, 준결승·결승 관람, 최근 5경기 기록 및 승점 랭킹 제공' }
       },
       dungeon: {
         type: 'dungeon', name: '지하 던전 입구', icon: '🕳️', w: 138, h: 98,
@@ -8220,14 +8369,14 @@
       oneTimeT3SummonUsed: false
     };
 
-    // 초기 마을 부지 & 핵심 건물 배치
-    village.addPlot('plot_townhall', 0,    -150, 'townhall', 1);
-    village.addPlot('plot_inn',      -190, -150, 'inn',      1);
-    village.addPlot('plot_tavern',   190,  -150, 'tavern',   1);
-    village.addPlot('plot_smithy',   -380, -150, 'smithy',   1);
-    village.addPlot('plot_dungeon',  380,  -150, 'dungeon',  1);
-    village.addPlot('plot_empty_1',  0,     150, null);
-    village.addPlot('plot_empty_2',  -190,  150, null);
+    // 초기 마을 부지 & 핵심 건물 배치 (시작 시 마을 회관만 건설된 상태, 나머지는 빈 부지)
+    village.addPlot('plot_townhall',  0,    -150, 'townhall', 1);
+    village.addPlot('plot_inn',       -190, -150, null);
+    village.addPlot('plot_tavern',    190,  -150, null);
+    village.addPlot('plot_smithy',    -380, -150, null);
+    village.addPlot('plot_dungeon',   380,  -150, null);
+    village.addPlot('plot_colosseum', 0,     150, null);
+    village.addPlot('plot_empty_2',   -190,  150, null);
 
     // 랜덤 Lv.1 헌터 2명 생성 헬퍼
     function createInitialRandomHunters(count = 2) {
@@ -8551,6 +8700,10 @@
     }
 
     function openPlotPanel(plot) {
+      if (plot && plot.building && plot.building.type === 'colosseum') {
+        openColosseumModal();
+        return;
+      }
       closeHunterPanel();
       gameState.selectedPlotId = plot.id;
       const panel = document.getElementById('buildingPanel');
@@ -8653,6 +8806,7 @@
         const catalogEl = document.getElementById('buildCatalogList');
         if (catalogEl) {
           const existingTypes = new Set(village.getAllBuildings().map(b => b.type));
+          const isTier5BossCleared = BOSS_SANCTUM.allStagesCleared || (BOSS_SANCTUM.bossStage || 1) >= 6;
           const buildableTypes = Object.values(BUILDING_CATALOG).filter(
             c => c.type !== 'townhall' && !existingTypes.has(c.type)
           );
@@ -8660,14 +8814,21 @@
             catalogEl.innerHTML = `<div style="padding:14px;text-align:center;color:#94a3b8;font-size:12.5px;">모든 마을 시설이 이미 건설되었습니다.</div>`;
           } else {
             catalogEl.innerHTML = buildableTypes.map(item => {
-              const canAfford = gameState.gold >= item.buildCost;
+              const isColosseumLocked = item.type === 'colosseum' && !isTier5BossCleared;
+              const canAfford = !isColosseumLocked && gameState.gold >= item.buildCost;
+              const costBadgeText = isColosseumLocked
+                ? '🔒 5티어 보스 처치 필요'
+                : `${item.buildCost.toLocaleString()} G`;
+              const subText = isColosseumLocked
+                ? `🔒 5티어 보스 [${getBossStageConfig(5).theme.title}] 처치 후 건설 해금`
+                : `${item.getStatText(1)} · ${item.helpGuide?.role || ''}`;
               return `
                 <div class="catalog-item ${canAfford ? '' : 'disabled'}" data-build-type="${item.type}">
                   <div class="catalog-info">
                     <div class="catalog-title">${item.icon} ${item.name}</div>
-                    <div class="catalog-sub">${item.getStatText(1)} · ${item.helpGuide?.role || ''}</div>
+                    <div class="catalog-sub">${subText}</div>
                   </div>
-                  <div class="catalog-cost">${item.buildCost.toLocaleString()} G</div>
+                  <div class="catalog-cost">${costBadgeText}</div>
                 </div>
               `;
             }).join('');
@@ -8677,6 +8838,10 @@
                 const bType = el.getAttribute('data-build-type');
                 const tpl = BUILDING_CATALOG[bType];
                 if (!tpl || gameState.gold < tpl.buildCost) return;
+                if (bType === 'colosseum' && !(BOSS_SANCTUM.allStagesCleared || (BOSS_SANCTUM.bossStage || 1) >= 6)) {
+                  showToast('🔒 5티어 보스를 처치한 후에 [결투장]을 건설할 수 있습니다!');
+                  return;
+                }
                 if (village.getAllBuildings().some(b => b.type === bType)) {
                   showToast('⚠️ 이미 마을에 건설된 시설입니다.');
                   openPlotPanel(plot);
@@ -8994,6 +9159,19 @@
       setText('hunterPotionVal', `❤️${curHpPot}/${maxHpPot} · 💧${curMpPot}/${maxMpPot} · ${bentoValText}`);
       const totalInvItems = h.inventory ? h.inventory.getTotalItemCount() : h.materials;
       setText('hunterMatVal', `보관 ${totalInvItems}개`);
+
+      const colStanding = (typeof COLOSSEUM_STATE !== 'undefined' && COLOSSEUM_STATE.standings)
+        ? COLOSSEUM_STATE.standings.get(h.id)
+        : null;
+      const colPts = colStanding ? (colStanding.points || 0) : 0;
+      const colPrize = colStanding ? (colStanding.prizeGold || 0) : 0;
+      const colWins = colStanding ? (colStanding.wins || 0) : 0;
+      const colRunnerUps = colStanding ? (colStanding.runnerUps || 0) : 0;
+      const colParts = colStanding ? (colStanding.participations || 0) : 0;
+      setText('hunterColosseumPtsVal', `${colPts.toLocaleString()}점`);
+      setText('hunterColosseumRecordVal', `우승 ${colWins} · 준우승 ${colRunnerUps} · 출전 ${colParts}`);
+      setText('hunterColosseumPrizeVal', `${formatGold(colPrize)} G`);
+
       setText('hunterStatusText', `상태: ${h.getStatusDescription()}`);
 
       // 인벤토리 탭 렌더링 (전리품 · 전투 소모품 · 기타/보스 재료 확장 보관함)
@@ -9648,6 +9826,12 @@
       }
 
       const jobIcons = { '버서커': '🪓', '레인저': '🏹', '팔라딘': '🛡️', '소서러': '🔮' };
+      const getColosseumPoints = (hunterId) => {
+        if (typeof COLOSSEUM_STATE !== 'undefined' && COLOSSEUM_STATE.standings) {
+          return COLOSSEUM_STATE.standings.get(hunterId)?.points || 0;
+        }
+        return 0;
+      };
       const renderRosterRebirthStars = (rebirthCount) => {
         const count = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Math.floor(Number(rebirthCount) || 0)));
         if (count <= 0) return '';
@@ -9673,6 +9857,7 @@
           const canAltar = canCommandRebirthAltarHunt(h);
           const canDonate = gameState.gold >= 500;
           const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount);
+          const colPts = getColosseumPoints(h.id);
           return `
             <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}" data-roster-id="${h.id}">
               <div class="roster-card-top">
@@ -9681,11 +9866,15 @@
                   <span class="roster-job-badge" data-role="job-lv">${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}</span>
                   <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label}</span>
                 </div>
-                <span class="roster-personality-badge ${isTrait ? 'personality-tag-trait' : 'personality-tag-penalty'}">${h.personality.icon} ${h.personality.name}</span>
+                <span class="personality-tag-trait">${h.personality.icon} ${h.personality.name}</span>
               </div>
               <div class="roster-sub-row">
                 <span data-role="rebirth">${rebirthStarsHtml}</span>
                 <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${h.personality.effectText}</span>
+              </div>
+              <div class="roster-card-meta" style="color:#fef08a;font-weight:700;">
+                <span data-role="colosseum-pts">🏟️ 결투장 승점: <b style="color:#4ade80;">${colPts.toLocaleString()}점</b></span>
+                <span style="color:#94a3b8;font-size:10.5px;">우승10·준우승5·참가2</span>
               </div>
               <div class="roster-mini-bars">
                 <div class="roster-mini-bar">
@@ -9770,6 +9959,12 @@
 
         const equipTiersEl = card.querySelector('[data-role="equip-tiers"]');
         if (equipTiersEl) equipTiersEl.textContent = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})`;
+
+        const colPtsEl = card.querySelector('[data-role="colosseum-pts"]');
+        if (colPtsEl) {
+          const colPts = getColosseumPoints(h.id);
+          colPtsEl.innerHTML = `🏟️ 결투장 승점: <b style="color:#4ade80;">${colPts.toLocaleString()}점</b>`;
+        }
 
         const statusEl = card.querySelector('[data-role="status"]');
         if (statusEl) statusEl.textContent = h.getStatusDescription();
@@ -16316,13 +16511,13 @@
     const IDB_SLOT_KEY = 'mainSlot';
 
     const DEFAULT_PLOT_BLUEPRINTS = [
-      { id: 'plot_townhall', x: 0,    y: -150, type: 'townhall', level: 1 },
-      { id: 'plot_inn',      x: -190, y: -150, type: 'inn',      level: 1 },
-      { id: 'plot_tavern',   x: 190,  y: -150, type: 'tavern',   level: 1 },
-      { id: 'plot_smithy',   x: -380, y: -150, type: 'smithy',   level: 1 },
-      { id: 'plot_dungeon',  x: 380,  y: -150, type: 'dungeon',  level: 1 },
-      { id: 'plot_empty_1',  x: 0,    y: 150,  type: null,       level: 1 },
-      { id: 'plot_empty_2',  x: -190, y: 150,  type: null,       level: 1 }
+      { id: 'plot_townhall',  x: 0,    y: -150, type: 'townhall', level: 1 },
+      { id: 'plot_inn',       x: -190, y: -150, type: null,       level: 1 },
+      { id: 'plot_tavern',    x: 190,  y: -150, type: null,       level: 1 },
+      { id: 'plot_smithy',    x: -380, y: -150, type: null,       level: 1 },
+      { id: 'plot_dungeon',   x: 380,  y: -150, type: null,       level: 1 },
+      { id: 'plot_colosseum', x: 0,     y: 150, type: null,       level: 1 },
+      { id: 'plot_empty_2',   x: -190,  y: 150, type: null,       level: 1 }
     ];
 
     const LEGACY_JOB_MAP = {
@@ -16339,6 +16534,7 @@
     let firestoreSetDoc = null;
     let firestoreDoc = null;
     let isStorageReady = false;
+    let isResettingProgress = false;
     let debouncedSaveTimer = null;
 
     function safeParseJson(val, fallback) {
@@ -16841,6 +17037,7 @@
     }
 
     function writeLocalSaveMirrors(payload) {
+      if (isResettingProgress) return false;
       let savedLocally = false;
       const serialized = JSON.stringify(payload);
       try {
@@ -16855,7 +17052,7 @@
 
     // 페이지 이탈·새로고침·패치 덮어쓰기 직전 동기 즉시 백업
     function flushSyncBackup() {
-      if (!isStorageReady) return;
+      if (!isStorageReady || isResettingProgress) return;
       try {
         const payload = serializeGameSaveData();
         writeLocalSaveMirrors(payload);
@@ -16863,7 +17060,7 @@
     }
 
     function scheduleAutoSave(delayMs = 1200) {
-      if (!isStorageReady) return;
+      if (!isStorageReady || isResettingProgress) return;
       clearTimeout(debouncedSaveTimer);
       debouncedSaveTimer = setTimeout(() => {
         saveProgressToStorage(false);
@@ -16871,6 +17068,7 @@
     }
 
     async function saveProgressToStorage(isManual = true) {
+      if (isResettingProgress) return;
       const payload = serializeGameSaveData();
       const savedLocally = writeLocalSaveMirrors(payload);
 
@@ -17381,6 +17579,18 @@
       document.getElementById('loadCodeConfirmBackdrop')?.classList.remove('open');
     }
 
+    function clearSaveCodeModalState() {
+      const ta = document.getElementById('saveCodeTextarea');
+      const meta = document.getElementById('saveCodeMetaBadge');
+      const fileInput = document.getElementById('saveCodeFileInput');
+      if (ta) ta.value = '';
+      if (meta) meta.textContent = '준비 중...';
+      if (fileInput) fileInput.value = '';
+      setSaveCodeFeedback('');
+      closeLoadCodeConfirmModal();
+      closeSaveCodeModal();
+    }
+
     async function applySaveCodeString(rawCode) {
       const normalized = await decodeSaveCodeToData(rawCode);
       openLoadCodeConfirmModal(normalized);
@@ -17499,82 +17709,115 @@
     })();
 
     async function resetAllGameProgress() {
+      if (isResettingProgress) return;
+      isResettingProgress = true;
       isStorageReady = false;
       clearTimeout(debouncedSaveTimer);
 
       try {
-        localStorage.removeItem(PERSISTENT_MASTER_KEY);
-        LEGACY_SAVE_KEYS.forEach(k => localStorage.removeItem(k));
-      } catch (_) {}
-      clearWindowNameBackup();
-      clearIndexedDBBackup();
-
-      if (db && currentUser && firestoreDoc) {
         try {
-          const [fsMod] = await Promise.all([
-            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js")
-          ]);
-          if (typeof fsMod.deleteDoc === 'function') {
-            const saveRef = firestoreDoc(db, 'artifacts', appId, 'users', currentUser.uid, 'villageSaves', 'mainSlot');
-            await fsMod.deleteDoc(saveRef);
-          }
+          localStorage.removeItem(PERSISTENT_MASTER_KEY);
+          LEGACY_SAVE_KEYS.forEach(k => localStorage.removeItem(k));
         } catch (_) {}
+        clearWindowNameBackup();
+        clearIndexedDBBackup();
+
+        if (db && currentUser && firestoreDoc) {
+          try {
+            const [fsMod] = await Promise.all([
+              import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js")
+            ]);
+            if (typeof fsMod.deleteDoc === 'function') {
+              const saveRef = firestoreDoc(db, 'artifacts', appId, 'users', currentUser.uid, 'villageSaves', 'mainSlot');
+              await fsMod.deleteDoc(saveRef);
+            }
+          } catch (_) {}
+        }
+
+        gameState.gold = 2500;
+        gameState.selectedPlotId = null;
+        gameState.selectedHunterId = null;
+        gameState.selectedEquipSlot = null;
+        gameState.followSelectedHunter = false;
+        gameState.activeHunterTab = 'overview';
+        gameState.oneTimeT3SummonUsed = false;
+        const summonBtnEl = document.getElementById('btnSummonOneTimeT3Hunter');
+        if (summonBtnEl) {
+          summonBtnEl.style.display = '';
+          summonBtnEl.disabled = false;
+          summonBtnEl.textContent = '✨ 1회 한정 3T·Lv.1 소환';
+        }
+
+        BOSS_SANCTUM.status = 'CLOSED';
+        BOSS_SANCTUM.prepTimer = 0;
+        BOSS_SANCTUM.bossStage = 1;
+        BOSS_SANCTUM.allStagesCleared = false;
+        BOSS_SANCTUM.fallenHunterIds.clear();
+        SUPREME_TOWN_GUARD.level = 1;
+        ARCANE_TOWN_GUARD.level = 1;
+        getTownGuardsList().forEach(syncTownGuardStats);
+        resetBossSanctumMonster();
+        resetRebirthAltarBoss(true);
+
+        if (typeof COLOSSEUM_STATE !== 'undefined') {
+          COLOSSEUM_STATE.season = 1;
+          COLOSSEUM_STATE.participants = [];
+          COLOSSEUM_STATE.rounds = [];
+          COLOSSEUM_STATE.champion = null;
+          COLOSSEUM_STATE.runnerUp = null;
+          COLOSSEUM_STATE.history = [];
+          COLOSSEUM_STATE.standings?.clear?.();
+          COLOSSEUM_STATE.selectedMatchId = null;
+          COLOSSEUM_STATE.spectatorMatchId = null;
+          COLOSSEUM_STATE.playback = null;
+        }
+
+        interactionManager.relations.clear();
+        interactionManager.pairCooldowns.clear();
+        interactionManager.activeBubbles.length = 0;
+        combatEffects.projectiles.length = 0;
+        combatEffects.slashes.length = 0;
+        combatEffects.popups.length = 0;
+
+        village.plots.length = 0;
+        DEFAULT_PLOT_BLUEPRINTS.forEach(bp => {
+          village.addPlot(bp.id, bp.x, bp.y, bp.type, bp.level);
+        });
+
+        hunters.length = 0;
+        createInitialRandomHunters(2).forEach(h => hunters.push(h));
+
+        closeBuildingPanel();
+        closeHunterPanel();
+        closeMonsterPopup();
+        closeRenameHunterModal();
+        closeDemolishConfirmModal();
+        closeRosterDonateModal();
+        closeBanishConfirmModal();
+        clearSaveCodeModalState();
+        document.getElementById('hunterRosterBackdrop')?.classList.remove('open');
+        document.getElementById('guardRosterBackdrop')?.classList.remove('open');
+        document.getElementById('colosseumModalBackdrop')?.classList.remove('open');
+        document.getElementById('helpModalBackdrop')?.classList.remove('open');
+        document.getElementById('resetConfirmBackdrop')?.classList.remove('open');
+        camera.reset();
+        updateResourceHUD();
+        updateBossRaidHudButton();
+
+        isStorageReady = true;
+        isResettingProgress = false;
+        writeLocalSaveMirrors(serializeGameSaveData());
+        showToast('🔄 마을과 헌터 데이터가 초기화되었습니다!');
+      } catch (err) {
+        console.error('Reset error:', err);
+        isStorageReady = true;
+        isResettingProgress = false;
+        showToast('⚠️ 초기화 중 오류가 발생해 기본 상태로 복구했습니다.');
       }
-
-      gameState.gold = 2500;
-      gameState.selectedPlotId = null;
-      gameState.selectedHunterId = null;
-      gameState.selectedEquipSlot = null;
-      gameState.followSelectedHunter = false;
-      gameState.activeHunterTab = 'overview';
-      gameState.oneTimeT3SummonUsed = false;
-      const summonBtnEl = document.getElementById('btnSummonOneTimeT3Hunter');
-      if (summonBtnEl) {
-        summonBtnEl.style.display = '';
-        summonBtnEl.disabled = false;
-        summonBtnEl.textContent = '✨ 1회 한정 3T·Lv.1 소환';
-      }
-
-      BOSS_SANCTUM.status = 'CLOSED';
-      BOSS_SANCTUM.prepTimer = 0;
-      BOSS_SANCTUM.bossStage = 1;
-      BOSS_SANCTUM.allStagesCleared = false;
-      BOSS_SANCTUM.fallenHunterIds.clear();
-      SUPREME_TOWN_GUARD.level = 1;
-      ARCANE_TOWN_GUARD.level = 1;
-      getTownGuardsList().forEach(syncTownGuardStats);
-      resetBossSanctumMonster();
-      resetRebirthAltarBoss(true);
-
-      interactionManager.relations.clear();
-      interactionManager.pairCooldowns.clear();
-      interactionManager.activeBubbles.length = 0;
-      combatEffects.projectiles.length = 0;
-      combatEffects.slashes.length = 0;
-      combatEffects.popups.length = 0;
-
-      village.plots.length = 0;
-      DEFAULT_PLOT_BLUEPRINTS.forEach(bp => {
-        village.addPlot(bp.id, bp.x, bp.y, bp.type, bp.level);
-      });
-
-      hunters.length = 0;
-      createInitialRandomHunters(2).forEach(h => hunters.push(h));
-
-      closeBuildingPanel();
-      closeHunterPanel();
-      document.getElementById('hunterRosterBackdrop')?.classList.remove('open');
-      document.getElementById('resetConfirmBackdrop')?.classList.remove('open');
-      camera.reset();
-      updateResourceHUD();
-      updateBossRaidHudButton();
-
-      isStorageReady = true;
-      writeLocalSaveMirrors(serializeGameSaveData());
-      showToast('🔄 마을과 헌터 데이터가 초기화되었습니다!');
     }
 
     document.getElementById('btnResetProgress')?.addEventListener('click', () => {
+      if (isResettingProgress) return;
       document.getElementById('resetConfirmBackdrop')?.classList.add('open');
     });
     document.getElementById('btnCancelResetModal')?.addEventListener('click', () => {
@@ -17643,6 +17886,1357 @@
         }
       }, 15000);
     })();
+
+    /**
+     * ============================================================================
+     * 왕국 결투장 (Colosseum 1:1 Tournament System)
+     * 1. 환생 횟수 -> 레벨 상위 순 최대 50명 선발 (전원 1T +15강 풀강화 장비 세트 보정)
+     * 2. 랜덤 배치 1:1 싱글 엘리미네이션 토너먼트
+     * 3. 현실 시간 매시 정각(1시간마다) 자동 개막
+     * 4. 최대 기록 5경기 유지
+     * 5. 상금(우승 5,000만 / 준우승 2,000만 / 참가상 500만) & 승점(우승 10 / 준우승 5 / 참가 2)
+     * ============================================================================
+     */
+    const COLOSSEUM_REWARD_CONFIG = {
+      CHAMPION_GOLD: 50000000,     // 우승 상금 5000만
+      RUNNER_UP_GOLD: 20000000,    // 준우승 상금 2000만
+      PARTICIPANT_GOLD: 5000000,   // 참가상 500만
+      CHAMPION_POINTS: 10,         // 우승 승점 10점
+      RUNNER_UP_POINTS: 5,         // 준우승 승점 5점
+      PARTICIPANT_POINTS: 2,       // 참가 승점 2점
+      MAX_HISTORY_RECORDS: 5       // 최대 기록 5 경기
+    };
+
+    const COLOSSEUM_STATE = {
+      season: 1,
+      activeTab: 'participants',
+      lastTriggeredSlotKey: null,
+      participants: [],
+      rounds: [],
+      champion: null,
+      runnerUp: null,
+      history: [],
+      standings: new Map(),
+      selectedMatchId: null,
+      spectatorMatchId: null,
+      playback: null,
+      animFrameId: null,
+      lastAnimTime: 0
+    };
+
+    function getColosseumStandingEntry(fighter) {
+      if (!COLOSSEUM_STATE.standings.has(fighter.id)) {
+        COLOSSEUM_STATE.standings.set(fighter.id, {
+          id: fighter.id,
+          name: fighter.name,
+          displayJob: fighter.displayJob,
+          jobIcon: fighter.jobIcon,
+          points: 0,
+          prizeGold: 0,
+          wins: 0,
+          runnerUps: 0,
+          participations: 0
+        });
+      }
+      const entry = COLOSSEUM_STATE.standings.get(fighter.id);
+      entry.name = fighter.name;
+      entry.displayJob = fighter.displayJob;
+      return entry;
+    }
+
+    // 1. 환생 -> 레벨 순 상위 최대 50명 선발 및 1T +15 풀강화 장비 세트 장착 스냅샷 생성
+    function buildColosseumParticipants() {
+      const sorted = [...hunters].sort((a, b) => {
+        const rbDiff = (b.rebirthCount || 0) - (a.rebirthCount || 0);
+        if (rbDiff !== 0) return rbDiff;
+        const lvDiff = (b.level || 1) - (a.level || 1);
+        if (lvDiff !== 0) return lvDiff;
+        return (b.exp || 0) - (a.exp || 0);
+      });
+
+      const top50 = sorted.slice(0, 50);
+      return top50.map((h, idx) => {
+        // 임시로 1T +15 풀강화 장비 세트를 장착시켜 공정한 1T+15 전투 능력치 계산 후 원래 장비 복원
+        const origEquip = JSON.parse(JSON.stringify(h.equipment));
+        const origHp = h.hp;
+        const origMp = h.mp;
+        const origMaxHp = h.maxHp;
+        const origMaxMp = h.maxMp;
+
+        ['weapon', 'armor', 'helmet', 'accessory'].forEach((slot) => {
+          h.equipment[slot] = { tier: 1, enhance: 15 };
+        });
+        h.recalculateVitals(false);
+        const fullT1Stats = h.getComputedStats();
+        const arenaMaxHp = h.maxHp;
+        const arenaMaxMp = h.maxMp;
+
+        const activeSkills = (h.skills?.actives || []).map((sk) => {
+          const mult = h.getSkillLevelMultiplier(sk);
+          return {
+            name: sk.name,
+            icon: sk.icon || '⚡',
+            powerMult: Math.max(1.35, ((sk.basePower || 180) / 100) * mult * 0.78),
+            mpCost: Math.max(15, h.getSkillMpCost(sk))
+          };
+        });
+
+        // 원래 장비 및 바이탈 복원
+        h.equipment = origEquip;
+        h.maxHp = origMaxHp;
+        h.maxMp = origMaxMp;
+        h.hp = origHp;
+        h.mp = origMp;
+
+        const jobColorMap = {
+          '버서커': '#ef4444',
+          '레인저': '#10b981',
+          '팔라딘': '#f59e0b',
+          '소서러': '#a855f7'
+        };
+        const jobIconMap = {
+          '버서커': '🪓',
+          '레인저': '🏹',
+          '팔라딘': '🛡️',
+          '소서러': '🔮'
+        };
+
+        return {
+          seedRank: idx + 1,
+          id: h.id,
+          name: h.name,
+          baseJob: h.baseJob || h.job,
+          displayJob: h.currentJobName || h.job,
+          jobIcon: jobIconMap[h.baseJob || h.job] || '⚔️',
+          color: jobColorMap[h.baseJob || h.job] || '#38bdf8',
+          level: h.level || 1,
+          rebirthCount: h.rebirthCount || 0,
+          equipBadge: '전 부위 1T +15강 풀세트',
+          maxHp: arenaMaxHp,
+          maxMp: arenaMaxMp,
+          atk: fullT1Stats.atk,
+          def: fullT1Stats.def,
+          crit: fullT1Stats.crit,
+          speed: h.speed || 70,
+          activeSkills
+        };
+      });
+    }
+
+    function shuffleColosseumList(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // 2. 1:1 결투 시뮬레이션 (텍스트 로그 + 준결승/결승전 스킬 이펙트·스킬명 타임라인 생성)
+    function simulateColosseumDuel(fighterA, fighterB, roundName, matchLabel) {
+      if (!fighterB) {
+        return {
+          winner: fighterA,
+          loser: null,
+          isBye: true,
+          logs: [`[부전승] ${fighterA.name} (환생 ${fighterA.rebirthCount} · Lv.${fighterA.level} · 1T+15 풀세트) 선수가 부전승으로 다음 라운드에 진출합니다.`],
+          timeline: [],
+          duration: 2
+        };
+      }
+
+      let hpA = fighterA.maxHp;
+      let hpB = fighterB.maxHp;
+      let mpA = fighterA.maxMp;
+      let mpB = fighterB.maxMp;
+      const logs = [];
+      const timeline = [];
+
+      logs.push(`⚔️ [${roundName} ${matchLabel}] ${fighterA.name}(${fighterA.displayJob} · ${fighterA.rebirthCount}환생 Lv.${fighterA.level} · 1T+15) VS ${fighterB.name}(${fighterB.displayJob} · ${fighterB.rebirthCount}환생 Lv.${fighterB.level} · 1T+15)`);
+      timeline.push({
+        time: 0.3,
+        type: 'START',
+        hpA, hpB,
+        text: `${fighterA.name} VS ${fighterB.name} 결투 시작!`
+      });
+
+      let turn = 1;
+      let tCursor = 1.0;
+      let turnA = fighterA.speed >= fighterB.speed ? true : Math.random() < 0.5;
+
+      while (hpA > 0 && hpB > 0 && turn <= 45) {
+        const atkFighter = turnA ? fighterA : fighterB;
+        const defFighter = turnA ? fighterB : fighterA;
+        const side = turnA ? 'LEFT' : 'RIGHT';
+        const curMp = turnA ? mpA : mpB;
+
+        const usableSkills = (atkFighter.activeSkills || []).filter(s => curMp >= s.mpCost);
+        const castSkill = (usableSkills.length > 0 && (Math.random() < 0.55 || turn % 2 === 1))
+          ? usableSkills[Math.floor(Math.random() * usableSkills.length)]
+          : null;
+
+        let rawDmg = atkFighter.atk * (0.95 + Math.random() * 0.25);
+        if (castSkill) {
+          if (turnA) mpA = Math.max(0, mpA - castSkill.mpCost);
+          else mpB = Math.max(0, mpB - castSkill.mpCost);
+          rawDmg = atkFighter.atk * castSkill.powerMult;
+        }
+
+        const isCrit = Math.random() * 100 < atkFighter.crit;
+        if (isCrit) rawDmg *= 1.45;
+
+        const finalDmg = Math.max(45, Math.round(rawDmg - defFighter.def * 0.36));
+        if (turnA) hpB = Math.max(0, hpB - finalDmg);
+        else hpA = Math.max(0, hpA - finalDmg);
+
+        if (castSkill) {
+          const critTxt = isCrit ? ' [치명타!]' : '';
+          logs.push(`[${turn}합] ✨ ${atkFighter.name}의 스킬 【${castSkill.icon} ${castSkill.name}】 발동!${critTxt} → ${defFighter.name}에게 ${finalDmg.toLocaleString()} 피해! (남은 HP: ${(turnA ? hpB : hpA).toLocaleString()})`);
+          timeline.push({
+            time: tCursor,
+            type: 'SKILL',
+            side,
+            attackerName: atkFighter.name,
+            skillName: `${castSkill.icon} ${castSkill.name}`,
+            color: atkFighter.color,
+            damage: finalDmg,
+            isCrit,
+            hpA,
+            hpB,
+            text: `${atkFighter.name} 【${castSkill.name}】 발동! (-${finalDmg.toLocaleString()})`
+          });
+          tCursor += 1.55;
+        } else {
+          const critTxt = isCrit ? ' [급소 일격!]' : '';
+          logs.push(`[${turn}합] 🗡️ ${atkFighter.name}의 1T 무기 강타${critTxt} → ${defFighter.name}에게 ${finalDmg.toLocaleString()} 피해 (남은 HP: ${(turnA ? hpB : hpA).toLocaleString()})`);
+          timeline.push({
+            time: tCursor,
+            type: 'ATTACK',
+            side,
+            attackerName: atkFighter.name,
+            skillName: isCrit ? '💥 1T 치명 일섬' : '⚔️ 1T 무기 연격',
+            color: atkFighter.color,
+            damage: finalDmg,
+            isCrit,
+            hpA,
+            hpB,
+            text: `${atkFighter.name}의 공격 (-${finalDmg.toLocaleString()})`
+          });
+          tCursor += 1.1;
+        }
+
+        turnA = !turnA;
+        turn++;
+      }
+
+      const winner = hpA >= hpB ? fighterA : fighterB;
+      const loser = winner.id === fighterA.id ? fighterB : fighterA;
+      logs.push(`🏆 [승자 확정] ${winner.name} 선수가 ${loser.name} 선수를 제압하고 다음 라운드에 진출했습니다!`);
+      timeline.push({
+        time: tCursor + 0.35,
+        type: 'END',
+        winnerName: winner.name,
+        winnerSide: winner.id === fighterA.id ? 'LEFT' : 'RIGHT',
+        hpA,
+        hpB,
+        text: `👑 승자: ${winner.name}!`
+      });
+
+      return {
+        winner,
+        loser,
+        isBye: false,
+        logs,
+        timeline,
+        duration: tCursor + 1.5
+      };
+    }
+
+    // 3. 랜덤 배치 1:1 싱글 엘리미네이션 토너먼트 실행
+    function runColosseumTournament(triggerLabel = '정규 개막') {
+      const colBld = village.getAllBuildings().find(b => b.type === 'colosseum');
+      if (!colBld) {
+        return false;
+      }
+
+      const selected50 = buildColosseumParticipants();
+      if (selected50.length < 2) {
+        showToast('⚠️ 결투장 토너먼트를 진행하려면 최소 2명 이상의 헌터가 필요합니다.');
+        return false;
+      }
+
+      COLOSSEUM_STATE.participants = selected50;
+      COLOSSEUM_STATE.rounds = [];
+      COLOSSEUM_STATE.champion = null;
+      COLOSSEUM_STATE.runnerUp = null;
+
+      let pool = shuffleColosseumList(selected50);
+      let roundIdx = 1;
+
+      while (pool.length > 1) {
+        const cnt = pool.length;
+        let roundName = `${roundIdx}라운드 (${cnt}강)`;
+        let isSpectatable = false;
+        if (cnt === 2) {
+          roundName = '결승전';
+          isSpectatable = true;
+        } else if (cnt <= 4) {
+          roundName = '준결승전';
+          isSpectatable = true;
+        } else if (cnt <= 8) {
+          roundName = '8강전';
+        } else if (cnt <= 16) {
+          roundName = '16강전';
+        } else if (cnt <= 32) {
+          roundName = '32강전';
+        } else {
+          roundName = `예선전 (${cnt}강)`;
+        }
+
+        const matches = [];
+        const nextPool = [];
+        for (let i = 0; i < pool.length; i += 2) {
+          const fA = pool[i];
+          const fB = pool[i + 1] || null;
+          const mNum = Math.floor(i / 2) + 1;
+          const mLabel = `${mNum}경기`;
+          const sim = simulateColosseumDuel(fA, fB, roundName, mLabel);
+
+          matches.push({
+            id: `col_r${roundIdx}_m${mNum}`,
+            roundIdx,
+            roundName,
+            matchLabel: mLabel,
+            isSpectatable,
+            fighterA: fA,
+            fighterB: fB,
+            winner: sim.winner,
+            loser: sim.loser,
+            isBye: sim.isBye,
+            logs: sim.logs,
+            timeline: sim.timeline,
+            duration: sim.duration
+          });
+          nextPool.push(sim.winner);
+        }
+
+        COLOSSEUM_STATE.rounds.push({
+          roundIdx,
+          roundName,
+          isSpectatable,
+          matches
+        });
+        pool = nextPool;
+        roundIdx++;
+      }
+
+      COLOSSEUM_STATE.champion = pool[0];
+      const finalRound = COLOSSEUM_STATE.rounds[COLOSSEUM_STATE.rounds.length - 1];
+      const finalMatch = finalRound?.matches?.[0] || null;
+      COLOSSEUM_STATE.runnerUp = finalMatch?.loser || null;
+      COLOSSEUM_STATE.selectedMatchId = finalMatch ? finalMatch.id : null;
+      COLOSSEUM_STATE.spectatorMatchId = finalMatch && !finalMatch.isBye ? finalMatch.id : null;
+
+      const currentSeasonNum = COLOSSEUM_STATE.season;
+
+      // 상금 및 승점 정산 (1. 참가 전원 참가상 500만G + 2점)
+      selected50.forEach((p) => {
+        const st = getColosseumStandingEntry(p);
+        st.participations += 1;
+        st.prizeGold += COLOSSEUM_REWARD_CONFIG.PARTICIPANT_GOLD;
+        st.points += COLOSSEUM_REWARD_CONFIG.PARTICIPANT_POINTS;
+
+        const realHunter = hunters.find(h => h.id === p.id);
+        if (realHunter) {
+          realHunter.personalGold += COLOSSEUM_REWARD_CONFIG.PARTICIPANT_GOLD;
+        }
+      });
+
+      // 2. 준우승자 추가 정산 (총 준우승 상금 2,000만G + 5점 반영)
+      if (COLOSSEUM_STATE.runnerUp) {
+        const rUp = COLOSSEUM_STATE.runnerUp;
+        const stRunner = getColosseumStandingEntry(rUp);
+        const extraRunnerGold = COLOSSEUM_REWARD_CONFIG.RUNNER_UP_GOLD - COLOSSEUM_REWARD_CONFIG.PARTICIPANT_GOLD;
+        const extraRunnerPts = COLOSSEUM_REWARD_CONFIG.RUNNER_UP_POINTS - COLOSSEUM_REWARD_CONFIG.PARTICIPANT_POINTS;
+        stRunner.runnerUps += 1;
+        stRunner.prizeGold += extraRunnerGold;
+        stRunner.points += extraRunnerPts;
+
+        const realRunner = hunters.find(h => h.id === rUp.id);
+        if (realRunner) {
+          realRunner.personalGold += extraRunnerGold;
+          realRunner.gainExp(350);
+          interactionManager.spawnBubble(realRunner, `🥈 제 ${currentSeasonNum}회 결투장 준우승! (+2,000만G / +5점)`, '#bae6fd');
+        }
+      }
+
+      // 3. 우승자 추가 정산 (총 우승 상금 5,000만G + 10점 반영)
+      const champ = COLOSSEUM_STATE.champion;
+      if (champ) {
+        const stChamp = getColosseumStandingEntry(champ);
+        const extraChampGold = COLOSSEUM_REWARD_CONFIG.CHAMPION_GOLD - COLOSSEUM_REWARD_CONFIG.PARTICIPANT_GOLD;
+        const extraChampPts = COLOSSEUM_REWARD_CONFIG.CHAMPION_POINTS - COLOSSEUM_REWARD_CONFIG.PARTICIPANT_POINTS;
+        stChamp.wins += 1;
+        stChamp.prizeGold += extraChampGold;
+        stChamp.points += extraChampPts;
+
+        const realChamp = hunters.find(h => h.id === champ.id);
+        if (realChamp) {
+          realChamp.personalGold += extraChampGold;
+          realChamp.gainExp(800);
+          interactionManager.spawnBubble(realChamp, `👑 제 ${currentSeasonNum}회 결투장 우승! (+5,000만G / +10점)`, '#fde047');
+        }
+      }
+
+      // 최근 토너먼트 기록 저장 (최대 5경기 유지)
+      const nowTime = new Date();
+      const timeLabel = `${String(nowTime.getHours()).padStart(2, '0')}:${String(nowTime.getMinutes()).padStart(2, '0')}:${String(nowTime.getSeconds()).padStart(2, '0')}`;
+      COLOSSEUM_STATE.history.unshift({
+        season: currentSeasonNum,
+        timestamp: timeLabel,
+        triggerLabel,
+        participantCount: selected50.length,
+        champion: champ ? { ...champ } : null,
+        runnerUp: COLOSSEUM_STATE.runnerUp ? { ...COLOSSEUM_STATE.runnerUp } : null
+      });
+      if (COLOSSEUM_STATE.history.length > COLOSSEUM_REWARD_CONFIG.MAX_HISTORY_RECORDS) {
+        COLOSSEUM_STATE.history = COLOSSEUM_STATE.history.slice(0, COLOSSEUM_REWARD_CONFIG.MAX_HISTORY_RECORDS);
+      }
+
+      showToast(`🏟️ 제 ${currentSeasonNum}회 결투장 종료! 우승: ${champ.name} (5,000만G / +10점) · 준우승: ${COLOSSEUM_STATE.runnerUp ? COLOSSEUM_STATE.runnerUp.name : '-'}`);
+      COLOSSEUM_STATE.season += 1;
+
+      if (document.getElementById('colosseumModalBackdrop')?.classList.contains('open')) {
+        renderColosseumModal();
+      }
+      return true;
+    }
+
+    // 4. 현실 시간 매시 정각(1시간마다) 자동 개막 스케줄러
+    function checkColosseumRealTimeSchedule() {
+      const now = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const s = now.getSeconds();
+
+      const nextHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h + 1, 0, 0, 0);
+      const nextHourLabel = `${pad(nextHour.getHours())}:00`;
+
+      const diffSec = Math.max(0, Math.floor((nextHour - now) / 1000));
+      const mm = Math.floor((diffSec % 3600) / 60);
+      const ss = diffSec % 60;
+
+      const badge = document.getElementById('colosseumScheduleBadge');
+      if (badge) {
+        badge.textContent = `다음 개막 ${nextHourLabel} (${pad(mm)}:${pad(ss)})`;
+      }
+
+      if (m === 0 && s <= 3) {
+        const slotKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}_${h}`;
+        if (COLOSSEUM_STATE.lastTriggeredSlotKey !== slotKey) {
+          COLOSSEUM_STATE.lastTriggeredSlotKey = slotKey;
+          runColosseumTournament(`매시 정각(${pad(h)}:00) 자동 개막`);
+        }
+      }
+    }
+
+    setInterval(checkColosseumRealTimeSchedule, 1000);
+
+    function findColosseumMatchById(matchId) {
+      for (const r of COLOSSEUM_STATE.rounds) {
+        const found = r.matches.find(m => m.id === matchId);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function stopColosseumSpectatorLoop() {
+      if (COLOSSEUM_STATE.animFrameId) {
+        cancelAnimationFrame(COLOSSEUM_STATE.animFrameId);
+        COLOSSEUM_STATE.animFrameId = null;
+      }
+    }
+
+    function startColosseumSpectatorMatch(matchId) {
+      const match = findColosseumMatchById(matchId);
+      if (!match || !match.fighterB) return;
+      COLOSSEUM_STATE.spectatorMatchId = match.id;
+      COLOSSEUM_STATE.playback = {
+        match,
+        elapsed: 0,
+        evIndex: 0,
+        hpA: match.fighterA.maxHp,
+        hpB: match.fighterB.maxHp,
+        leftDash: 0,
+        rightDash: 0,
+        leftFlash: 0,
+        rightFlash: 0,
+        leftSwing: 0,
+        rightSwing: 0,
+        leftRecoil: 0,
+        rightRecoil: 0,
+        screenShake: 0,
+        sparks: [],
+        effects: [],
+        banners: [],
+        commentary: `${match.roundName} ${match.matchLabel} · ${match.fighterA.name} VS ${match.fighterB.name}`
+      };
+      COLOSSEUM_STATE.lastAnimTime = performance.now();
+      if (!COLOSSEUM_STATE.animFrameId) {
+        COLOSSEUM_STATE.animFrameId = requestAnimationFrame(stepColosseumArena);
+      }
+    }
+
+    function drawColosseumArenaCharacter(ctx, fighter, x, y, facing, opts = {}) {
+      const {
+        flash = false,
+        swing = 0,
+        recoil = 0,
+        walkPhase = 0,
+        isSkill = false,
+        isWinner = false,
+        isLoser = false
+      } = opts;
+
+      const t = performance.now() * 0.004;
+      const rebirthTier = Math.max(0, Math.min(5, fighter.rebirthCount || 0));
+      const bob = isLoser ? 4 : Math.sin(walkPhase) * 2.5 - Math.abs(swing) * 5;
+      const lean = swing * 0.24 * facing - recoil * 0.2 * facing;
+
+      ctx.save();
+      ctx.translate(x, y);
+      if (isLoser) {
+        ctx.globalAlpha = 0.45;
+      }
+
+      // 1. 발밑 원형 아레나 그림자 & 환생 윤회 오라 링
+      ctx.save();
+      ctx.translate(0, 22);
+      ctx.scale(1, 0.42);
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.65)';
+      ctx.beginPath();
+      ctx.arc(0, 0, 28, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (rebirthTier > 0 || isWinner) {
+        ctx.save();
+        ctx.rotate(t * (1.2 + rebirthTier * 0.25));
+        ctx.strokeStyle = isWinner ? '#fde047' : fighter.color;
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([8, 5]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 34 + Math.sin(t * 3) * 2, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(0, bob);
+      ctx.rotate(lean);
+
+      // 2. 등 뒤 망토 / 날개 실루엣
+      ctx.fillStyle = fighter.color;
+      ctx.globalAlpha = isLoser ? 0.4 : 0.72;
+      ctx.beginPath();
+      ctx.moveTo(-facing * 4, -8);
+      ctx.lineTo(-facing * 24, 14 + Math.sin(t * 5) * 2.5);
+      ctx.lineTo(-facing * 6, 18);
+      ctx.lineTo(facing * 6, 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = isLoser ? 0.45 : 1;
+
+      if (rebirthTier >= 2) {
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.translate(-facing * 5, -6);
+          ctx.rotate(side * (0.45 + Math.sin(t * 4) * 0.16));
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.85)';
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(-facing * 14, -18, -facing * 24, -8);
+          ctx.quadraticCurveTo(-facing * 16, 4, 0, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
+      // 3. 다리
+      const legSwing = Math.sin(walkPhase) * 5;
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-10, 10 + legSwing * 0.4, 8, 13, 3);
+      ctx.roundRect(2, 10 - legSwing * 0.4, 8, 13, 3);
+      ctx.fill();
+      ctx.stroke();
+
+      // 4. 1T +15 풀강화 갑옷 & 견갑
+      ctx.fillStyle = flash ? '#ffffff' : fighter.color;
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.roundRect(-14, -10, 28, 23, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // 흉갑 장식 라인
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-8, -3);
+      ctx.lineTo(0, 4);
+      ctx.lineTo(8, -3);
+      ctx.stroke();
+
+      // 양 어깨 1T +15 견갑
+      [-15, 15].forEach((sx) => {
+        ctx.fillStyle = flash ? '#ffffff' : '#fef08a';
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(sx, -8, 6.2, Math.PI, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      });
+
+      // 5. 머리, 헤어, 눈, 1T 투구
+      ctx.fillStyle = flash ? '#ffffff' : '#fde68a';
+      ctx.beginPath();
+      ctx.arc(0, -21, 11.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(0, -23.5, 12, Math.PI * 1.05, -0.05 * Math.PI);
+      ctx.closePath();
+      ctx.fill();
+
+      // 눈빛
+      ctx.fillStyle = isSkill ? '#fde047' : '#0f172a';
+      ctx.beginPath();
+      ctx.arc(facing * 4.2, -20, 2.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 환생 별 표시 (머리 위)
+      if (rebirthTier > 0) {
+        ctx.fillStyle = '#facc15';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('★'.repeat(rebirthTier), 0, -39);
+      }
+
+      // 6. 직업별 무기 & 공격 스윙 모션
+      ctx.save();
+      ctx.translate(facing * 14, -2);
+      const weaponAngle = facing * (0.35 - swing * 1.45);
+      ctx.rotate(weaponAngle);
+
+      if (isSkill || swing > 0.25) {
+        ctx.save();
+        ctx.shadowColor = isSkill ? '#fde047' : fighter.color;
+        ctx.shadowBlur = 16;
+        ctx.strokeStyle = isSkill ? '#fde047' : '#e0f2fe';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(0, -14, 24, -Math.PI * 0.85, Math.PI * 0.25);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (fighter.baseJob === '버서커') {
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(-2.5, -34, 5, 42);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-2, -32);
+        ctx.quadraticCurveTo(-18, -34, -19, -22);
+        ctx.quadraticCurveTo(-17, -12, -2, -15);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      } else if (fighter.baseJob === '레인저') {
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, -12, 16, -1.2, 1.2);
+        ctx.stroke();
+        ctx.strokeStyle = '#fde68a';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-4, -12);
+        ctx.lineTo(18, -12);
+        ctx.stroke();
+      } else if (fighter.baseJob === '소서러') {
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 8);
+        ctx.lineTo(0, -28);
+        ctx.stroke();
+        ctx.fillStyle = '#e879f9';
+        ctx.shadowColor = '#c084fc';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(0, -32, 7.5 + Math.sin(t * 6) * 1.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-4, 2);
+        ctx.lineTo(-3, -34);
+        ctx.lineTo(0, -41);
+        ctx.lineTo(3, -34);
+        ctx.lineTo(4, 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.restore();
+      ctx.restore();
+
+      // 7. 하단 명판
+      ctx.font = 'bold 12px sans-serif';
+      const label = `${fighter.jobIcon} ${fighter.name}`;
+      const tw = ctx.measureText(label).width + 16;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.beginPath();
+      ctx.roundRect(-tw / 2, 34, tw, 20, 6);
+      ctx.fill();
+      ctx.strokeStyle = isWinner ? '#fde047' : 'rgba(148, 163, 184, 0.35)';
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+
+      ctx.fillStyle = isWinner ? '#fde047' : '#f8fafc';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, 0, 44);
+
+      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#7dd3fc';
+      ctx.fillText(`${fighter.rebirthCount}환생 · Lv.${fighter.level} · 1T+15`, 0, 63);
+
+      ctx.restore();
+    }
+
+    function stepColosseumArena(now) {
+      const modalOpen = document.getElementById('colosseumModalBackdrop')?.classList.contains('open');
+      if (!modalOpen || COLOSSEUM_STATE.activeTab !== 'spectator' || !COLOSSEUM_STATE.playback) {
+        COLOSSEUM_STATE.animFrameId = null;
+        return;
+      }
+
+      const dt = Math.min(0.08, Math.max(0, (now - COLOSSEUM_STATE.lastAnimTime) / 1000));
+      COLOSSEUM_STATE.lastAnimTime = now;
+
+      const pb = COLOSSEUM_STATE.playback;
+      pb.elapsed += dt;
+
+      while (pb.evIndex < pb.match.timeline.length && pb.elapsed >= pb.match.timeline[pb.evIndex].time) {
+        const ev = pb.match.timeline[pb.evIndex];
+        pb.evIndex++;
+        pb.hpA = ev.hpA;
+        pb.hpB = ev.hpB;
+        pb.commentary = ev.text;
+
+        if (ev.type === 'SKILL' || ev.type === 'ATTACK') {
+          const isLeft = ev.side === 'LEFT';
+          if (isLeft) {
+            pb.leftDash = 1.0;
+            pb.leftSwing = 1.0;
+            pb.rightFlash = 0.45;
+            pb.rightRecoil = 1.0;
+          } else {
+            pb.rightDash = 1.0;
+            pb.rightSwing = 1.0;
+            pb.leftFlash = 0.45;
+            pb.leftRecoil = 1.0;
+          }
+          pb.screenShake = ev.type === 'SKILL' ? 9 : 4.5;
+
+          const srcX = isLeft ? 0.27 : 0.73;
+          const dstX = isLeft ? 0.73 : 0.27;
+
+          for (let s = 0; s < (ev.type === 'SKILL' ? 14 : 7); s++) {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 70 + Math.random() * 140;
+            pb.sparks.push({
+              rx: dstX,
+              ry: 0.62,
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd - 45,
+              color: ev.type === 'SKILL' ? '#fde047' : (ev.color || '#38bdf8'),
+              size: ev.type === 'SKILL' ? 3.5 : 2.5,
+              life: 0.55,
+              maxLife: 0.55
+            });
+          }
+
+          pb.banners.push({
+            kind: 'SKILL',
+            text: ev.skillName,
+            color: ev.color || '#fde047',
+            rx: srcX,
+            ry: 0.24,
+            life: 1.55,
+            maxLife: 1.55
+          });
+          pb.banners.push({
+            kind: 'DMG',
+            text: `${ev.isCrit ? '💥 ' : '-'}${ev.damage.toLocaleString()}`,
+            color: ev.isCrit ? '#fde047' : '#fda4af',
+            rx: dstX,
+            ry: 0.42,
+            life: 1.15,
+            maxLife: 1.15
+          });
+          pb.effects.push({
+            isSkill: ev.type === 'SKILL',
+            isLeft,
+            color: ev.color || '#fde047',
+            srcX,
+            dstX,
+            life: 0.75,
+            maxLife: 0.75
+          });
+        }
+      }
+
+      pb.leftDash = Math.max(0, pb.leftDash - dt * 2.4);
+      pb.rightDash = Math.max(0, pb.rightDash - dt * 2.4);
+      pb.leftSwing = Math.max(0, pb.leftSwing - dt * 2.8);
+      pb.rightSwing = Math.max(0, pb.rightSwing - dt * 2.8);
+      pb.leftRecoil = Math.max(0, pb.leftRecoil - dt * 2.5);
+      pb.rightRecoil = Math.max(0, pb.rightRecoil - dt * 2.5);
+      pb.leftFlash = Math.max(0, pb.leftFlash - dt * 2.6);
+      pb.rightFlash = Math.max(0, pb.rightFlash - dt * 2.6);
+      pb.screenShake = Math.max(0, pb.screenShake - dt * 28);
+
+      const arenaCanvas = document.getElementById('colosseumArenaCanvas');
+      if (arenaCanvas) {
+        const rect = arenaCanvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(300, Math.round(rect.width));
+        const h = Math.max(220, Math.round(rect.height));
+        if (arenaCanvas.width !== Math.round(w * dpr) || arenaCanvas.height !== Math.round(h * dpr)) {
+          arenaCanvas.width = Math.round(w * dpr);
+          arenaCanvas.height = Math.round(h * dpr);
+        }
+        const ctx = arenaCanvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        ctx.save();
+        if (pb.screenShake > 0.2) {
+          const sx = (Math.random() - 0.5) * pb.screenShake;
+          const sy = (Math.random() - 0.5) * pb.screenShake;
+          ctx.translate(sx, sy);
+        }
+
+        // 아레나 바닥 원형 무대 & 투기장 기둥 빛줄기
+        const stageGrad = ctx.createRadialGradient(w * 0.5, h * 0.68, 20, w * 0.5, h * 0.68, w * 0.45);
+        stageGrad.addColorStop(0, 'rgba(251, 191, 36, 0.22)');
+        stageGrad.addColorStop(0.65, 'rgba(99, 102, 241, 0.08)');
+        stageGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+        ctx.fillStyle = stageGrad;
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.68, w * 0.44, h * 0.19, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.45)';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.18)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(w * 0.5, h * 0.68, w * 0.28, h * 0.11, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // 상단 양측 HP 게이지 바
+        const ratioA = Math.max(0, pb.hpA / pb.match.fighterA.maxHp);
+        const ratioB = Math.max(0, pb.hpB / pb.match.fighterB.maxHp);
+        const barW = w * 0.36;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(16, 14, barW, 12);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(16, 14, barW * ratioA, 12);
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`${pb.match.fighterA.name} (${pb.hpA.toLocaleString()})`, 16, 40);
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(w - 16 - barW, 14, barW, 12);
+        ctx.fillStyle = '#fb7185';
+        ctx.fillRect(w - 16 - barW * ratioB, 14, barW * ratioB, 12);
+        ctx.textAlign = 'right';
+        ctx.fillText(`${pb.match.fighterB.name} (${pb.hpB.toLocaleString()})`, w - 16, 40);
+
+        // 좌/우 헌터 돌진·반동 좌표 및 실제 외형 렌더링
+        const dashOffset = Math.sin(pb.leftDash * Math.PI) * 0.22 - Math.sin(pb.leftRecoil * Math.PI) * 0.05;
+        const rightDashOffset = Math.sin(pb.rightDash * Math.PI) * 0.22 - Math.sin(pb.rightRecoil * Math.PI) * 0.05;
+        const lx = (0.27 + dashOffset) * w;
+        const rx = (0.73 - rightDashOffset) * w;
+        const fy = h * 0.58;
+        const isFinished = pb.evIndex >= pb.match.timeline.length;
+        const winnerId = pb.match.winner?.id;
+
+        drawColosseumArenaCharacter(ctx, pb.match.fighterA, lx, fy, 1, {
+          flash: pb.leftFlash > 0,
+          swing: pb.leftSwing,
+          recoil: pb.leftRecoil,
+          walkPhase: pb.elapsed * 9,
+          isSkill: pb.leftSwing > 0.45,
+          isWinner: isFinished && winnerId === pb.match.fighterA.id,
+          isLoser: isFinished && winnerId !== pb.match.fighterA.id
+        });
+
+        drawColosseumArenaCharacter(ctx, pb.match.fighterB, rx, fy, -1, {
+          flash: pb.rightFlash > 0,
+          swing: pb.rightSwing,
+          recoil: pb.rightRecoil,
+          walkPhase: pb.elapsed * 9 + 1.4,
+          isSkill: pb.rightSwing > 0.45,
+          isWinner: isFinished && winnerId === pb.match.fighterB.id,
+          isLoser: isFinished && winnerId !== pb.match.fighterB.id
+        });
+
+        // 스킬 이펙트 (참격 호 + 광선 + 충격파 링)
+        for (let i = pb.effects.length - 1; i >= 0; i--) {
+          const ef = pb.effects[i];
+          ef.life -= dt;
+          if (ef.life <= 0) {
+            pb.effects.splice(i, 1);
+            continue;
+          }
+          const prog = 1 - ef.life / ef.maxLife;
+          const targetPx = ef.dstX * w;
+          const targetPy = fy - 6;
+
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, 1 - prog);
+          if (ef.isSkill) {
+            const grad = ctx.createLinearGradient(ef.srcX * w, targetPy, targetPx, targetPy);
+            grad.addColorStop(0, 'rgba(253, 224, 71, 0.15)');
+            grad.addColorStop(1, ef.color);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 12 * (1 - prog * 0.55);
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(ef.srcX * w, targetPy);
+            ctx.lineTo(targetPx, targetPy);
+            ctx.stroke();
+
+            // 교차 검기/마법진 이펙트
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 3.5;
+            ctx.beginPath();
+            ctx.arc(targetPx, targetPy, 22 + prog * 54, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            ctx.strokeStyle = ef.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(targetPx, targetPy, 12 + prog * 34, -0.9, 0.9);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // 타격 스파크 파티클
+        for (let i = pb.sparks.length - 1; i >= 0; i--) {
+          const sp = pb.sparks[i];
+          sp.life -= dt;
+          if (sp.life <= 0) {
+            pb.sparks.splice(i, 1);
+            continue;
+          }
+          sp.rx += (sp.vx * dt) / w;
+          sp.ry += (sp.vy * dt) / h;
+          sp.vy += 260 * dt;
+
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, sp.life / sp.maxLife);
+          ctx.fillStyle = sp.color;
+          ctx.beginPath();
+          ctx.arc(sp.rx * w, sp.ry * h, sp.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 스킬명 배너 및 데미지 팝업 표시
+        for (let i = pb.banners.length - 1; i >= 0; i--) {
+          const bn = pb.banners[i];
+          bn.life -= dt;
+          if (bn.life <= 0) {
+            pb.banners.splice(i, 1);
+            continue;
+          }
+          const prog = 1 - bn.life / bn.maxLife;
+          const bx = bn.rx * w;
+          const by = (bn.ry - prog * 0.08) * h;
+
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, bn.life * 2);
+          if (bn.kind === 'SKILL') {
+            ctx.font = 'bold 13px sans-serif';
+            const tw = ctx.measureText(bn.text).width + 22;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+            ctx.strokeStyle = bn.color;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(bx - tw / 2, by - 15, tw, 26, 8);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = bn.color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(bn.text, bx, by - 2);
+          } else {
+            ctx.font = 'bold 16px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.strokeStyle = '#090d16';
+            ctx.lineWidth = 3.5;
+            ctx.strokeText(bn.text, bx, by);
+            ctx.fillStyle = bn.color;
+            ctx.fillText(bn.text, bx, by);
+          }
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        const commEl = document.getElementById('colosseumCommentaryText');
+        if (commEl) commEl.textContent = pb.commentary;
+      }
+
+      COLOSSEUM_STATE.animFrameId = requestAnimationFrame(stepColosseumArena);
+    }
+
+    function renderColosseumModal() {
+      const body = document.getElementById('colosseumModalBody');
+      const titleEl = document.getElementById('colosseumModalTitle');
+      if (!body) return;
+
+      checkColosseumRealTimeSchedule();
+      document.querySelectorAll('#colosseumTabBar .help-tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-col-tab') === COLOSSEUM_STATE.activeTab);
+      });
+
+      const currentRoster = COLOSSEUM_STATE.participants.length > 0
+        ? COLOSSEUM_STATE.participants
+        : buildColosseumParticipants();
+
+      if (titleEl) {
+        const displaySeason = COLOSSEUM_STATE.rounds.length > 0 ? COLOSSEUM_STATE.season - 1 : COLOSSEUM_STATE.season;
+        titleEl.textContent = `왕국 결투장 · 제 ${displaySeason}회 1:1 토너먼트 (${currentRoster.length}/50명)`;
+      }
+
+      if (COLOSSEUM_STATE.activeTab === 'participants') {
+        stopColosseumSpectatorLoop();
+        if (currentRoster.length === 0) {
+          body.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;">현재 마을에 등록 가능한 헌터가 없습니다.</div>`;
+          return;
+        }
+        body.innerHTML = `
+          <div style="font-size:12px;color:#fde68a;font-weight:700;">
+            🏅 환생 횟수 → 레벨 상위 순으로 선발된 <b>${currentRoster.length}명</b>의 출전 명단입니다. 모든 참가자는 결투장 규칙에 따라 <b>전 부위 1T +15강 풀강화 장비 세트</b>를 착용하고 출전합니다.
+          </div>
+          <div class="hunter-roster-grid">
+            ${currentRoster.map((p) => `
+              <div class="roster-card" style="cursor:default;">
+                <div class="roster-card-top">
+                  <div class="roster-name-group">
+                    <span class="roster-job-badge">#${p.seedRank}</span>
+                    <span class="roster-hunter-name">${p.jobIcon} ${p.name}</span>
+                  </div>
+                  <span class="personality-tag-trait">${p.rebirthCount}환생 · Lv.${p.level}</span>
+                </div>
+                <div class="roster-card-meta" style="color:#fef08a;font-weight:800;">
+                  <span>🛡️ ${p.equipBadge}</span>
+                  <span>${p.displayJob}</span>
+                </div>
+                <div class="roster-card-meta">
+                  <span>❤️ HP ${p.maxHp.toLocaleString()}</span>
+                  <span>⚔️ ATK ${p.atk.toLocaleString()} · 🛡️ DEF ${p.def.toLocaleString()}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        return;
+      }
+
+      if (COLOSSEUM_STATE.activeTab === 'bracket') {
+        stopColosseumSpectatorLoop();
+        if (COLOSSEUM_STATE.rounds.length === 0) {
+          body.innerHTML = `
+            <div style="padding:28px;text-align:center;color:#cbd5e1;line-height:1.6;">
+              아직 개막된 토너먼트 기록이 없습니다.<br/>
+              매일 현실 시간 <b>오전 10:00</b> 또는 <b>저녁 22:00</b>에 자동 개막하며, 우측 상단 <b>⚡ 즉시 토너먼트 개막</b> 버튼으로 지금 바로 시작할 수 있습니다.
+            </div>
+          `;
+          return;
+        }
+
+        const selectedMatch = findColosseumMatchById(COLOSSEUM_STATE.selectedMatchId) || COLOSSEUM_STATE.rounds[COLOSSEUM_STATE.rounds.length - 1].matches[0];
+        const reversedRounds = [...COLOSSEUM_STATE.rounds].reverse();
+
+        body.innerHTML = `
+          ${COLOSSEUM_STATE.champion ? `
+            <div style="background:linear-gradient(135deg, rgba(245,158,11,0.22), rgba(220,38,38,0.22));border:1px solid rgba(250,204,21,0.5);border-radius:11px;padding:9px 12px;font-size:12.5px;font-weight:800;color:#fde047;line-height:1.5;">
+              👑 우승: ${COLOSSEUM_STATE.champion.name} (${COLOSSEUM_STATE.champion.displayJob} · 상금 5,000만G / +10점)<br/>
+              ${COLOSSEUM_STATE.runnerUp ? `<span style="color:#bae6fd;">🥈 준우승: ${COLOSSEUM_STATE.runnerUp.name} (${COLOSSEUM_STATE.runnerUp.displayJob} · 상금 2,000만G / +5점) · 🎖️ 참가상 전원 500만G / +2점</span>` : ''}
+            </div>
+          ` : ''}
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(290px, 1fr));gap:12px;">
+            <div id="colosseumRoundListScroll" style="display:flex;flex-direction:column;gap:10px;max-height:52vh;overflow-y:auto;padding-right:4px;">
+              ${reversedRounds.map((r) => `
+                <div class="colosseum-round-card">
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;font-weight:800;color:#f8fafc;">
+                    <span>${r.roundName} (${r.matches.length}경기)</span>
+                    <span style="font-size:10.5px;color:${r.isSpectatable ? '#fda4af' : '#7dd3fc'};">
+                      ${r.isSpectatable ? '🎥 라이브 스킬 관람 가능' : '📜 텍스트 전투 기록'}
+                    </span>
+                  </div>
+                  ${r.matches.map((m) => {
+                    const fBText = m.fighterB ? m.fighterB.name : '부전승';
+                    const isActive = selectedMatch && selectedMatch.id === m.id;
+                    return `
+                      <div class="colosseum-match-row ${isActive ? 'active' : ''}" data-col-match-id="${m.id}">
+                        <div style="font-size:11.5px;color:#e2e8f0;min-width:0;flex:1;">
+                          <span style="color:#94a3b8;font-weight:700;">[${m.matchLabel}]</span>
+                          <b style="color:${m.winner?.id === m.fighterA.id ? '#fde047' : '#cbd5e1'};">${m.fighterA.name}</b>
+                          <span style="color:#64748b;"> vs </span>
+                          <b style="color:${m.fighterB && m.winner?.id === m.fighterB.id ? '#fde047' : '#cbd5e1'};">${fBText}</b>
+                        </div>
+                        ${m.isSpectatable && !m.isBye ? `
+                          <button type="button" class="btn-roster-focus" data-col-watch-id="${m.id}">🎥 관람</button>
+                        ` : `<span style="font-size:10px;color:#7dd3fc;white-space:nowrap;">텍스트</span>`}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `).join('')}
+            </div>
+
+            <div id="colosseumMatchLogPanel" style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:12.5px;font-weight:800;color:#fde68a;">📜 ${selectedMatch ? `${selectedMatch.roundName} ${selectedMatch.matchLabel} 전투 내용` : '경기 로그'}</span>
+                ${selectedMatch && selectedMatch.isSpectatable && !selectedMatch.isBye ? `
+                  <button type="button" class="btn-roster-focus" data-col-watch-id="${selectedMatch.id}">⚔️ 라이브 전투 관람하기</button>
+                ` : ''}
+              </div>
+              <div class="colosseum-log-box">
+                ${(selectedMatch?.logs || []).map((line) => `<div>${line}</div>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      if (COLOSSEUM_STATE.activeTab === 'history') {
+        stopColosseumSpectatorLoop();
+        const rankedStandings = Array.from(COLOSSEUM_STATE.standings.values())
+          .sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.runnerUps - a.runnerUps));
+
+        body.innerHTML = `
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:12px;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:800;color:#fde68a;">🗂️ 최근 결투장 기록 (최대 ${COLOSSEUM_REWARD_CONFIG.MAX_HISTORY_RECORDS}경기 유지)</span>
+                <span class="badge-lv">${COLOSSEUM_STATE.history.length} / ${COLOSSEUM_REWARD_CONFIG.MAX_HISTORY_RECORDS}</span>
+              </div>
+              ${COLOSSEUM_STATE.history.length === 0 ? `
+                <div style="padding:22px;text-align:center;color:#94a3b8;background:rgba(15,23,42,0.7);border-radius:10px;font-size:12px;">
+                  아직 완료된 결투장 경기 기록이 없습니다.
+                </div>
+              ` : COLOSSEUM_STATE.history.map((rec) => `
+                <div class="colosseum-round-card" style="gap:4px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#94a3b8;">
+                    <b style="color:#fbbf24;">제 ${rec.season}회 결투장 (${rec.participantCount}인)</b>
+                    <span>${rec.timestamp} · ${rec.triggerLabel}</span>
+                  </div>
+                  <div style="font-size:12px;font-weight:800;color:#fde047;">
+                    👑 우승: ${rec.champion ? `${rec.champion.jobIcon} ${rec.champion.name}` : '-'} <span style="font-size:10.5px;color:#86efac;">(5,000만G · +10점)</span>
+                  </div>
+                  <div style="font-size:11.5px;font-weight:700;color:#bae6fd;">
+                    🥈 준우승: ${rec.runnerUp ? `${rec.runnerUp.jobIcon} ${rec.runnerUp.name}` : '-'} <span style="font-size:10.5px;color:#cbd5e1;">(2,000만G · +5점)</span>
+                  </div>
+                  <div style="font-size:10.5px;color:#94a3b8;">
+                    🎖️ 참가상: 출전 헌터 전원 각 500만G · +2점 지급 완료
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:13px;font-weight:800;color:#7dd3fc;">🏆 누적 승점 & 상금 랭킹</span>
+                <span style="font-size:10.5px;color:#94a3b8;">우승 10점 · 준우승 5점 · 참가 2점</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;max-height:48vh;overflow-y:auto;padding-right:4px;">
+                ${rankedStandings.length === 0 ? `
+                  <div style="padding:22px;text-align:center;color:#94a3b8;background:rgba(15,23,42,0.7);border-radius:10px;font-size:12px;">
+                    토너먼트 종료 시 헌터별 누적 승점과 상금이 집계됩니다.
+                  </div>
+                ` : rankedStandings.map((st, idx) => `
+                  <div class="colosseum-match-row" style="cursor:default;">
+                    <div style="font-size:11.5px;color:#f8fafc;min-width:0;flex:1;">
+                      <b style="color:${idx === 0 ? '#fde047' : idx === 1 ? '#e2e8f0' : idx === 2 ? '#fdba74' : '#94a3b8'};">#${idx + 1}</b>
+                      <span style="margin-left:4px;font-weight:800;">${st.jobIcon} ${st.name}</span>
+                      <span style="font-size:10px;color:#94a3b8;margin-left:4px;">(우승 ${st.wins} · 준우승 ${st.runnerUps} · 참가 ${st.participations})</span>
+                    </div>
+                    <div style="text-align:right;white-space:nowrap;">
+                      <div style="font-size:11.5px;font-weight:800;color:#4ade80;">${st.points}점</div>
+                      <div style="font-size:10px;color:#fde68a;">${formatGold(st.prizeGold)} G</div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // 3) 준결승 · 결승전 라이브 관람 탭
+      const spectatableMatches = [];
+      COLOSSEUM_STATE.rounds.forEach((r) => {
+        if (r.isSpectatable) {
+          r.matches.forEach((m) => {
+            if (!m.isBye) spectatableMatches.push(m);
+          });
+        }
+      });
+
+      if (spectatableMatches.length === 0) {
+        stopColosseumSpectatorLoop();
+        body.innerHTML = `
+          <div style="padding:28px;text-align:center;color:#cbd5e1;line-height:1.6;">
+            관람 가능한 <b>준결승전 · 결승전</b> 경기가 아직 없습니다.<br/>
+            토너먼트를 개막하면 준결승 및 결승전의 스킬 이펙트와 스킬명이 연출되는 라이브 결투를 관람할 수 있습니다.
+          </div>
+        `;
+        return;
+      }
+
+      const activeSpecId = spectatableMatches.some(m => m.id === COLOSSEUM_STATE.spectatorMatchId)
+        ? COLOSSEUM_STATE.spectatorMatchId
+        : spectatableMatches[spectatableMatches.length - 1].id;
+
+      body.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px;">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${spectatableMatches.map((m) => `
+              <button type="button" class="help-tab-btn ${m.id === activeSpecId ? 'active' : ''}" data-col-spec-select="${m.id}">
+                ⚔️ ${m.roundName} ${m.matchLabel}: ${m.fighterA.name} vs ${m.fighterB.name}
+              </button>
+            `).join('')}
+          </div>
+          <button type="button" class="btn-roster-focus" id="btnReplayColosseumMatch">🔁 전투 다시 재생</button>
+        </div>
+        <div class="colosseum-arena-wrap">
+          <canvas id="colosseumArenaCanvas"></canvas>
+          <div id="colosseumCommentaryText" style="font-size:12px;font-weight:700;color:#fde68a;text-align:center;">
+            전투 중계를 불러오는 중...
+          </div>
+        </div>
+      `;
+
+      document.getElementById('btnReplayColosseumMatch')?.addEventListener('click', () => {
+        startColosseumSpectatorMatch(activeSpecId);
+      });
+
+      startColosseumSpectatorMatch(activeSpecId);
+    }
+
+    function openColosseumModal(defaultTab = null) {
+      closeBuildingPanel();
+      closeHunterPanel();
+      closeMonsterPopup();
+      if (defaultTab) {
+        COLOSSEUM_STATE.activeTab = defaultTab;
+      }
+      renderColosseumModal();
+      document.getElementById('colosseumModalBackdrop')?.classList.add('open');
+    }
+
+    function closeColosseumModal() {
+      stopColosseumSpectatorLoop();
+      document.getElementById('colosseumModalBackdrop')?.classList.remove('open');
+    }
+
+    document.getElementById('btnCloseColosseumModal')?.addEventListener('click', closeColosseumModal);
+    document.getElementById('colosseumModalBackdrop')?.addEventListener('click', (e) => {
+      if (e.target.id === 'colosseumModalBackdrop') closeColosseumModal();
+    });
+    document.getElementById('colosseumTabBar')?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-col-tab]');
+      if (!btn) return;
+      COLOSSEUM_STATE.activeTab = btn.getAttribute('data-col-tab');
+      renderColosseumModal();
+    });
+    document.getElementById('colosseumModalBody')?.addEventListener('click', (e) => {
+      const watchBtn = e.target.closest('[data-col-watch-id]');
+      if (watchBtn) {
+        e.stopPropagation();
+        const mId = watchBtn.getAttribute('data-col-watch-id');
+        COLOSSEUM_STATE.spectatorMatchId = mId;
+        COLOSSEUM_STATE.activeTab = 'spectator';
+        renderColosseumModal();
+        return;
+      }
+      const specBtn = e.target.closest('[data-col-spec-select]');
+      if (specBtn) {
+        const mId = specBtn.getAttribute('data-col-spec-select');
+        COLOSSEUM_STATE.spectatorMatchId = mId;
+        renderColosseumModal();
+        return;
+      }
+      const matchRow = e.target.closest('[data-col-match-id]');
+      if (matchRow) {
+        const nextMatchId = matchRow.getAttribute('data-col-match-id');
+        COLOSSEUM_STATE.selectedMatchId = nextMatchId;
+        const selectedMatch = findColosseumMatchById(nextMatchId);
+        const logPanel = document.getElementById('colosseumMatchLogPanel');
+        if (selectedMatch && logPanel) {
+          document.querySelectorAll('#colosseumRoundListScroll .colosseum-match-row').forEach((row) => {
+            row.classList.toggle('active', row.getAttribute('data-col-match-id') === nextMatchId);
+          });
+          logPanel.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12.5px;font-weight:800;color:#fde68a;">📜 ${selectedMatch.roundName} ${selectedMatch.matchLabel} 전투 내용</span>
+              ${selectedMatch.isSpectatable && !selectedMatch.isBye ? `
+                <button type="button" class="btn-roster-focus" data-col-watch-id="${selectedMatch.id}">⚔️ 라이브 전투 관람하기</button>
+              ` : ''}
+            </div>
+            <div class="colosseum-log-box">
+              ${(selectedMatch.logs || []).map((line) => `<div>${line}</div>`).join('')}
+            </div>
+          `;
+        } else {
+          renderColosseumModal();
+        }
+      }
+    });
 
     initStorageSystem();
   </script>
