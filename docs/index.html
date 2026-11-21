@@ -2807,7 +2807,7 @@
       { stage: 3,  reqLv: 40, title: '미스릴 심연의 마도거신', body: '#0f766e', limb: '#115e59', stroke: '#5eead4', horn: '#38bdf8', core: '#2dd4bf', aura: 'rgba(45, 212, 191, 0.55)',  crownStyle: 'crystal' },
       { stage: 4,  reqLv: 50, title: '용혈 화염의 패왕군주',   body: '#991b1b', limb: '#450a0a', stroke: '#fca5a5', horn: '#fb923c', core: '#fde047', aura: 'rgba(249, 115, 22, 0.58)',  crownStyle: 'dragon' },
       { stage: 5,  reqLv: 60, title: '빙결 설원의 서리거인왕', body: '#1d4ed8', limb: '#1e3a8a', stroke: '#93c5fd', horn: '#e0f2fe', core: '#38bdf8', aura: 'rgba(56, 189, 248, 0.58)',  crownStyle: 'crystal' },
-      { stage: 6,  reqLv: 65, title: '천둥 성좌의 뇌전수호자', body: '#581c87', limb: '#3b0764', stroke: '#d8b4fe', horn: '#fde047', core: '#a855f7', aura: 'rgba(192, 132, 252, 0.6)',  crownStyle: 'halo' },
+      { stage: 6,  reqLv: 80, title: '천둥 성좌의 뇌전수호자', body: '#581c87', limb: '#3b0764', stroke: '#d8b4fe', horn: '#fde047', core: '#a855f7', aura: 'rgba(192, 132, 252, 0.6)',  crownStyle: 'halo' },
       { stage: 7,  reqLv: 70, title: '심연 그림자의 암흑군주', body: '#18181b', limb: '#09090b', stroke: '#a855f7', horn: '#f43f5e', core: '#c084fc', aura: 'rgba(168, 85, 247, 0.62)',  crownStyle: 'dragon' },
       { stage: 8,  reqLv: 80, title: '성광 심판의 황금세라핌', body: '#b45309', limb: '#78350f', stroke: '#fef08a', horn: '#ffffff', core: '#fef9c3', aura: 'rgba(253, 224, 71, 0.65)',  crownStyle: 'halo' },
       { stage: 9,  reqLv: 90, title: '혼돈 차원의 파멸거신',   body: '#701a75', limb: '#4a044e', stroke: '#f0abfc', horn: '#fb7185', core: '#e879f9', aura: 'rgba(232, 121, 249, 0.68)', crownStyle: 'chaos' },
@@ -2847,7 +2847,7 @@
     /**
      * ============================================================================
      * 환생 헌터(1환생 이상) 전용 최상급 중간보스 소형 구역: ✨ 초월 환생의 제단
-     * - 초보 사냥터 위쪽 보스 필드(고대 수호자의 성소) 바로 오른쪽 옆에 소형 배치
+     * - 고대 수호자의 성소(x: 760~1180, y: -575~-370) 바로 오른쪽 옆에 배치
      * - 1환생(rebirthCount >= 1) 미만 헌터 입장 차단 & 유저 직접 출정 지시 지원
      * ============================================================================
      */
@@ -2855,8 +2855,8 @@
       id: 'rebirth_altar',
       name: '초월 환생의 제단',
       minRebirth: 1,
-      bounds: { x: 1205, y: -575, w: 230, h: 205 },
-      centerX: 1320,
+      bounds: { x: 1200, y: -575, w: 210, h: 205 },
+      centerX: 1305,
       centerY: -472,
       respawnDelay: 18,
       boss: {
@@ -2868,8 +2868,8 @@
         atk: 265,
         def: 180,
         range: 64,
-        x: 1320,
-        y: -462,
+        x: 1305,
+        y: -461,
         respawn: 0,
         attackCooldown: 1.0,
         attackAnimTimer: 0,
@@ -2952,14 +2952,22 @@
     }
 
     function getBossStageConfig(stage = BOSS_SANCTUM.bossStage) {
-      const s = Math.max(1, Math.min(BOSS_SANCTUM.maxBossStage, stage));
-      const theme = BOSS_STAGE_THEMES[s - 1] || BOSS_STAGE_THEMES[0];
-      const reqLv = theme.reqLv;
-      const reqTier = s;
-      const reqEnhance = s >= 5 ? 12 : (s === 4 ? 10 : (s + 2)); // 1~3보스: +3~+5강, 4보스: +10강 이상, 5보스 이상: +12강 이상
-      const reqEnhanceLabel = s >= 4 ? `+${reqEnhance}강 이상` : `+${reqEnhance}강`;
+  const s = Math.max(1, Math.min(BOSS_SANCTUM.maxBossStage, stage));
+  const theme = BOSS_STAGE_THEMES[s - 1] || BOSS_STAGE_THEMES[0];
+  const reqLv = theme.reqLv;
+  const reqTier = s;
+  const reqEnhance = s >= 5 ? 12 : (s === 4 ? 10 : (s + 2)); // 1~3보스: +3~+5강, 4보스: +10강 이상, 5보스 이상: +12강 이상
+  const reqEnhanceLabel = s >= 4 ? `+${reqEnhance}강 이상` : `+${reqEnhance}강`;
+  const reqRebirthByStage = {
+    7: 1,
+    8: 2,
+    9: 4,
+    10: 5
+  };
+  const reqRebirth = reqRebirthByStage[s] || 0;
+  const reqStageOrRebirthLabel = s >= 7 ? `${reqRebirth}환생↑` : (s === 6 ? `Lv.${reqLv}↑` : `Lv.${reqLv}`);
 
-      // 각 티어별 보스에 마을 회관 헌터 정원 수 반영 (1보스: 4인 ~ 10보스: 회관 Lv.10 기준 30인)
+  // 각 티어별 보스에 마을 회관 헌터 정원 수 반영 (1보스: 4인 ~ 10보스: 회관 Lv.10 기준 30인)
       const recHunters = s === 1 ? 4 : getTownHallCapacity(s);
       const hunterCountScale = recHunters / 4;
 
@@ -2978,7 +2986,14 @@
       const stageHpMult = s === 2
         ? 0.5
         : (s === 4 ? 0.25 : (s >= 5 ? 0.2 : (s >= 3 ? 0.5 : 1)));
-      const stageAtkMult = s === 2 ? 0.8 : (s >= 5 ? 0.7 : 1);
+      const stageAtkMult = s === 2
+        ? 0.8
+        : (s === 7 ? 0.55 : (s >= 8 ? 0.455 : (s >= 5 ? 0.7 : 1)));
+      const baseRegenMult = s >= 6 ? (stageHpMult * 0.6) : stageHpMult;
+      const stage7RegenMult = s >= 7 ? (baseRegenMult * 0.2) : baseRegenMult;
+      const stage8RegenMult = s >= 8 ? (stage7RegenMult * 0.55) : stage7RegenMult;
+      const stage9RegenMult = s === 9 ? (stage8RegenMult * 0.55) : stage8RegenMult;
+      const stageRegenMult = s >= 10 ? (stage9RegenMult * 0.45) : stage9RegenMult;
 
       return {
         stage: s,
@@ -2986,13 +3001,14 @@
         reqLv,
         reqTier,
         reqEnhance,
+        reqRebirth: s >= 7 ? reqRebirth : 0,
         recHunters,
-        reqLabel: `Lv.${reqLv} · T${reqTier} ${reqEnhanceLabel} · ${recHunters}인`,
-        fullName: `${theme.title} [Lv.${reqLv} · T${reqTier} ${reqEnhanceLabel} · ${recHunters}인]`,
+        reqLabel: `${reqStageOrRebirthLabel} · T${reqTier} ${reqEnhanceLabel} · ${recHunters}인`,
+        fullName: theme.title,
         maxHp: Math.round(baseHpBoosted * combinedScale * hunterCountScale * stageHpMult),
         atk: Math.round(169 * atkScale * stageAtkMult),
         def: Math.round(155 * atkScale),
-        regenPerSec: Math.round(baseRegenBoosted * combinedScale * hunterCountScale * stageHpMult),
+        regenPerSec: Math.round(baseRegenBoosted * combinedScale * hunterCountScale * stageRegenMult),
         rewardVillageGold: Math.round(3000 * Math.pow(1.65, s - 1) * Math.pow(hunterCountScale, 0.55)),
         rewardHunterGold: Math.round(900 * Math.pow(1.58, s - 1)),
         rewardExp: Math.round(1400 * Math.pow(1.55, s - 1)),
@@ -3139,6 +3155,11 @@
         entity.y = entity.y <= 352.5 ? (340 - radius) : (365 + radius);
       }
 
+      // 최상급 사냥터 북쪽 경계(x >= 1430, y: -365 ~ -340) 차단 — 천공의 섬과 분리
+      if (entity.x >= 1430 - radius && entity.y > -365 - radius && entity.y < -340 + radius) {
+        entity.y = entity.y <= -352.5 ? (-365 - radius) : (-340 + radius);
+      }
+
       // 환생 전용 사냥터 내부(x >= 1430, y: 365~785)에 미환생 헌터가 들어온 경우 중급 사냥터 입구로 밀어냄
       if (entity instanceof Hunter && (entity.rebirthCount || 0) < 1) {
         if (entity.x >= 1430 - radius && entity.y >= 360 && entity.y <= 795) {
@@ -3180,6 +3201,39 @@
           }
         }
       }
+
+      // [천공의 섬: 도보 이동 불가(walkable: false) · 포탈 전용 이동 구역]
+      const si = SKY_ISLAND_GROUND.bounds;
+      const isPortalWarpingHunter = entity instanceof Hunter && (entity.skyIslandPortalWarp === true || entity.activeGroundId === SKY_ISLAND_GROUND.id);
+      const isSkyIslandMonster = !isPortalWarpingHunter && !(entity instanceof Hunter) && SKY_ISLAND_GROUND.monsters.includes(entity);
+      if (isSkyIslandMonster) {
+        const minX = si.x + 45 + radius;
+        const maxX = si.x + si.w - 45 - radius;
+        const minY = si.y + 82 + radius;
+        const maxY = si.y + si.h - 28 - radius;
+        if (entity.x < minX) entity.x = minX;
+        if (entity.x > maxX) entity.x = maxX;
+        if (entity.y < minY) entity.y = minY;
+        if (entity.y > maxY) entity.y = maxY;
+      } else if (!isPortalWarpingHunter) {
+        const pad = radius + 4;
+        if (
+          entity.x >= si.x - pad &&
+          entity.x <= si.x + si.w + pad &&
+          entity.y >= si.y - pad &&
+          entity.y <= si.y + si.h + pad
+        ) {
+          const dLeft = Math.abs(entity.x - (si.x - pad));
+          const dRight = Math.abs((si.x + si.w + pad) - entity.x);
+          const dTop = Math.abs(entity.y - (si.y - pad));
+          const dBottom = Math.abs((si.y + si.h + pad) - entity.y);
+          const minD = Math.min(dLeft, dRight, dTop, dBottom);
+          if (minD === dBottom) entity.y = si.y + si.h + pad;
+          else if (minD === dTop) entity.y = si.y - pad;
+          else if (minD === dLeft) entity.x = si.x - pad;
+          else entity.x = si.x + si.w + pad;
+        }
+      }
     }
 
     // 헌터가 길이 아닌 외곽 구역이나 경계 벽에 끼어 정체되었는지 검사하고 정상 도로로 복귀
@@ -3205,6 +3259,25 @@
       }
 
       // 경계 벽 틈새나 맵 외곽 구역에 1.2초 이상 갇힌 경우 즉시 가장 가까운 안전 통로/광장으로 복귀
+      const inSkyIslandBounds = (
+        hunter.activeGroundId === SKY_ISLAND_GROUND.id ||
+        hunter.skyIslandPortalWarp === true ||
+        (
+          hunter.x >= SKY_ISLAND_GROUND.bounds.x - 24 &&
+          hunter.x <= SKY_ISLAND_GROUND.bounds.x + SKY_ISLAND_GROUND.bounds.w + 24 &&
+          hunter.y >= SKY_ISLAND_GROUND.bounds.y - 24 &&
+          hunter.y <= SKY_ISLAND_GROUND.bounds.y + SKY_ISLAND_GROUND.bounds.h + 24
+        )
+      );
+      if (inSkyIslandBounds) {
+        if (hunter.state === 'HUNTING_FIELD' && hunter.activeGroundId === SKY_ISLAND_GROUND.id) {
+          hunter.stuckMoveTimer = 0;
+          return;
+        }
+        teleportHunterFromSkyIslandToTown(hunter, '✨ 천공의 섬에서 마을로 순간 이동!');
+        return;
+      }
+
       const inWallBand = (
         hunter.x >= TOWN_EAST_GATE.wallX - TOWN_EAST_GATE.wallHalfThick - 14 &&
         hunter.x <= TOWN_EAST_GATE.wallX + TOWN_EAST_GATE.wallHalfThick + 14 &&
@@ -3230,7 +3303,7 @@
         hunter.x >= 1382 && hunter.x <= 1438 &&
         ((hunter.rebirthCount || 0) < 1 || hunter.y < 553 || hunter.y > 597)
       );
-      const outOfPlayableBounds = hunter.x < -640 || hunter.x > 2240 || hunter.y < -610 || hunter.y > 1270;
+      const outOfPlayableBounds = hunter.x < -640 || hunter.x > 2560 || hunter.y < -820 || hunter.y > 1270;
 
       if (hunter.stuckMoveTimer >= 1.2 || inWallBand || inMidSouthWall || inHighSouthWall || inTopEastWall || inMidEastWall || outOfPlayableBounds) {
         hunter.stuckMoveTimer = 0;
@@ -3398,8 +3471,8 @@
         centerX: 1820,
         centerY: 575,
         baseExp: 980,
-        baseGold: 520,
-        goldDropRange: { min: 1500, max: 3800 },
+        baseGold: 1040,
+        goldDropRange: { min: 3000, max: 7600 },
         lootSpec: {
           itemId: 'loot_rebirth_essence',
           tierKey: 'rebirth',
@@ -3409,7 +3482,8 @@
           valueMultiplier: 12.0
         },
         baseMonsterCount: 4,
-        maxMonsterCount: 12,
+        maxMonsterCount: 20,
+        maxCountedHunters: 8,
         miniBossConfig: {
           bossStageRef: 6,
           kind: 'field_miniboss',
@@ -3546,6 +3620,175 @@
       }
     ];
 
+    /**
+     * ============================================================================
+     * 최상급 사냥터 위쪽 3환생 이상 전용 구역: ☁️ 천공의 섬 (도보 이동 불가 · 포탈 전용)
+     * ============================================================================
+     */
+    const SKY_ISLAND_GROUND = {
+      id: 'sky_island_field',
+      name: '천공의 섬 (성역 구름군도)',
+      icon: '☁️',
+      zoneType: 'NORMAL_HUNT',
+      isOpen: false,
+      walkable: false,
+      minRebirth: 3,
+      minRecLv: 1,
+      maxRecLv: 99,
+      bounds: { x: 1515, y: -725, w: 755, h: 305 },
+      centerX: 1892,
+      centerY: -572,
+      baseExp: 2650,
+      baseGold: 2900,
+      goldDropRange: { min: 9600, max: 23000 },
+      lootSpec: {
+        itemId: 'loot_top_astral',
+        tierKey: 'top',
+        name: '심연 성좌의 별결정',
+        icon: '💠',
+        dropChance: 0.75,
+        valueMultiplier: 16.0
+      },
+      baseMonsterCount: 4,
+      maxMonsterCount: 12,
+      monsterTemplates: [
+        { kind: 'irongolem',  name: '백익의 수호천사',   color: '#0284c7', stroke: '#fde047', hp: 88000,  atk: 780, isRanged: false, range: 36 },
+        { kind: 'shadowwolf', name: '성광의 심판천사',   color: '#38bdf8', stroke: '#f8fafc', hp: 79000,  atk: 840, isRanged: false, range: 34 },
+        { kind: 'manaorc',    name: '천공의 성가대천사', color: '#6366f1', stroke: '#fef08a', hp: 83000,  atk: 890, isRanged: true,  range: 176 },
+        { kind: 'kingslime',  name: '대천사 세라핌',     color: '#0ea5e9', stroke: '#fde047', hp: 108000, atk: 960, isRanged: false, range: 38 }
+      ],
+      getExpMultiplier() {
+        return 1.0;
+      },
+      monsters: []
+    };
+
+    const ALL_FIELD_GROUNDS = [...HUNTING_GROUNDS, SKY_ISLAND_GROUND];
+
+    function isSkyIslandOpened() {
+      return true;
+    }
+
+    function canHunterEnterSkyIsland(hunter) {
+      return Boolean(isSkyIslandOpened() && hunter && (hunter.rebirthCount || 0) >= SKY_ISLAND_GROUND.minRebirth);
+    }
+
+    function teleportHunterToSkyIsland(hunter, gateBuilding) {
+      if (!hunter || !canHunterEnterSkyIsland(hunter)) return false;
+      const aliveSkyMonsters = SKY_ISLAND_GROUND.monsters.filter(m => m && m.hp > 0);
+      const pickMon = aliveSkyMonsters.length > 0
+        ? aliveSkyMonsters[Math.floor(Math.random() * aliveSkyMonsters.length)]
+        : null;
+      const b = SKY_ISLAND_GROUND.bounds;
+      const destX = pickMon
+        ? Math.max(b.x + 65, Math.min(b.x + b.w - 65, pickMon.x + (Math.random() - 0.5) * 28))
+        : (b.x + 110 + Math.random() * (b.w - 220));
+      const destY = pickMon
+        ? Math.max(b.y + 85, Math.min(b.y + b.h - 45, pickMon.y + (Math.random() - 0.5) * 24))
+        : (b.y + 110 + Math.random() * (b.h - 165));
+
+      combatEffects.spawnMeleeSlash({
+        x: hunter.x,
+        y: hunter.y - 4,
+        facing: hunter.facing || 1,
+        slashType: 'MAGIC_BURST',
+        color: '#38bdf8'
+      });
+
+      hunter.x = destX;
+      hunter.y = destY;
+      hunter.targetX = destX;
+      hunter.targetY = destY;
+      hunter.waypoints = [];
+      hunter.skyIslandPortalWarp = true;
+      hunter.activeGroundId = SKY_ISLAND_GROUND.id;
+      hunter.targetGroundId = SKY_ISLAND_GROUND.id;
+      hunter.targetBuildingName = SKY_ISLAND_GROUND.name;
+      hunter.targetBuildingType = 'hunting_ground';
+      hunter.currentTargetMonster = pickMon || null;
+      hunter.currentTargetHunter = null;
+      hunter.huntTimer = 22 + Math.random() * 10;
+      hunter.state = 'HUNTING_FIELD';
+
+      combatEffects.spawnMeleeSlash({
+        x: hunter.x,
+        y: hunter.y - 4,
+        facing: hunter.facing || 1,
+        slashType: 'MAGIC_BURST',
+        color: '#fde047'
+      });
+
+      const gateLv = gateBuilding ? gateBuilding.level : 1;
+      interactionManager.spawnBubble(hunter, `☁️ 천공의 섬 포탈 이동! (Lv.${gateLv})`, '#7dd3fc');
+      return true;
+    }
+
+    function sendRebirthHunterToSkyIslandGate(hunter) {
+      if (!hunter || (hunter.rebirthCount || 0) < SKY_ISLAND_GROUND.minRebirth) return false;
+      const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+      if (!skyGate) return false;
+      const destX = skyGate.x;
+      const destY = skyGate.y + skyGate.h / 2 + 16;
+      hunter.setDestinationWithGatePath(destX, destY);
+      hunter.targetBuildingName = `${skyGate.name} → ${SKY_ISLAND_GROUND.name}`;
+      hunter.targetBuildingType = 'sky_island_portal';
+      hunter.targetGroundId = SKY_ISLAND_GROUND.id;
+      hunter.activeGroundId = null;
+      hunter.currentTargetMonster = null;
+      hunter.currentTargetHunter = null;
+      hunter.skyIslandPortalWarp = false;
+      hunter.state = 'WALKING';
+      interactionManager.spawnBubble(hunter, '🌀 천공의 섬 게이트로 향하는 중!', '#7dd3fc');
+      return true;
+    }
+
+    function teleportHunterFromSkyIslandToTown(hunter, reasonBubble = '✨ 천공의 섬에서 마을로 순간 이동!') {
+      if (!hunter) return false;
+      const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+      const destX = skyGate
+        ? skyGate.x + (Math.random() - 0.5) * 32
+        : (Math.random() - 0.5) * 80;
+      const destY = skyGate
+        ? skyGate.y + skyGate.h / 2 + 18 + (Math.random() - 0.5) * 14
+        : (TOWN_EAST_GATE.roadCenterY + (Math.random() - 0.5) * 16);
+
+      combatEffects.spawnMeleeSlash({
+        x: hunter.x,
+        y: hunter.y - 4,
+        facing: hunter.facing || 1,
+        slashType: 'MAGIC_BURST',
+        color: '#38bdf8'
+      });
+
+      hunter.x = destX;
+      hunter.y = destY;
+      hunter.targetX = destX;
+      hunter.targetY = destY;
+      hunter.waypoints = [];
+      hunter.skyIslandPortalWarp = false;
+      hunter.activeGroundId = null;
+      hunter.targetGroundId = null;
+      hunter.targetBuildingName = '';
+      hunter.targetBuildingType = '';
+      hunter.currentTargetMonster = null;
+      hunter.currentTargetHunter = null;
+      hunter.state = 'IDLE';
+      hunter.stateTimer = 0.4;
+
+      combatEffects.spawnMeleeSlash({
+        x: hunter.x,
+        y: hunter.y - 4,
+        facing: hunter.facing || 1,
+        slashType: 'MAGIC_BURST',
+        color: '#fde047'
+      });
+
+      if (reasonBubble) {
+        interactionManager.spawnBubble(hunter, reasonBubble, '#7dd3fc');
+      }
+      return true;
+    }
+
     // 고대 수호자(해금 보스) 위력의 1/5(20%) 능력치를 계산해 필드 중간 보스 생성
     const FIELD_MINIBOSS_SPAWN_CHANCE = 0.001; // 0.1% 확률로 등장
 
@@ -3602,7 +3845,7 @@
       const tpl = ground.monsterTemplates[index % ground.monsterTemplates.length];
       const pad = 70;
       const sx = ground.bounds.x + pad + Math.random() * (ground.bounds.w - pad * 2);
-      const sy = ground.bounds.y + 85 + Math.random() * (ground.bounds.h - pad - 85);
+      const sy = ground.bounds.y + 88 + Math.random() * (ground.bounds.h - pad - 88);
       return {
         isFieldMiniBoss: false,
         kind: tpl.kind || 'slime',
@@ -3632,34 +3875,50 @@
         attackCooldown: 0.6 + Math.random() * 0.6
       };
     }
-
-    // 사냥터 내 사냥 중인 헌터 수(최대 5명 카운트)에 따른 목표 몬스터 수 및 리젠 시간 계산
+    // 사냥터 내 사냥 중인 헌터 수(기본 최대 5명, 환생 전용 사냥터는 최대 8명 카운트)에 따른 목표 몬스터 수 및 리젠 시간 계산
     function getHuntingGroundScaling(ground, hunterList) {
       const rawCount = hunterList.filter(
         h => h.state === 'HUNTING_FIELD' && h.activeGroundId === ground.id
       ).length;
-      const countedHunters = Math.min(5, rawCount);
+      const maxCap = ground.maxCountedHunters || 5;
+      const countedHunters = Math.min(maxCap, rawCount);
       const targetMonsterCount = Math.min(
         ground.maxMonsterCount,
-        ground.baseMonsterCount + countedHunters * 2 // 기본 4마리 ~ 5명 시 12마리 (리젠 시 0.1% 확률로 중간 보스 출현)
+        ground.baseMonsterCount + countedHunters * 2 // 기본 4마리 ~ 5명 시 12마리 (환생 전용 사냥터 8명 시 20마리)
       );
-      const respawnDelay = Math.max(1.3, 4.5 - countedHunters * 0.65); // 0명: 4.5초 ~ 5명: 1.3초
+      const respawnDelay = Math.max(1.0, 4.5 - countedHunters * 0.65); // 0명: 4.5초 ~ 8명: 1.0초
       return { rawCount, countedHunters, targetMonsterCount, respawnDelay };
     }
 
-    HUNTING_GROUNDS.forEach((hg) => {
+    ALL_FIELD_GROUNDS.forEach((hg) => {
       for (let i = 0; i < hg.baseMonsterCount; i++) {
         hg.monsters.push(createGroundMonster(hg, i, true));
       }
     });
 
     function evaluateHuntingGroundPreference(hunter, ground) {
+      const rebirths = hunter?.rebirthCount || 0;
+      if (ground.walkable === false) {
+        if (!canHunterEnterSkyIsland(hunter)) {
+          return { score: 0, matched: false, label: '천공의 섬 (3환생 이상 · 포탈 전용)' };
+        }
+        const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+        if (!skyGate) {
+          return { score: 0, matched: false, label: '천공의 섬 게이트 건설 필요' };
+        }
+        return { score: 165, matched: true, label: `천공의 섬 포탈 출정 (${rebirths}환생 · 2,650 EXP)` };
+      }
       if (ground.minRebirth) {
-        const rebirths = hunter.rebirthCount || 0;
         if (rebirths < ground.minRebirth) {
           return { score: 0, matched: false, label: `환생 전용 (${ground.minRebirth}환생 이상 입장 가능)` };
         }
-        return { score: 115, matched: true, label: `환생 성역 (${rebirths}환생 전용 · 기본 EXP)` };
+        const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+        const sanctuaryScore = (rebirths >= 3 && skyGate) ? 85 : 130;
+        return { score: sanctuaryScore, matched: true, label: `환생 성역 (${rebirths}환생 전용 · 기본 EXP)` };
+      }
+      // 1환생 이상 환생 헌터는 일반 사냥터(초보·중급·상급·최상급) 출정 대상에서 제외
+      if (rebirths >= 1) {
+        return { score: 0, matched: false, label: '환생 헌터 전용 사냥터 이용 대상' };
       }
       const lv = hunter.level;
       if (lv >= ground.minRecLv && lv <= ground.maxRecLv) {
@@ -5058,6 +5317,25 @@
         monsterDmgBonusPct: 1.50,
         auraColor: '#f472b6',
         desc: '환생 헌터 전용 최상급 중간보스 토벌 증표. 착용 시 몬스터 대상 입히는 피해 +150% 증가'
+      },
+      sky_sanctuary_wings: {
+        id: 'sky_sanctuary_wings',
+        category: 'wing',
+        regionName: '천공의 섬',
+        name: '천공의 성역 날개',
+        icon: '🪽',
+        rarity: 'legendary',
+        sellable: false,
+        isCraftingMat: false,
+        atkBonusPct: 0.20,
+        defBonusPct: 0.20,
+        critBonus: 8,
+        speedBonus: 16,
+        enhanceAtkBonusPct: 0.04,
+        enhanceDefBonusPct: 0.04,
+        enhanceCritBonus: 1,
+        enhanceSpeedBonus: 2,
+        desc: '천공의 섬 몬스터 사냥 시 0.1% 확률로 획득하는 성역의 날개. 착용 시 공격력/방어력 +20%, 치명타 +8%, 이동속도 +16 상승 (천공 대장간 강화 시 추가 상승)'
       }
     };
 
@@ -5068,6 +5346,15 @@
       'insignia_top',
       'insignia_rebirth_supreme'
     ];
+
+    const SKY_WING_ITEM_IDS = [
+      'sky_sanctuary_wings'
+    ];
+
+    const SINGLETON_EQUIP_CATEGORIES = new Set([
+      'insignia',
+      'wing'
+    ]);
 
     const LOOT_TIER_TO_ITEM_ID = {
       beginner: 'loot_beginner_crystal',
@@ -5087,10 +5374,10 @@
         const amount = Math.max(0, Math.floor(qty));
         if (!id || amount <= 0) return false;
         const def = ITEM_CATALOG[id];
-        const isInsignia = def && def.category === 'insignia';
+        const isSingleton = def && SINGLETON_EQUIP_CATEGORIES.has(def.category);
         const existing = this.items.get(id);
         if (existing) {
-          if (isInsignia) {
+          if (isSingleton) {
             existing.qty = 1;
             return false;
           }
@@ -5098,7 +5385,7 @@
           return true;
         }
         if (this.items.size >= this.maxSlots) return false;
-        this.items.set(id, { id, qty: isInsignia ? 1 : amount });
+        this.items.set(id, { id, qty: isSingleton ? 1 : amount });
         return true;
       }
 
@@ -5204,10 +5491,10 @@
         rawArr.forEach(entry => {
           if (entry && entry.id && entry.qty > 0) {
             const def = ITEM_CATALOG[entry.id];
-            const isInsignia = def && def.category === 'insignia';
+            const isSingleton = def && SINGLETON_EQUIP_CATEGORIES.has(def.category);
             this.items.set(entry.id, {
               id: entry.id,
-              qty: isInsignia ? 1 : Math.floor(entry.qty)
+              qty: isSingleton ? 1 : Math.floor(entry.qty)
             });
           }
         });
@@ -5280,7 +5567,7 @@
         this.targetX = x;
         this.targetY = y;
         this.waypoints = [];
-        this.speed = Math.max(36, 68 + speedPassiveBonus);
+        this.baseSpeed = Math.max(36, 68 + speedPassiveBonus);
         this.facing = 1;
         this.walkCycle = Math.random() * Math.PI * 2;
 
@@ -5335,11 +5622,16 @@
         this.attackCooldown = 0;
         this.attackAnimTimer = 0;
         this.enhanceCooldown = 0;
+        this.wingEnhanceCooldown = 0;
         this.facilityStuckTimer = 0;
         this.particles = [];
         this.equippedInsigniaId = (preset.equippedInsigniaId && ITEM_CATALOG[preset.equippedInsigniaId])
           ? preset.equippedInsigniaId
           : null;
+        this.equippedWingId = (preset.equippedWingId && ITEM_CATALOG[preset.equippedWingId])
+          ? preset.equippedWingId
+          : null;
+        this.wingEnhance = Math.max(0, Math.min(15, Math.floor(Number(preset.wingEnhance) || 0)));
         // 몬스터 3마리 사냥당 인성 +1 누적용 카운터
         this.monsterKillAlignmentProgress = Math.max(0, Math.min(2, Math.floor(Number(preset.monsterKillAlignmentProgress) || 0)));
 
@@ -5348,6 +5640,17 @@
         this.hp = 500;
         this.mp = 160;
         this.recalculateVitals(true);
+      }
+
+      get speed() {
+        const wing = this.getEquippedWing();
+        const enh = Math.max(0, this.wingEnhance || 0);
+        const wingSpeed = wing ? ((wing.speedBonus || 0) + enh * (wing.enhanceSpeedBonus || 0)) : 0;
+        return (this.baseSpeed || 68) + wingSpeed;
+      }
+
+      set speed(val) {
+        this.baseSpeed = val;
       }
 
       get materials() {
@@ -5580,10 +5883,16 @@
 
       getCombatProfile() {
         const job = this.baseJob || this.job;
+        const rangedScale = 0.7; // 원거리 헌터 사거리 30% 감소
+        const rangerRange = Math.round(168 * rangedScale);
+        const sorcererRange = Math.round(158 * rangedScale);
+        const isRebornMelee = (this.rebirthCount || 0) >= 1;
+        const halfRangedMeleeRange = Math.round(rangerRange * 0.5);
+
         if (job === '레인저') {
           return {
             style: 'RANGED',
-            range: 168,
+            range: rangerRange,
             cooldown: 0.78,
             projType: 'ARROW',
             projColor: '#34d399',
@@ -5594,7 +5903,7 @@
         if (job === '소서러') {
           return {
             style: 'RANGED',
-            range: 158,
+            range: sorcererRange,
             cooldown: 0.96,
             projType: 'MAGIC_ORB',
             projColor: '#c084fc',
@@ -5605,7 +5914,7 @@
         if (job === '팔라딘') {
           return {
             style: 'MELEE',
-            range: 36,
+            range: isRebornMelee ? halfRangedMeleeRange : 36,
             cooldown: 0.92,
             projType: 'MAGIC_ORB',
             projColor: '#fde047',
@@ -5615,7 +5924,7 @@
         }
         return {
           style: 'MELEE',
-          range: 34,
+          range: isRebornMelee ? halfRangedMeleeRange : 34,
           cooldown: 0.85,
           projType: 'MAGIC_ORB',
           projColor: '#f87171',
@@ -5640,6 +5949,26 @@
         if (!this.inventory || this.inventory.getCount(insigniaId) <= 0) return false;
         this.equippedInsigniaId = insigniaId;
         return true;
+      }
+
+      getEquippedWing() {
+        if (!this.equippedWingId) return null;
+        return ITEM_CATALOG[this.equippedWingId] || null;
+      }
+
+      equipWing(wingId) {
+        const def = ITEM_CATALOG[wingId];
+        if (!def || def.category !== 'wing') return false;
+        if (!this.inventory || this.inventory.getCount(wingId) <= 0) return false;
+        this.equippedWingId = wingId;
+        this.recalculateVitals(false);
+        return true;
+      }
+
+      getWingEnhanceCost() {
+        const enh = Math.max(0, Math.min(15, this.wingEnhance || 0));
+        if (enh >= 15) return Infinity;
+        return 10000000 + enh * 10000000;
       }
 
       // 스킬 레벨에 따른 배율 계산 (Lv.1 = 1.0배, Lv.20 = 2.14배)
@@ -5809,10 +6138,20 @@
         const prosperityTier = Math.max(0, Math.floor((Number(gameState?.prosperity) || 0) / 1000));
         const prosperityAtkMult = 1 + prosperityTier * (combatStyle === 'RANGED' ? 0.01 : 0.02);
 
+        // 근접 계열 헌터: 첫 환생(rebirthCount >= 1) 시 방어력 +100% 증가, 이후 환생당 +50% 추가 증가
+        const meleeFirstRebirthDefBonus = (combatStyle === 'MELEE' && (this.rebirthCount || 0) >= 1)
+          ? (1.0 + Math.max(0, (this.rebirthCount || 0) - 1) * 0.5)
+          : 0;
+        const wing = this.getEquippedWing();
+        const wEnh = Math.max(0, this.wingEnhance || 0);
+        const wingAtkBonus = wing ? ((wing.atkBonusPct || 0) + wEnh * (wing.enhanceAtkBonusPct || 0)) : 0;
+        const wingDefBonus = wing ? ((wing.defBonusPct || 0) + wEnh * (wing.enhanceDefBonusPct || 0)) : 0;
+        const wingCritBonus = wing ? ((wing.critBonus || 0) + wEnh * (wing.enhanceCritBonus || 0)) : 0;
+
         return {
-          atk: Math.max(10, Math.round((this.baseAtk + atkBonus) * atkMult * rebirthMult * prosperityAtkMult)),
-          def: Math.max(5, Math.round((this.baseDef + defBonus) * defMult * rebirthMult)),
-          crit: Math.max(1, Math.min(95, this.crit + critBonus + passiveCrit + rebirthCrit))
+          atk: Math.max(10, Math.round((this.baseAtk + atkBonus) * (atkMult + wingAtkBonus) * rebirthMult * prosperityAtkMult)),
+          def: Math.max(5, Math.round((this.baseDef + defBonus) * (defMult + meleeFirstRebirthDefBonus + wingDefBonus) * rebirthMult)),
+          crit: Math.max(1, Math.min(95, this.crit + critBonus + passiveCrit + rebirthCrit + wingCritBonus))
         };
       }
 
@@ -5892,6 +6231,21 @@
       }
 
       pickNextDestination(skipEnhance = false) {
+        // 천공의 섬에 체류 중인 헌터가 마을이나 다른 구역으로 복귀해야 할 경우 도보 이동 대신 즉시 마을로 순간 이동
+        const isCurrentlyOnSkyIsland = (
+          this.activeGroundId === SKY_ISLAND_GROUND.id ||
+          this.skyIslandPortalWarp === true ||
+          (
+            this.x >= SKY_ISLAND_GROUND.bounds.x - 20 &&
+            this.x <= SKY_ISLAND_GROUND.bounds.x + SKY_ISLAND_GROUND.bounds.w + 20 &&
+            this.y >= SKY_ISLAND_GROUND.bounds.y - 20 &&
+            this.y <= SKY_ISLAND_GROUND.bounds.y + SKY_ISLAND_GROUND.bounds.h + 20
+          )
+        );
+        if (isCurrentlyOnSkyIsland) {
+          teleportHunterFromSkyIslandToTown(this, '✨ 천공의 섬에서 마을로 순간 이동!');
+        }
+
         // [최우선] 보스 필드가 개방된 경우: 1분 정비 시간 동안 회복/물약/강화 정비 후 성소 입구 집결, 전투 개시 시 전원 돌격
         if (BOSS_SANCTUM.status === 'PREPARING') {
           if (BOSS_SANCTUM.fallenHunterIds.has(this.id)) {
@@ -6111,6 +6465,16 @@
               return;
             }
           }
+          const skySmithy = buildings.find(b => b.type === 'sky_smithy');
+          const wingEnhanceCost = this.getWingEnhanceCost();
+          if (skySmithy && this.getEquippedWing() && (this.wingEnhance || 0) < 15 && (this.wingEnhanceCooldown || 0) <= 0 && this.personalGold >= wingEnhanceCost) {
+            this.setDestinationWithGatePath(skySmithy.x, skySmithy.y + skySmithy.h / 2 + 16);
+            this.targetBuildingName = skySmithy.name;
+            this.targetBuildingType = skySmithy.type;
+            this.targetGroundId = null;
+            this.state = 'WALKING';
+            return;
+          }
           const enchanter = buildings.find(b => b.type === 'enchanter');
           const nextEnhance = (!skipEnhance && (this.enhanceCooldown || 0) <= 0 && !canPromoteAnyNow)
             ? this.getNextEnhanceTarget()
@@ -6124,14 +6488,19 @@
             return;
           }
         }
-
-        // 현재 레벨 및 환생 단계에 가장 적합한 사냥터 우선 출정 (1환생 이상 헌터는 윤회의 성역 최우선 평가)
-        const matchedGrounds = HUNTING_GROUNDS
+        // 현재 레벨 및 환생 단계에 가장 적합한 사냥터 우선 출정 (1환생 이상 헌터는 윤회의 성역/천공의 섬 전용)
+        const isRebornHunter = (this.rebirthCount || 0) >= 1;
+        const matchedGrounds = ALL_FIELD_GROUNDS
           .map(hg => ({ hg, pref: evaluateHuntingGroundPreference(this, hg) }))
           .filter(entry => entry.pref.matched)
           .sort((a, b) => b.pref.score - a.pref.score);
         const matchedGround = matchedGrounds.length > 0 ? matchedGrounds[0].hg : null;
-        if (matchedGround && Math.random() < 0.72) {
+        if (matchedGround && (matchedGround.id === SKY_ISLAND_GROUND.id || isRebornHunter || Math.random() < 0.85)) {
+          if (matchedGround.walkable === false && matchedGround.id === SKY_ISLAND_GROUND.id) {
+            if (sendRebirthHunterToSkyIslandGate(this)) {
+              return;
+            }
+          }
           const aliveMonsters = matchedGround.monsters.filter(m => m.hp > 0);
           let gx = matchedGround.centerX;
           let gy = matchedGround.centerY;
@@ -6152,8 +6521,8 @@
           return;
         }
 
-        // 현재 레벨에 맞는 사냥터가 없을 경우 지하 던전 이용 우선 추천
-        if (!this.hasMatchedHuntingGround() && isHealthy) {
+        // 현재 레벨에 맞는 사냥터가 없을 경우 지하 던전 이용 우선 추천 (환생 헌터는 전용 사냥터/던전/마을 이용)
+        if (!isRebornHunter && !this.hasMatchedHuntingGround() && isHealthy) {
           const dungeonBld = buildings.find(b => b.type === 'dungeon');
           if (dungeonBld) {
             this.setDestinationWithGatePath(dungeonBld.x, dungeonBld.y + dungeonBld.h / 2 + 16);
@@ -6268,6 +6637,9 @@
         if ((this.enhanceCooldown || 0) > 0) {
           this.enhanceCooldown = Math.max(0, this.enhanceCooldown - dt);
         }
+        if ((this.wingEnhanceCooldown || 0) > 0) {
+          this.wingEnhanceCooldown = Math.max(0, this.wingEnhanceCooldown - dt);
+        }
         if (this.state !== 'USING_FACILITY') {
           this.facilityStuckTimer = 0;
         }
@@ -6334,7 +6706,7 @@
 
           const distToAltarBoss = Math.hypot(altarBoss.x - this.x, altarBoss.y - this.y);
           const combat = this.getCombatProfile();
-          const effectiveRange = combat.style === 'RANGED' ? Math.min(combat.range, 96) : (combat.range + 22);
+          const effectiveRange = combat.style === 'RANGED' ? combat.range : (combat.range + 22);
 
           if (distToAltarBoss > effectiveRange) {
             const dx = altarBoss.x - this.x;
@@ -6426,7 +6798,7 @@
           );
           const distToBoss = Math.hypot(boss.x - this.x, boss.y - this.y);
           const combat = this.getCombatProfile();
-          const effectiveRange = combat.style === 'RANGED' ? Math.min(combat.range, 92) : (combat.range + 18);
+          const effectiveRange = combat.style === 'RANGED' ? combat.range : (combat.range + 18);
 
           if (!isInsideSanctum || distToBoss > effectiveRange) {
             const dx = boss.x - this.x;
@@ -6481,7 +6853,7 @@
 
         // [사냥터 야외 필드 전투 상태]
         if (this.state === 'HUNTING_FIELD') {
-          const ground = HUNTING_GROUNDS.find(g => g.id === this.activeGroundId);
+          const ground = ALL_FIELD_GROUNDS.find(g => g.id === this.activeGroundId);
           const hasActivePvpDuel = Boolean(
             this.currentTargetHunter &&
             this.currentTargetHunter.hp > 0 &&
@@ -6491,6 +6863,10 @@
 
           // PvP 교전 중에는 한쪽 헌터가 사망할 때까지 이탈/휴식 조건을 보류해 끝까지 결판냄
           if (!ground || (!hasActivePvpDuel && (this.hp < this.maxHp * 0.35 || this.fatigue >= 85))) {
+            if (ground && ground.id === SKY_ISLAND_GROUND.id) {
+              teleportHunterFromSkyIslandToTown(this, '✨ 체력/피로 한계 · 마을 순간 이동 후퇴!');
+              return;
+            }
             this.state = 'IDLE';
             this.stateTimer = 0.4;
             this.activeGroundId = null;
@@ -6502,6 +6878,10 @@
           // 본인이 21레벨에 도달해 초보 사냥터 경험치 90% 감소 패널티가 적용되면 스스로 사냥터 이탈 판단
           const pref = evaluateHuntingGroundPreference(this, ground);
           if (!hasActivePvpDuel && !pref.matched) {
+            if (ground.id === SKY_ISLAND_GROUND.id) {
+              teleportHunterFromSkyIslandToTown(this, '✨ 천공의 섬 이탈 · 마을 순간 이동!');
+              return;
+            }
             interactionManager.spawnBubble(this, '🎓 Lv.21 달성! 상위 사냥터/던전으로!', '#38bdf8');
             this.state = 'IDLE';
             this.stateTimer = 0.4;
@@ -6631,6 +7011,10 @@
             this.currentTargetMonster = null;
             this.huntTimer -= dt;
             if (this.huntTimer <= 0) {
+              if (ground.id === SKY_ISLAND_GROUND.id) {
+                teleportHunterFromSkyIslandToTown(this, '✨ 천공의 섬 사냥 종료 · 마을 순간 이동!');
+                return;
+              }
               this.state = 'IDLE';
               this.stateTimer = 0.5;
               this.activeGroundId = null;
@@ -6985,6 +7369,18 @@
           const dy = curGoal.y - this.y;
           const dist = Math.hypot(dx, dy);
 
+          if (this.targetBuildingType === 'sky_island_portal') {
+            const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+            if (skyGate && canHunterEnterSkyIsland(this)) {
+              const gateDoorX = skyGate.x;
+              const gateDoorY = skyGate.y + skyGate.h / 2 + 16;
+              if (Math.hypot(gateDoorX - this.x, gateDoorY - this.y) <= 22) {
+                teleportHunterToSkyIsland(this, skyGate);
+                return;
+              }
+            }
+          }
+
           if (dist < 4) {
             this.x = curGoal.x;
             this.y = curGoal.y;
@@ -6992,6 +7388,20 @@
             if (this.waypoints && this.waypoints.length > 0) {
               this.waypoints.shift();
               if (this.waypoints.length > 0) return;
+            }
+
+            if (this.targetBuildingType === 'sky_island_portal') {
+              const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
+              if (!skyGate || !canHunterEnterSkyIsland(this)) {
+                this.state = 'IDLE';
+                this.stateTimer = 0.5;
+                this.targetBuildingName = '';
+                this.targetBuildingType = '';
+                this.targetGroundId = null;
+                return;
+              }
+              teleportHunterToSkyIsland(this, skyGate);
+              return;
             }
 
             if (this.targetBuildingType === REBIRTH_ALTAR.id) {
@@ -7257,6 +7667,36 @@
               break;
             }
           }
+        } else if (bldType === 'sky_smithy') {
+          const equippedWing = this.getEquippedWing();
+          const curEnh = Math.max(0, this.wingEnhance || 0);
+          const enhCost = this.getWingEnhanceCost();
+          if (!equippedWing || curEnh >= 15 || this.personalGold < enhCost) {
+            this.wingEnhanceCooldown = 25;
+            this.facilityStuckTimer = 0;
+            this.state = 'IDLE';
+            this.stateTimer = 0.1;
+            this.targetBuildingName = '';
+            this.targetBuildingType = '';
+            this.pickNextDestination(true);
+            return;
+          }
+          this.personalGold -= enhCost;
+          this.wingEnhanceCooldown = 14;
+          baseFee = Math.round(enhCost * 0.25) + lv * 120;
+          const successChance = Math.min(0.95, Math.max(0.30, 0.85 - curEnh * 0.038 + lv * 0.025));
+          if (Math.random() < successChance) {
+            this.wingEnhance = curEnh + 1;
+            this.recalculateVitals(false);
+            interactionManager.spawnBubble(
+              this,
+              `🪽 ${equippedWing.name} +${this.wingEnhance}강 성공!`,
+              '#7dd3fc'
+            );
+            showToast(`🪽 ${this.name} [${equippedWing.name}] +${this.wingEnhance}강 강화 성공!`);
+          } else {
+            interactionManager.spawnBubble(this, '💨 천공 성광 흩어짐 (강화 실패)...', '#94a3b8');
+          }
         } else if (bldType === 'generalstore') {
           const unitPrice = 45 + lv * 15;
           const sellableEntries = this.inventory
@@ -7429,6 +7869,22 @@
         getStatText: (lv) => `인성 정화 +${15 + lv * 5} · 정화세 ${55 + lv * 20}G`,
         helpGuide: { role: '음수(-) 인성·카오스 헌터의 인성 회복 및 정화 세금 수입' }
       },
+      sky_island_gate: {
+        type: 'sky_island_gate', name: '천공의 섬 게이트', icon: '🌀', w: 142, h: 98,
+        wallColor: '#e0f2fe', roofColor: '#0369a1', roofStyle: 'spire', hasChimney: false,
+        maxLevel: 1, buildCost: 50000000, baseUpgradeCost: 950, prosperityPerLv: 90,
+        desc: '3환생 이상 헌터가 최상급 사냥터 위 [천공의 섬]으로 포탈 이동할 수 있는 Lv.1 전용 마력 게이트입니다. 도보 이동이 불가능한 천공의 섬으로 안전하게 전송합니다.',
+        getStatText: () => `Lv.1 고정 · 3환생↑ 천공의 섬 포탈 이동 활성`,
+        helpGuide: { role: '3환생 이상 헌터의 [천공의 섬] 포탈 전용 이동 지원 (업그레이드 불가 Lv.1 고정 시설)' }
+      },
+      sky_smithy: {
+        type: 'sky_smithy', name: '천공 대장간', icon: '🪽', w: 138, h: 96,
+        wallColor: '#e0f2fe', roofColor: '#0284c7', roofStyle: 'spire', hasChimney: true,
+        buildCost: 100000000, baseUpgradeCost: 1100, prosperityPerLv: 95,
+        desc: '천공의 섬에서 획득한 날개 아이템에 성역의 별빛을 벼려 +15강까지 강화하는 전용 대장간입니다.',
+        getStatText: (lv) => `날개 강화 성공률 +${(lv * 2.5).toFixed(1)}% · 공명세 ${lv * 120}G`,
+        helpGuide: { role: '헌터 착용 날개(+1~+15강) 전용 강화 및 성역 제련 세금 수입' }
+      },
       dungeon: {
         type: 'dungeon', name: '지하 던전 입구', icon: '🕳️', w: 138, h: 98,
         wallColor: '#334155', roofColor: '#1e293b', roofStyle: 'fortress', hasChimney: false,
@@ -7445,8 +7901,18 @@
       { x: 380,  y: 150 },
       { x: -380, y: 320 },
       { x: -190, y: 320 },
+      { x: 0,    y: 320 },
       { x: 190,  y: 320 },
-      { x: 380,  y: 320 }
+      { x: 380,  y: 320 },
+      { x: -380, y: -320 },
+      { x: -190, y: -320 },
+      { x: 0,    y: -320 },
+      { x: 190,  y: -320 },
+      { x: 380,  y: -320 },
+      { x: -380, y: 490 },
+      { x: -190, y: 490 },
+      { x: 0,    y: 490 },
+      { x: 190,  y: 490 }
     ];
 
     class VillageManager {
@@ -7572,7 +8038,7 @@
 
       _clampTargetBounds() {
         this.targetX = Math.max(-750, Math.min(2150, this.targetX));
-        this.targetY = Math.max(-680, Math.min(1260, this.targetY));
+        this.targetY = Math.max(-780, Math.min(1260, this.targetY));
       }
 
       screenToWorld(sx, sy) {
@@ -7772,92 +8238,6 @@
     const hunters = createInitialRandomHunters(2);
     gameState.huntersCount = hunters.length;
 
-    // 테스트용 환생 용병 생성 헬퍼 (전직 계보·스킬·장비 세팅 지원)
-    function spawnTestRebirthMercenary(options = {}) {
-      try {
-        const targetRebirths = Math.max(
-          1,
-          Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Number(options.rebirthCount) || 3)
-        );
-        const targetLevel = Math.max(
-          1,
-          Math.min(LEVEL_REBIRTH_CONFIG.maxLevel, Number(options.level) || 50)
-        );
-        const baseJob = JOB_ARCHETYPES.some(a => a.job === options.job)
-          ? options.job
-          : (options.job || JOB_ARCHETYPES[Math.floor(Math.random() * JOB_ARCHETYPES.length)].job);
-        const archetype = JOB_ARCHETYPES.find(a => a.job === baseJob) || JOB_ARCHETYPES[0];
-
-        // 환생 차수에 맞춰 이진 전직 트리 경로 자동 구성
-        const advPath = [];
-        const tree = JOB_ADVANCEMENT_TREE[archetype.job];
-        if (tree) {
-          let curNode = null;
-          for (let t = 0; t < targetRebirths; t++) {
-            const tierList = tree.tiers[t] || [];
-            if (!tierList.length) break;
-            if (!curNode) {
-              curNode = tierList[0];
-            } else {
-              const childId = curNode.childrenIds?.[0];
-              curNode = (childId && JOB_ADVANCEMENT_NODES_BY_ID[childId]) || tierList[0];
-            }
-            if (curNode) advPath.push(curNode.id);
-          }
-        }
-
-        const equipTier = Math.max(1, Math.min(MAX_EQUIP_TIER, options.equipTier ?? (targetRebirths + 2)));
-        const equipEnhance = Math.max(0, Math.min(15, options.equipEnhance ?? Math.min(12, targetRebirths * 3)));
-        const defaultEquip = {
-          weapon:    { tier: equipTier, enhance: equipEnhance },
-          armor:     { tier: equipTier, enhance: Math.max(0, equipEnhance - 1) },
-          helmet:    { tier: equipTier, enhance: Math.max(0, equipEnhance - 2) },
-          accessory: { tier: equipTier, enhance: Math.max(0, equipEnhance - 2) }
-        };
-
-        const mercName = (options.name || `환생${targetRebirths}용병`).slice(0, 8);
-        const merc = new Hunter(
-          `h_test_rebirth_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
-          {
-            ...archetype,
-            name: mercName,
-            baseJob: archetype.job,
-            job: archetype.job,
-            advancementPath: advPath,
-            advancementTier: advPath.length,
-            rebirthCount: targetRebirths,
-            level: targetLevel,
-            personalGold: typeof options.personalGold === 'number' ? options.personalGold : 50000,
-            equipment: options.equipment || defaultEquip
-          },
-          (Math.random() - 0.5) * 80,
-          22 + (Math.random() - 0.5) * 24
-        );
-
-        // 테스트용 액티브·패시브 스킬 레벨 일부 상향
-        if (merc.skills?.actives) {
-          merc.skills.actives.forEach((sk, idx) => {
-            sk.lv = Math.min(SKILL_SYSTEM_CONFIG.maxSkillLevel, 3 + targetRebirths * 2 + (idx % 2));
-            sk.reqUses = SKILL_SYSTEM_CONFIG.getRequiredUses(sk.lv);
-          });
-        }
-        if (merc.skills?.passives) {
-          merc.skills.passives.forEach((sk, idx) => {
-            sk.lv = Math.min(SKILL_SYSTEM_CONFIG.maxSkillLevel, 3 + targetRebirths * 2 + (idx % 2));
-            sk.reqUses = SKILL_SYSTEM_CONFIG.getRequiredUses(sk.lv);
-          });
-        }
-        merc.recalculateVitals(true);
-        merc.pickNextDestination();
-        return merc;
-      } catch (err) {
-        console.error('Failed to spawn test rebirth mercenary:', err);
-        return null;
-      }
-    }
-
-    window.spawnTestRebirthMercenary = spawnTestRebirthMercenary;
-
     // 마을 조경 소품 (나무 & 가로등)
     const props = [
       { type: 'tree', x: -490, y: -330 },
@@ -7992,8 +8372,8 @@
         };
       }
 
-      for (let gIdx = HUNTING_GROUNDS.length - 1; gIdx >= 0; gIdx--) {
-        const ground = HUNTING_GROUNDS[gIdx];
+      for (let gIdx = ALL_FIELD_GROUNDS.length - 1; gIdx >= 0; gIdx--) {
+        const ground = ALL_FIELD_GROUNDS[gIdx];
         for (let mIdx = ground.monsters.length - 1; mIdx >= 0; mIdx--) {
           const m = ground.monsters[mIdx];
           if (!m || m.hp <= 0) continue;
@@ -8041,7 +8421,7 @@
           monsters: [REBIRTH_ALTAR.boss]
         };
       } else {
-        ground = HUNTING_GROUNDS.find(g => g.id === gameState.selectedMonsterGroundId);
+        ground = ALL_FIELD_GROUNDS.find(g => g.id === gameState.selectedMonsterGroundId);
       }
 
       if (!m || !ground || m.hp <= 0 || !ground.monsters.includes(m)) {
@@ -8178,13 +8558,16 @@
 
         const unlockedMax = Math.max(b.level, b.unlockedMaxLevel || b.level);
         b.unlockedMaxLevel = unlockedMax;
-        const isMaxLv = b.level >= MAX_BUILDING_LEVEL;
+        const buildingMaxLv = b.maxLevel || MAX_BUILDING_LEVEL;
+        const isSingleLevelFixed = buildingMaxLv <= 1;
+        const isMaxLv = b.level >= buildingMaxLv;
         const needsStageUnlock = !isMaxLv && b.level >= unlockedMax;
         const nextUnlockLv = unlockedMax + 1;
         const requiredBossStage = nextUnlockLv - 1;
         const isBossClearedForUnlock = BOSS_SANCTUM.bossStage >= nextUnlockLv || BOSS_SANCTUM.allStagesCleared;
         const unlockCost = village.getStageUnlockCost(b, nextUnlockLv);
         const upCost = b.baseUpgradeCost * b.level;
+        const unlockAndUpgradeCost = unlockCost + upCost;
 
         const curStatEl = document.getElementById('panelStatCurrent');
         const nextStatEl = document.getElementById('panelStatNext');
@@ -8194,28 +8577,30 @@
 
         if (curStatEl) curStatEl.textContent = `현재: ${b.getStatText(b.level)}`;
         if (nextStatEl) {
-          nextStatEl.textContent = isMaxLv
-            ? '최고 레벨(Lv.10) 달성'
-            : (needsStageUnlock
-                ? (isBossClearedForUnlock ? `🔓 Lv.${nextUnlockLv} 해금 가능` : `🔒 ${requiredBossStage}보스 처치 필요`)
-                : `🔓 다음: ${b.getStatText(b.level + 1)}`);
+          nextStatEl.textContent = isSingleLevelFixed
+            ? '업그레이드 불가 (Lv.1 고정)'
+            : (isMaxLv
+                ? `최고 레벨(Lv.${buildingMaxLv}) 달성`
+                : (needsStageUnlock
+                    ? (isBossClearedForUnlock ? `🔓 Lv.${nextUnlockLv} 해금 가능` : `🔒 ${requiredBossStage}보스 처치 필요`)
+                    : `🔓 다음: ${b.getStatText(b.level + 1)}`));
         }
 
         if (unlockBtn && upBtn) {
           if (isMaxLv) {
             unlockBtn.style.display = 'none';
             upBtn.style.display = 'block';
-            upBtn.textContent = '최고 레벨 (Lv.10 MAX)';
+            upBtn.textContent = isSingleLevelFixed ? '업그레이드 불가 (Lv.1 고정)' : `최고 레벨 (Lv.${buildingMaxLv} MAX)`;
             upBtn.disabled = true;
             upBtn.style.opacity = '0.5';
           } else if (needsStageUnlock) {
             unlockBtn.style.display = 'block';
             upBtn.style.display = 'none';
             unlockBtn.disabled = !isBossClearedForUnlock;
-            const canUnlock = isBossClearedForUnlock && gameState.gold >= unlockCost;
+            const canUnlock = isBossClearedForUnlock && gameState.gold >= unlockAndUpgradeCost;
             unlockBtn.style.opacity = canUnlock ? '1' : '0.5';
             unlockBtn.textContent = isBossClearedForUnlock
-              ? `🔓 Lv.${nextUnlockLv} 잠금 해제 (${unlockCost.toLocaleString()} G)`
+              ? `🔓 Lv.${nextUnlockLv} 잠금 해제 & 업그레이드 (${unlockAndUpgradeCost.toLocaleString()} G)`
               : `🔒 ${requiredBossStage}보스 처치 후 해금 가능`;
           } else {
             unlockBtn.style.display = 'none';
@@ -8304,10 +8689,58 @@
       armor:     { label: '방어구', icon: '🛡️' },
       helmet:    { label: '투구',   icon: '🪖' },
       accessory: { label: '장신구', icon: '💍' },
-      insignia:  { label: '인장',   icon: '🏅' }
+      insignia:  { label: '인장',   icon: '🏅' },
+      wing:      { label: '날개',   icon: '🪽' }
     };
 
     function getEquipmentDetailInfo(hunter, slot, smithyLv) {
+      if (slot === 'wing') {
+        const meta = EQUIP_SLOT_META.wing;
+        const equippedWing = hunter.getEquippedWing();
+        const wEnh = Math.max(0, hunter.wingEnhance || 0);
+        const atkPct = equippedWing ? Math.round(((equippedWing.atkBonusPct || 0) + wEnh * (equippedWing.enhanceAtkBonusPct || 0)) * 100) : 0;
+        const defPct = equippedWing ? Math.round(((equippedWing.defBonusPct || 0) + wEnh * (equippedWing.enhanceDefBonusPct || 0)) * 100) : 0;
+        const critVal = equippedWing ? ((equippedWing.critBonus || 0) + wEnh * (equippedWing.enhanceCritBonus || 0)) : 0;
+        const spdVal = equippedWing ? ((equippedWing.speedBonus || 0) + wEnh * (equippedWing.enhanceSpeedBonus || 0)) : 0;
+
+        const allWingsGuide = SKY_WING_ITEM_IDS.map((wId) => {
+          const def = ITEM_CATALOG[wId];
+          const ownedQty = hunter.inventory ? hunter.inventory.getCount(wId) : 0;
+          const isEquipped = hunter.equippedWingId === wId;
+          const actionHtml = isEquipped
+            ? `<span style="color:#4ade80;font-weight:800;">착용 중 (+${wEnh}강)</span>`
+            : (ownedQty > 0
+                ? `<button type="button" class="equip-detail-close" data-equip-wing-id="${wId}" style="background:rgba(2,132,199,0.35);border-color:#38bdf8;color:#e0f2fe;">착용하기</button>`
+                : `<span style="color:#64748b;">미보유</span>`);
+          return `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:6px;padding:4px 6px;background:rgba(30,41,59,0.72);border-radius:6px;margin-top:3px;">
+              <span>${def.icon} <b>${def.name}</b> <span style="color:#94a3b8;">(천공의 섬 0.1% 드랍)</span></span>
+              ${actionHtml}
+            </div>
+          `;
+        }).join('');
+
+        const nextCost = hunter.getWingEnhanceCost();
+        const enhanceNote = !equippedWing
+          ? '📍 획득 방법: [천공의 섬] 몬스터 처치 시 0.1% 확률로 드랍'
+          : (wEnh >= 15
+              ? '🌟 최대 날개 강화(+15강 MAX) 달성'
+              : `🪽 다음 날개 강화(+${wEnh + 1}강) 비용: ${formatGold(nextCost)} G (천공 대장간)`);
+
+        return {
+          meta,
+          name: equippedWing ? `${equippedWing.name} (+${wEnh}강 / 최대 +15강)` : '미착용 (날개 슬롯)',
+          item: { tier: equippedWing ? 10 : 0, enhance: wEnh },
+          statSummary: equippedWing
+            ? `⚔️ 공격력 +${atkPct}% · 🛡️ 방어력 +${defPct}% · ⚡ 치명타 +${critVal}% · 💨 이동속도 +${spdVal}`
+            : '🪽 현재 착용 중인 날개가 없습니다. [천공의 섬] 몬스터를 사냥해 날개를 획득하세요.',
+          auraNote: equippedWing ? '✨ 천공의 성역 백색 날개 외형 및 성광 비행 오라 활성' : '',
+          nextEnhanceText: enhanceNote,
+          promoteText: `<div style="margin-top:2px;"><div style="font-weight:800;color:#bae6fd;margin-bottom:2px;">🪽 천공 날개 도감 & 장착</div>${allWingsGuide}</div>`,
+          isInsignia: true
+        };
+      }
+
       if (slot === 'insignia') {
         const meta = EQUIP_SLOT_META.insignia;
         const equippedIns = hunter.getEquippedInsignia();
@@ -8409,6 +8842,17 @@
       let lastTouchHandledAt = 0;
 
       const handleEquipSelect = (targetEl) => {
+        const wingEquipBtn = targetEl.closest('[data-equip-wing-id]');
+        if (wingEquipBtn) {
+          const wId = wingEquipBtn.getAttribute('data-equip-wing-id');
+          const h = hunters.find(item => item.id === gameState.selectedHunterId);
+          if (h && wId && h.equipWing(wId)) {
+            const def = ITEM_CATALOG[wId];
+            showToast(`🪽 ${h.name} [${def?.name || '날개'}] 장착 완료!`);
+            refreshHunterPanel();
+          }
+          return;
+        }
         const insEquipBtn = targetEl.closest('[data-equip-insignia-id]');
         if (insEquipBtn) {
           const insId = insEquipBtn.getAttribute('data-equip-insignia-id');
@@ -8827,7 +9271,9 @@
         const smithyLv = smithy ? smithy.level : 0;
         const activeSlot = gameState.selectedEquipSlot;
         const equippedIns = h.getEquippedInsignia();
+        const equippedWing = h.getEquippedWing();
         const ownedInsSig = REGIONAL_INSIGNIA_IDS.map(id => `${id}:${h.inventory ? h.inventory.getCount(id) : 0}`).join(',');
+        const ownedWingSig = SKY_WING_ITEM_IDS.map(id => `${id}:${h.inventory ? h.inventory.getCount(id) : 0}`).join(',');
 
         const equipSig = [
           h.id,
@@ -8837,6 +9283,9 @@
           h.materials,
           h.equippedInsigniaId || 'none',
           ownedInsSig,
+          h.equippedWingId || 'none',
+          h.wingEnhance || 0,
+          ownedWingSig,
           ...['weapon', 'armor', 'helmet', 'accessory'].map(s => `${h.equipment[s].tier}:${h.equipment[s].enhance}`)
         ].join('|');
 
@@ -8879,14 +9328,33 @@
             </div>
           `;
 
+          const isWingSelected = activeSlot === 'wing';
+          const wEnh = Math.max(0, h.wingEnhance || 0);
+          const wingAtkPct = equippedWing ? Math.round(((equippedWing.atkBonusPct || 0) + wEnh * (equippedWing.enhanceAtkBonusPct || 0)) * 100) : 0;
+          const wingRowHtml = `
+            <div class="equip-slot-row ${isWingSelected ? 'active' : ''}" data-equip-slot="wing" title="클릭하여 날개 상세 정보 및 천공 대장간 강화 안내 보기">
+              <div>
+                <span style="margin-right:4px;">🪽</span>
+                <span class="equip-tier-tag" style="background:rgba(56,189,248,0.22);color:#bae6fd;">날개</span>
+                <b>${equippedWing ? `${equippedWing.icon} ${equippedWing.name}` : '미착용'}</b>
+                ${equippedWing ? `<span style="color:#38bdf8;font-weight:800;">+${wEnh}</span>` : ''}
+              </div>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <span class="equip-req-badge ${equippedWing ? 'ready' : 'locked'}">${equippedWing ? `공방 +${wingAtkPct}%` : '천공 0.1%'}</span>
+                <span style="color:#94a3b8;font-size:10px;">${isWingSelected ? '▾' : '▸'}</span>
+              </div>
+            </div>
+          `;
+
           let detailHtml = '';
-          if (activeSlot && (activeSlot === 'insignia' || h.equipment[activeSlot])) {
+          if (activeSlot && (activeSlot === 'insignia' || activeSlot === 'wing' || h.equipment[activeSlot])) {
             const info = getEquipmentDetailInfo(h, activeSlot, smithyLv);
             if (info.isInsignia) {
+              const slotBadgeTitle = activeSlot === 'wing' ? '🪽 [날개]' : '🏅 [보스 인장]';
               detailHtml = `
                 <div class="equip-detail-card">
                   <div class="equip-detail-head">
-                    <span>🏅 [보스 인장] ${info.name}</span>
+                    <span>${slotBadgeTitle} ${info.name}</span>
                     <button type="button" class="equip-detail-close">닫기 ✕</button>
                   </div>
                   <div style="color:#86efac;font-weight:700;">${info.statSummary}</div>
@@ -8913,7 +9381,7 @@
             detailHtml = `<div style="font-size:10.5px;color:#94a3b8;text-align:center;padding-top:2px;">💡 장비 또는 인장을 클릭하면 상세 능력치와 획득·승급 방법을 확인할 수 있습니다.</div>`;
           }
 
-          equipBox.innerHTML = rowsHtml + insigniaRowHtml + detailHtml;
+          equipBox.innerHTML = rowsHtml + wingRowHtml + insigniaRowHtml + detailHtml;
         }
       }
     }
@@ -9661,7 +10129,7 @@
             </div>
             <div class="tier-note-card">
               <h4>✨ 초월 환생의 제단 (1환생↑ 전용 최상급 중간보스)</h4>
-              초보 사냥터 북쪽 보스 필드 바로 오른쪽 옆 소형 제단에는 <b>1환생 이상 헌터</b>만 입장할 수 있으며, <b>헌터 상세 패널(✨ 제단 출정)</b> 또는 <b>전체 헌터 목록(✨ 제단출정)</b>에서 유저가 직접 출정을 지시할 수 있습니다. 처치 시 <b>✨ 초월 윤회의 인장(몬스터 피해 +150%)</b>과 고액 골드·경험치·별결정을 획득합니다.
+              고대 수호자의 성소 바로 오른쪽 옆 제단에는 <b>1환생 이상 헌터</b>만 입장할 수 있으며, <b>헌터 상세 패널(✨ 제단 출정)</b> 또는 <b>전체 헌터 목록(✨ 제단출정)</b>에서 유저가 직접 출정을 지시할 수 있습니다. 처치 시 <b>✨ 초월 윤회의 인장(몬스터 피해 +150%)</b>과 고액 골드·경험치·별결정을 획득합니다.
             </div>
             <div class="tier-note-card">
               <h4>⚡ 스킬 숙련도 & 레벨업 (최대 Lv.20)</h4>
@@ -9730,6 +10198,7 @@
 
     document.getElementById('btnRecruitHunter')?.addEventListener('click', recruitNewHunter);
     document.getElementById('btnRosterRecruitHunter')?.addEventListener('click', recruitNewHunter);
+
     document.getElementById('btnSummonOneTimeT3Hunter')?.addEventListener('click', () => {
       if (gameState.oneTimeT3SummonUsed) {
         showToast('⚠️ 1회 한정 3T·Lv.1 헌터 소환은 이미 사용했습니다!');
@@ -10230,8 +10699,12 @@
       const plot = village.plots.find(p => p.id === gameState.selectedPlotId);
       if (!plot || !plot.building) return;
       const b = plot.building;
+      const buildingMaxLv = b.maxLevel || MAX_BUILDING_LEVEL;
       const unlockedMax = Math.max(b.level, b.unlockedMaxLevel || b.level);
-      if (unlockedMax >= MAX_BUILDING_LEVEL) return;
+      if (unlockedMax >= buildingMaxLv) {
+        if (buildingMaxLv <= 1) showToast(`ℹ️ ${b.name}은(는) Lv.1 고정 건물로 업그레이드할 수 없습니다.`);
+        return;
+      }
       const nextUnlockLv = unlockedMax + 1;
       const requiredBossStage = nextUnlockLv - 1;
       const isBossClearedForUnlock = BOSS_SANCTUM.bossStage >= nextUnlockLv || BOSS_SANCTUM.allStagesCleared;
@@ -10240,24 +10713,32 @@
         showToast(`🔒 ${requiredBossStage}보스 [${reqBossCfg.theme.title}] 처치 후 Lv.${nextUnlockLv} 잠금 해제가 가능합니다!`);
         return;
       }
-      const cost = village.getStageUnlockCost(b, nextUnlockLv);
-      if (gameState.gold < cost) {
-        showToast(`⚠️ ${b.name} Lv.${nextUnlockLv} 잠금 해제 골드(${formatGold(cost)}G)가 부족합니다.`);
+      const unlockCost = village.getStageUnlockCost(b, nextUnlockLv);
+      const upgradeCost = b.baseUpgradeCost * b.level;
+      const totalCost = unlockCost + upgradeCost;
+      if (gameState.gold < totalCost) {
+        showToast(`⚠️ ${b.name} Lv.${nextUnlockLv} 잠금 해제 및 업그레이드 골드(${formatGold(totalCost)}G)가 부족합니다.`);
         return;
       }
-      gameState.gold -= cost;
+      gameState.gold -= totalCost;
       b.unlockedMaxLevel = nextUnlockLv;
+      b.level = nextUnlockLv;
+      b.investedGold += totalCost;
       updateResourceHUD();
       openPlotPanel(plot);
-      showToast(`🔓 ${b.icon} ${b.name} Lv.${nextUnlockLv} 업그레이드 단계 잠금 해제!`);
+      showToast(`🔓⬆️ ${b.icon} ${b.name} Lv.${b.level} 잠금 해제 및 업그레이드 완료!`);
     });
 
     document.getElementById('btnUpgradeBuilding')?.addEventListener('click', () => {
       const plot = village.plots.find(p => p.id === gameState.selectedPlotId);
       if (!plot || !plot.building) return;
       const b = plot.building;
+      const buildingMaxLv = b.maxLevel || MAX_BUILDING_LEVEL;
       const unlockedMax = Math.max(b.level, b.unlockedMaxLevel || b.level);
-      if (b.level >= MAX_BUILDING_LEVEL) return;
+      if (b.level >= buildingMaxLv) {
+        if (buildingMaxLv <= 1) showToast(`ℹ️ ${b.name}은(는) Lv.1 고정 건물로 업그레이드할 수 없습니다.`);
+        return;
+      }
       if (b.level >= unlockedMax) {
         showToast(`🔒 먼저 ${b.name} Lv.${b.level + 1} 단계 잠금을 해제해주세요.`);
         return;
@@ -10378,7 +10859,7 @@
       const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
       if (BOSS_SANCTUM.status === 'CLOSED') {
         btn.disabled = false;
-        btn.textContent = `🔥 보스 오픈 (${cfg.reqLabel})`;
+        btn.textContent = '🔥 보스 오픈';
         if (abandonBtn) abandonBtn.style.display = 'none';
       } else if (BOSS_SANCTUM.status === 'PREPARING') {
         btn.disabled = true;
@@ -10408,6 +10889,15 @@
 
       hunters.forEach((h) => {
         if (h.state === 'REBIRTH_ALTAR_HUNT') return;
+        const onSky = h.activeGroundId === SKY_ISLAND_GROUND.id || h.skyIslandPortalWarp === true || (
+          h.x >= SKY_ISLAND_GROUND.bounds.x - 20 &&
+          h.x <= SKY_ISLAND_GROUND.bounds.x + SKY_ISLAND_GROUND.bounds.w + 20 &&
+          h.y >= SKY_ISLAND_GROUND.bounds.y - 20 &&
+          h.y <= SKY_ISLAND_GROUND.bounds.y + SKY_ISLAND_GROUND.bounds.h + 20
+        );
+        if (onSky) {
+          teleportHunterFromSkyIslandToTown(h, '✨ 보스전 집결 · 천공의 섬에서 마을 순간 이동!');
+        }
         h.currentTargetMonster = null;
         h.activeGroundId = null;
         interactionManager.spawnBubble(h, '📢 보스 필드 오픈! 1분간 정비 시작!', '#fde047');
@@ -10623,9 +11113,312 @@
       const t = performance.now() * 0.004;
       const bounce = Math.abs(Math.sin(t + m.spawnX * 0.05)) * 2.2;
       const kind = m.kind || 'slime';
+      const isSkyIslandUnit = SKY_ISLAND_GROUND.monsters.includes(m);
 
       ctx.save();
       ctx.translate(m.x, m.y);
+
+      if (isSkyIslandUnit) {
+        // [천공의 섬 전용 외형] 헌터 실루엣 기반의 백색 천사 몬스터 + 등에 커다란 날개
+        const facing = m.facing || -1;
+        const walkPhase = m.walkCycle || (t * 4.2 + m.spawnX * 0.05);
+        const wingFlap = Math.sin(t * 3.4 + m.spawnX * 0.03) * 0.24;
+        const hoverBob = Math.abs(Math.sin(walkPhase)) * 2.4 + Math.sin(t * 2.1) * 1.4;
+        const isLargeSeraph = kind === 'kingslime' || kind === 'irongolem';
+        const bodyScale = isLargeSeraph ? 1.18 : 1.02;
+
+        // 발밑 천공 성광 마법진 & 그림자
+        ctx.save();
+        ctx.translate(0, 14);
+        ctx.scale(1, 0.44);
+        ctx.strokeStyle = 'rgba(224, 242, 254, 0.72)';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(0, 0, 17 * bodyScale, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.34)';
+        ctx.beginPath();
+        ctx.ellipse(0, 14, 12 * bodyScale, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(0, -hoverBob);
+        ctx.scale(bodyScale, bodyScale);
+
+        // 1. 등에 달린 커다란 백색 천사 날개 (좌·우 깃털 날개)
+        const drawLargeAngelWing = (side) => {
+          ctx.save();
+          ctx.translate(-facing * 4, -4);
+          ctx.rotate(side * (0.48 + wingFlap));
+
+          const wingGrad = ctx.createLinearGradient(0, -4, -side * 24, -18);
+          wingGrad.addColorStop(0, '#ffffff');
+          wingGrad.addColorStop(0.65, '#f1f5f9');
+          wingGrad.addColorStop(1, '#e0f2fe');
+
+          ctx.fillStyle = wingGrad;
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.4;
+
+          // 주 날개 외곽 실루엣
+          ctx.beginPath();
+          ctx.moveTo(0, -2);
+          ctx.quadraticCurveTo(side * 12, -22, side * 25, -16);
+          ctx.quadraticCurveTo(side * 22, -4, side * 26, 5);
+          ctx.quadraticCurveTo(side * 13, 9, 0, 5);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // 날개 깃털 결 라인
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.65)';
+          ctx.lineWidth = 1.1;
+          for (let f = 0; f < 3; f++) {
+            const fy = -12 + f * 6;
+            ctx.beginPath();
+            ctx.moveTo(side * 4, -1 + f * 1.5);
+            ctx.lineTo(side * (20 - f * 1.5), fy);
+            ctx.stroke();
+          }
+          ctx.restore();
+        };
+        drawLargeAngelWing(-1);
+        drawLargeAngelWing(1);
+
+        // 2. 백색 천사 다리 & 부츠
+        const legSwing = Math.sin(walkPhase) * 2.8;
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.2;
+        ctx.fillRect(-5.5, 9 + legSwing * 0.35, 4.2, 6.5);
+        ctx.strokeRect(-5.5, 9 + legSwing * 0.35, 4.2, 6.5);
+        ctx.fillRect(1.3, 9 - legSwing * 0.35, 4.2, 6.5);
+        ctx.strokeRect(1.3, 9 - legSwing * 0.35, 4.2, 6.5);
+
+        // 3. 백색 천사 망토 & 갑옷 몸통 (헌터 체형 실루엣)
+        ctx.fillStyle = '#f1f5f9';
+        ctx.beginPath();
+        ctx.moveTo(-6.5, -3);
+        ctx.lineTo(-facing * 12, 12.5);
+        ctx.lineTo(facing * 5.5, 12.5);
+        ctx.lineTo(6.5, -3);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.roundRect(-8.5, -4.5, 17, 15.5, 4.5);
+        ctx.fill();
+        ctx.stroke();
+
+        // 성스러운 금빛·은빛 흉갑 문양 & 허리띠
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(-5.2, -2.2, 10.4, 6.8);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(-8, 6.2, 16, 2.2);
+
+        // 천사 어깨 견갑
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.2;
+        [-9.5, 9.5].forEach((sx) => {
+          ctx.beginPath();
+          ctx.arc(sx, -2.5, 3.8, Math.PI, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        });
+
+        // 4. 백색 천사 머리 · 은백색 머리카락 · 천사 링(헤일로) · 백은 투구
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.ellipse(0, -21.5, 6.5, 2.2, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#fffbeb';
+        ctx.beginPath();
+        ctx.arc(0, -10.5, 6.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 순백/은백색 머리카락
+        ctx.fillStyle = '#f8fafc';
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(0, -11.8, 7.1, Math.PI, 0);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillRect(-7, -11.8, 2.2, 8.5);
+        ctx.fillRect(4.8, -11.8, 2.2, 8.5);
+
+        // 백색 투구 & 날개 장식
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.arc(0, -12.5, 7.2, Math.PI * 1.05, -0.05 * Math.PI);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.moveTo(-5.5, -15.5);
+        ctx.lineTo(-10, -20.5);
+        ctx.lineTo(-3, -17);
+        ctx.moveTo(5.5, -15.5);
+        ctx.lineTo(10, -20.5);
+        ctx.lineTo(3, -17);
+        ctx.fill();
+
+        // 천사 안광 (황금·하늘빛)
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.arc(facing * 2.4, -10.2, 1.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5. 천사 몬스터별 고유 무기 모양 & 색상
+        const swingAngle = Math.sin(walkPhase) * 0.14;
+        if (kind === 'shadowwolf') {
+          // 성광의 심판천사: 진홍·황금빛 심판대검
+          ctx.save();
+          ctx.translate(facing * 10, 1);
+          ctx.rotate(facing * (0.42 + swingAngle));
+          ctx.fillStyle = '#991b1b';
+          ctx.fillRect(-1.6, 0, 3.2, 6);
+          ctx.fillStyle = '#f59e0b';
+          ctx.beginPath();
+          ctx.moveTo(-7, -3.5);
+          ctx.lineTo(0, -1);
+          ctx.lineTo(7, -3.5);
+          ctx.lineTo(5.5, 1.2);
+          ctx.lineTo(-5.5, 1.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = '#fda4af';
+          ctx.strokeStyle = '#be123c';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-3.2, -1);
+          ctx.lineTo(-2.6, -24);
+          ctx.lineTo(0, -30);
+          ctx.lineTo(2.6, -24);
+          ctx.lineTo(3.2, -1);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = '#fde047';
+          ctx.fillRect(-0.8, -23, 1.6, 19);
+          ctx.restore();
+        } else if (kind === 'manaorc') {
+          // 천공의 성가대천사: 자수정빛 고리 지팡이 & 마력 오브
+          ctx.save();
+          ctx.translate(facing * 10, 1);
+          ctx.rotate(facing * (0.28 + swingAngle));
+          ctx.fillStyle = '#581c87';
+          ctx.fillRect(-1.4, -22, 2.8, 28);
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 1.9;
+          ctx.beginPath();
+          ctx.arc(0, -23, 5.8, 0.22 * Math.PI, 0.78 * Math.PI, true);
+          ctx.stroke();
+          ctx.fillStyle = '#e879f9';
+          ctx.shadowColor = '#a855f7';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(0, -25, 3.8 + Math.sin(t * 6) * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        } else if (kind === 'kingslime') {
+          // 대천사 세라핌: 에메랄드·황금빛 삼지 성창
+          ctx.save();
+          ctx.translate(facing * 10.5, 1);
+          ctx.rotate(facing * (0.34 + swingAngle));
+          ctx.fillStyle = '#b45309';
+          ctx.fillRect(-1.7, -23, 3.4, 30);
+          ctx.fillStyle = '#facc15';
+          ctx.fillRect(-6.5, -21, 13, 2.6);
+          ctx.fillStyle = '#34d399';
+          ctx.strokeStyle = '#047857';
+          ctx.lineWidth = 1.1;
+          // 중앙 창날
+          ctx.beginPath();
+          ctx.moveTo(-2.6, -21);
+          ctx.lineTo(0, -33);
+          ctx.lineTo(2.6, -21);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          // 좌·우 보조 창날
+          [-5.2, 5.2].forEach((px) => {
+            ctx.beginPath();
+            ctx.moveTo(px - 1.6, -21);
+            ctx.lineTo(px, -28.5);
+            ctx.lineTo(px + 1.6, -21);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          });
+          ctx.restore();
+        } else {
+          // 백익의 수호천사: 빙청색 성광 장창 + 좌측 성광 방패
+          ctx.save();
+          ctx.translate(-facing * 8, 2);
+          ctx.fillStyle = '#0284c7';
+          ctx.strokeStyle = '#bae6fd';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(-4.5, -6);
+          ctx.lineTo(4.5, -6);
+          ctx.lineTo(4, 3);
+          ctx.lineTo(0, 7.5);
+          ctx.lineTo(-4, 3);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.save();
+          ctx.translate(facing * 10, 1);
+          ctx.rotate(facing * (0.36 + swingAngle));
+          ctx.fillStyle = '#0369a1';
+          ctx.fillRect(-1.5, -22, 3, 28);
+          ctx.fillStyle = '#7dd3fc';
+          ctx.strokeStyle = '#e0f2fe';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-4, -18);
+          ctx.lineTo(0, -28);
+          ctx.lineTo(4, -18);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        ctx.restore();
+
+        // HP 바 & 이름표
+        const hpRatio = Math.max(0, m.hp / m.maxHp);
+        const barY = isLargeSeraph ? -38 : -34;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.fillRect(-22, barY, 44, 5);
+        ctx.fillStyle = m.provoked ? '#f87171' : '#e0f2fe';
+        ctx.fillRect(-21, barY + 1, 42 * hpRatio, 3);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(`👼 ${m.name}`, 0, barY - 4);
+        ctx.restore();
+        return;
+      }
 
       if (m.isFieldMiniBoss || kind === 'field_miniboss') {
         const theme = m.bossTheme || 'meadow_slime';
@@ -11691,6 +12484,155 @@
         });
       });
 
+      // [최상급 사냥터 위쪽 3환생 이상 전용 구역: ☁️ 천공의 섬 · 도보 이동 불가 · 포탈 전용]
+      {
+        const sbSky = SKY_ISLAND_GROUND.bounds;
+        const tCloud = performance.now() * 0.0012;
+        const padX = 24;
+        const padY = 20;
+        const outerX = sbSky.x - padX;
+        const outerY = sbSky.y - padY;
+        const outerW = sbSky.w + padX * 2;
+        const outerH = sbSky.h + padY * 2;
+
+        // 구름 외곽 퍼프(원형 군집) 생성 헬퍼: 천공의 섬 경계 전체를 뭉게구름 형태로 감쌈
+        const traceCloudPerimeter = (x0, y0, w0, h0, puffStep = 34, puffR = 22) => {
+          const puffs = [];
+          const cols = Math.max(4, Math.round(w0 / puffStep));
+          const rows = Math.max(2, Math.round(h0 / puffStep));
+          const dx = w0 / cols;
+          const dy = h0 / rows;
+
+          for (let c = 0; c <= cols; c++) {
+            const px = x0 + c * dx;
+            const rTop = puffR * (0.86 + 0.22 * Math.sin(c * 1.7 + tCloud));
+            puffs.push({ x: px, y: y0, r: rTop });
+            const rBot = puffR * (0.88 + 0.22 * Math.cos(c * 1.9 - tCloud));
+            puffs.push({ x: px, y: y0 + h0, r: rBot });
+          }
+          for (let r = 1; r < rows; r++) {
+            const py = y0 + r * dy;
+            const rLeft = puffR * (0.85 + 0.2 * Math.cos(r * 2.1 + tCloud));
+            puffs.push({ x: x0, y: py, r: rLeft });
+            const rRight = puffR * (0.85 + 0.2 * Math.sin(r * 2.3 - tCloud));
+            puffs.push({ x: x0 + w0, y: py, r: rRight });
+          }
+          return puffs;
+        };
+
+        const cloudPuffs = traceCloudPerimeter(outerX, outerY, outerW, outerH, 34, 23);
+
+        // 구름 그림자 (공중에 떠 있는 입체감)
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+        ctx.beginPath();
+        ctx.roundRect(sbSky.x + 8, sbSky.y + 14, sbSky.w, sbSky.h, 36);
+        ctx.fill();
+        ctx.restore();
+
+        // 외곽 뭉게구름 실루엣 채우기 & 외곽선
+        ctx.save();
+        ctx.fillStyle = '#e0f2fe';
+        ctx.strokeStyle = 'rgba(186, 230, 253, 0.92)';
+        ctx.lineWidth = 2.5;
+        cloudPuffs.forEach((pf) => {
+          ctx.beginPath();
+          ctx.arc(pf.x, pf.y, pf.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+        ctx.restore();
+
+        // 천공의 섬 내부 성역 본체 (구름 클리핑 적용)
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(sbSky.x, sbSky.y, sbSky.w, sbSky.h, 28);
+        cloudPuffs.forEach((pf) => {
+          ctx.moveTo(pf.x + pf.r * 0.85, pf.y);
+          ctx.arc(pf.x, pf.y, pf.r * 0.85, 0, Math.PI * 2);
+        });
+        ctx.clip();
+
+        ctx.fillStyle = '#13263d';
+        ctx.fillRect(outerX - 24, outerY - 24, outerW + 48, outerH + 48);
+
+        const skyCols = 14;
+        const skyRows = 6;
+        const cw = sbSky.w / skyCols;
+        const ch = sbSky.h / skyRows;
+        for (let r = 0; r < skyRows; r++) {
+          for (let c = 0; c < skyCols; c++) {
+            const cx = sbSky.x + c * cw + cw * 0.5;
+            const cy = sbSky.y + r * ch + ch * 0.5;
+            const hash = Math.abs(Math.sin(r * 41.3 + c * 73.9));
+            if (hash > 0.58) {
+              ctx.fillStyle = hash > 0.84
+                ? 'rgba(253, 224, 71, 0.34)'
+                : 'rgba(125, 211, 252, 0.32)';
+              ctx.beginPath();
+              ctx.arc(cx, cy, hash > 0.84 ? 2.5 : 1.8, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+        ctx.restore();
+
+        // 구름 테두리 하이라이트 (구름 군도 경계 강조)
+        ctx.save();
+        ctx.strokeStyle = 'rgba(224, 242, 254, 0.82)';
+        ctx.lineWidth = 2;
+        cloudPuffs.forEach((pf, idx) => {
+          if (idx % 2 === 0) {
+            ctx.beginPath();
+            ctx.arc(pf.x, pf.y - 2, pf.r * 0.92, Math.PI * 0.9, Math.PI * 2.1);
+            ctx.stroke();
+          }
+        });
+        ctx.restore();
+
+        // 주변 떠다니는 작은 구름 조각 장식
+        const miniClouds = [
+          { x: sbSky.x - 42, y: sbSky.y + 42 + Math.sin(tCloud * 1.4) * 5, s: 0.68 },
+          { x: sbSky.x + sbSky.w + 42, y: sbSky.y + 78 + Math.cos(tCloud * 1.2) * 5, s: 0.74 },
+          { x: sbSky.x + sbSky.w * 0.5, y: sbSky.y - 36 + Math.sin(tCloud * 1.6) * 4, s: 0.65 }
+        ];
+        miniClouds.forEach((mc) => {
+          ctx.save();
+          ctx.translate(mc.x, mc.y);
+          ctx.scale(mc.s, mc.s);
+          ctx.fillStyle = 'rgba(224, 242, 254, 0.86)';
+          ctx.beginPath();
+          ctx.arc(-12, 2, 11, 0, Math.PI * 2);
+          ctx.arc(0, -3, 14, 0, Math.PI * 2);
+          ctx.arc(13, 2, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(sbSky.x + 18, sbSky.y + 14, 470, 44, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = '#bae6fd';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('☁️ 천공의 섬 (성역 구름군도) [3환생 이상 전용 · 도보 이동 불가]', sbSky.x + 30, sbSky.y + 28);
+
+        ctx.fillStyle = '#fde68a';
+        ctx.font = '11px sans-serif';
+        ctx.fillText('🔒 도보 진입 불가 · [천공의 섬 게이트] 포탈 전용 입장 · 2,650 EXP · 별결정 드랍', sbSky.x + 30, sbSky.y + 45);
+
+        SKY_ISLAND_GROUND.monsters.forEach((m) => {
+          if (m.hp <= 0) return;
+          drawFieldMonster(ctx, m);
+        });
+      }
+
       // [초보 사냥터 북쪽 보스 레이드 전용 구역: 고대 수호자의 성소]
       const sb = BOSS_SANCTUM.bounds;
       ctx.fillStyle = BOSS_SANCTUM.status === 'ACTIVE' ? 'rgba(159, 18, 57, 0.34)' : 'rgba(76, 29, 149, 0.28)';
@@ -11799,7 +12741,7 @@
       // 2. 마을 안전 구역 (확장 부지까지 수용 가능한 넉넉한 크기)
       ctx.fillStyle = '#3f624d';
       ctx.beginPath();
-      ctx.roundRect(-560, -420, 1090, 840, 28);
+      ctx.roundRect(-560, -450, 1090, 1050, 28);
       ctx.fill();
 
       ctx.strokeStyle = '#78350f';
@@ -11883,8 +12825,8 @@
       // 4. 마을-사냥터 경계 석조 성벽 (길이 아닌 구역은 모두 견고한 벽으로 차단)
       const wallLeft = TOWN_EAST_GATE.wallX - TOWN_EAST_GATE.wallHalfThick;
       const wallW = TOWN_EAST_GATE.wallHalfThick * 2;
-      const wallTopLimit = -440;
-      const wallBottomLimit = 440;
+      const wallTopLimit = -470;
+      const wallBottomLimit = 620;
 
       // 상단 성벽 구간 (wallTopLimit ~ gateTopY)
       const topSegH = TOWN_EAST_GATE.gateTopY - wallTopLimit;
@@ -12529,6 +13471,93 @@
         ctx.fillStyle = '#2dd4bf';
         ctx.beginPath();
         ctx.ellipse(px, py - 1, 8, 3.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+      },
+
+      sky_island_gate(ctx, bld, left, top, wallTop) {
+        // 🌀 천공의 섬 게이트: 하늘빛/금빛 고리 포탈 + 부유하는 천공 크리스탈
+        const t = performance.now() * 0.003;
+        [-48, 48].forEach((ox) => {
+          ctx.fillStyle = '#bae6fd';
+          ctx.fillRect(bld.x + ox - 5, wallTop + 4, 10, bld.h - 28);
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bld.x + ox - 5, wallTop + 4, 10, bld.h - 28);
+        });
+
+        // 포탈 입구 회전 마력 링
+        const portalX = bld.x;
+        const portalY = top + bld.h - 22;
+        ctx.save();
+        ctx.translate(portalX, portalY);
+        ctx.rotate(t * 1.4);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.4;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.beginPath();
+        ctx.arc(0, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // 상단 부유 천공 크리스탈
+        const floatY = top - 52 + Math.sin(t * 2.2) * 3.5;
+        ctx.save();
+        ctx.translate(bld.x + 6, floatY);
+        ctx.fillStyle = '#7dd3fc';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(0, -10);
+        ctx.lineTo(7, 0);
+        ctx.lineTo(0, 10);
+        ctx.lineTo(-7, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      },
+
+      sky_smithy(ctx, bld, left, top, wallTop) {
+        // 🪽 천공 대장간: 백은·하늘빛 대리석 기둥 + 공중 부유 성광 날개 문장 & 제련 모루
+        const t = performance.now() * 0.0032;
+        [-48, 48].forEach((ox) => {
+          ctx.fillStyle = '#e0f2fe';
+          ctx.fillRect(bld.x + ox - 5, wallTop + 4, 10, bld.h - 28);
+          ctx.strokeStyle = '#0284c7';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(bld.x + ox - 5, wallTop + 4, 10, bld.h - 28);
+        });
+
+        const floatY = top - 52 + Math.sin(t * 2.4) * 3.5;
+        ctx.save();
+        ctx.translate(bld.x + 6, floatY);
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.moveTo(0, 2);
+        ctx.quadraticCurveTo(-12, -10, -18, -4);
+        ctx.quadraticCurveTo(-10, 4, 0, 5);
+        ctx.moveTo(0, 2);
+        ctx.quadraticCurveTo(12, -10, 18, -4);
+        ctx.quadraticCurveTo(10, 4, 0, 5);
+        ctx.fill();
+        ctx.restore();
+
+        const ax = left + bld.w - 24;
+        const ay = top + bld.h - 10;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.moveTo(ax - 11, ay - 6);
+        ctx.lineTo(ax + 11, ay - 6);
+        ctx.lineTo(ax + 7, ay);
+        ctx.lineTo(ax - 7, ay);
+        ctx.closePath();
         ctx.fill();
       }
     };
@@ -13532,6 +14561,38 @@
       // 보행 바운스 오프셋 적용
       ctx.translate(0, -bobY);
 
+      // 0.5. 착용 날개 아이템 렌더링 (헌터 등 뒤 좌·우 날개)
+      const equippedWing = hunter.getEquippedWing ? hunter.getEquippedWing() : null;
+      if (equippedWing) {
+        const wingFlap = Math.sin(t * 3.6 + hunter.x * 0.04) * 0.22;
+        const wEnh = Math.max(0, hunter.wingEnhance || 0);
+        const wingScale = 1 + Math.min(0.28, wEnh * 0.018);
+        [-1, 1].forEach((side) => {
+          ctx.save();
+          ctx.translate(-hunter.facing * 3.5, -3);
+          ctx.scale(wingScale, wingScale);
+          ctx.rotate(side * (0.46 + wingFlap));
+
+          const wGrad = ctx.createLinearGradient(0, -3, side * 20, -15);
+          wGrad.addColorStop(0, '#ffffff');
+          wGrad.addColorStop(0.65, wEnh >= 10 ? '#fef08a' : '#e0f2fe');
+          wGrad.addColorStop(1, wEnh >= 15 ? '#fde047' : '#bae6fd');
+
+          ctx.fillStyle = wGrad;
+          ctx.strokeStyle = wEnh >= 10 ? '#f59e0b' : '#38bdf8';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(0, -1.5);
+          ctx.quadraticCurveTo(side * 10, -18, side * 21, -13);
+          ctx.quadraticCurveTo(side * 18, -3, side * 21, 4);
+          ctx.quadraticCurveTo(side * 10, 7, 0, 4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+
       // 1. 다리 (걷기 애니메이션)
       const legSwing = hunter.state === 'WALKING' ? Math.sin(hunter.walkCycle) * 3 : 0;
       ctx.fillStyle = '#1e293b';
@@ -14256,6 +15317,26 @@
           }
           const scaling = getHuntingGroundScaling(ground, hunters);
           monster.respawn = monster.isFieldMiniBoss ? (monster.respawnDelay || 25) : scaling.respawnDelay;
+
+          // [천공의 섬 전용 0.1% 확률 날개 아이템 드랍]
+          if (ground && ground.id === SKY_ISLAND_GROUND.id && Math.random() < 0.001) {
+            const wingId = 'sky_sanctuary_wings';
+            const wingDef = ITEM_CATALOG[wingId];
+            if (wingDef && hunter.inventory) {
+              const alreadyOwnedWing = hunter.inventory.getCount(wingId) >= 1;
+              if (!alreadyOwnedWing) {
+                hunter.inventory.addItem(wingId, 1);
+                if (!hunter.equippedWingId) {
+                  hunter.equipWing(wingId);
+                }
+                interactionManager.spawnBubble(hunter, `🪽 [0.1%] ${wingDef.name} 획득 & 착용!`, '#7dd3fc');
+                showToast(`🪽 경축! '${hunter.name}' 헌터가 천공의 섬에서 [0.1%] 확률로 [${wingDef.name}]을(를) 획득했습니다!`);
+              } else {
+                showToast(`🪽 '${hunter.name}' 헌터는 이미 [${wingDef.name}]을(를) 보유 중입니다.`);
+              }
+            }
+          }
+
           const isMiniBoss = !!monster.isFieldMiniBoss;
           if (isMiniBoss) {
             const insId = monster.insigniaId ?? ground.miniBossConfig?.insigniaId ?? null;
@@ -14289,9 +15370,18 @@
 
           hunter.personalGold += hunterShare;
           const lootSpec = ground.lootSpec || { itemId: 'loot_beginner_crystal', tierKey: 'beginner', name: '초원 풀잎 결정', icon: '🌱', dropChance: 0.45 };
+          const fieldTierDropCountById = {
+            beginner_field: 1,
+            mid_field_20_40: 2,
+            high_field_40_70: 3,
+            rebirth_sanctuary_field: 4,
+            top_field_70_99: 5,
+            sky_island_field: 6
+          };
+          const baseFieldLootQty = fieldTierDropCountById[ground?.id] || 1;
           if (isMiniBoss || Math.random() < (lootSpec.dropChance ?? 0.45)) {
             const targetItemId = lootSpec.itemId || LOOT_TIER_TO_ITEM_ID[lootSpec.tierKey] || 'loot_beginner_crystal';
-            const dropQty = isMiniBoss ? 3 : 1;
+            const dropQty = isMiniBoss ? (baseFieldLootQty + 2) : baseFieldLootQty;
             hunter.inventory.addItem(targetItemId, dropQty, {
               category: 'loot',
               name: lootSpec.name,
@@ -14302,7 +15392,7 @@
             });
             interactionManager.spawnBubble(
               hunter,
-              isMiniBoss ? `👑 중간보스 처치! ${lootSpec.icon}x${dropQty} +${formatGold(hunterShare)}G` : `${lootSpec.icon} [${lootSpec.name}] 획득!`,
+              isMiniBoss ? `👑 중간보스 처치! ${lootSpec.icon}x${dropQty} +${formatGold(hunterShare)}G` : `${lootSpec.icon} [${lootSpec.name}] x${dropQty} 획득!`,
               '#fde047'
             );
           }
@@ -14740,6 +15830,98 @@
 
     // 창 최소화·백그라운드 전환 시에도 rAF 중단과 무관하게 실제 경과 시간(dt)만큼 시뮬레이션 진행
     function stepSimulation(dt) {
+      // [보스 레이드 정비 카운트다운 및 보스전 진행/재생/반격 처리]
+      if (BOSS_SANCTUM.status === 'PREPARING') {
+        BOSS_SANCTUM.prepTimer = Math.max(0, (BOSS_SANCTUM.prepTimer || 0) - dt);
+        updateBossRaidHudButton();
+
+        if (BOSS_SANCTUM.prepTimer <= 0) {
+          BOSS_SANCTUM.status = 'ACTIVE';
+          BOSS_SANCTUM.prepTimer = 0;
+          updateBossRaidHudButton();
+
+          const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
+          showToast(`🔥 60초 정비 완료! [${cfg.theme.title}] 보스 성소 결계가 개방되었습니다!`);
+
+          hunters.forEach((h) => {
+            if (!h || h.hp <= 0) return;
+            if (BOSS_SANCTUM.fallenHunterIds.has(h.id)) return;
+            if (h.state === 'REBIRTH_ALTAR_HUNT') return;
+
+            const onSky = h.activeGroundId === SKY_ISLAND_GROUND.id || h.skyIslandPortalWarp === true || (
+              h.x >= SKY_ISLAND_GROUND.bounds.x - 20 &&
+              h.x <= SKY_ISLAND_GROUND.bounds.x + SKY_ISLAND_GROUND.bounds.w + 20 &&
+              h.y >= SKY_ISLAND_GROUND.bounds.y - 20 &&
+              h.y <= SKY_ISLAND_GROUND.bounds.y + SKY_ISLAND_GROUND.bounds.h + 20
+            );
+            if (onSky) {
+              teleportHunterFromSkyIslandToTown(h, '✨ 보스전 돌격! 마을로 순간 이동!');
+            }
+
+            h.activeGroundId = null;
+            h.targetGroundId = null;
+            h.targetBuildingName = BOSS_SANCTUM.name;
+            h.targetBuildingType = BOSS_SANCTUM.id;
+            h.currentTargetMonster = BOSS_SANCTUM.boss;
+            h.currentTargetHunter = null;
+            h.state = 'BOSS_RAID';
+            h.setDestinationWithGatePath(
+              BOSS_SANCTUM.boss.x + (Math.random() - 0.5) * 44,
+              BOSS_SANCTUM.boss.y + 32 + (Math.random() - 0.5) * 16
+            );
+            interactionManager.spawnBubble(h, '⚔️ 보스 성소로 총공격!', '#fda4af');
+          });
+        }
+      } else if (BOSS_SANCTUM.status === 'ACTIVE') {
+        const boss = BOSS_SANCTUM.boss;
+        const activeRaiders = hunters.filter(
+          h => h && h.hp > 0 && !BOSS_SANCTUM.fallenHunterIds.has(h.id) && h.state !== 'REBIRTH_ALTAR_HUNT'
+        );
+
+        if (activeRaiders.length === 0) {
+          failBossRaidAndReset('참가 헌터 전원 전투 불능');
+        } else if (boss && boss.hp > 0) {
+          // 보스 초당 체력 재생 및 근접 광역 반격
+          if (boss.regenPerSec > 0 && boss.hp < boss.maxHp) {
+            boss.hp = Math.min(boss.maxHp, boss.hp + boss.regenPerSec * dt);
+          }
+          if (boss.attackAnimTimer > 0) {
+            boss.attackAnimTimer = Math.max(0, boss.attackAnimTimer - dt);
+          }
+
+          boss.attackCooldown = (boss.attackCooldown || 0) - dt;
+          const engagedRaidersAll = activeRaiders.filter(
+            h => h.state === 'BOSS_RAID' && Math.hypot(h.x - boss.x, h.y - boss.y) <= (boss.range || 152)
+          );
+          const maxSimultaneousTargets = (boss.stage || BOSS_SANCTUM.bossStage) >= 7 ? 3 : engagedRaidersAll.length;
+          const engagedRaiders = engagedRaidersAll.slice(0, maxSimultaneousTargets);
+
+          if (engagedRaiders.length > 0 && boss.attackCooldown <= 0) {
+            boss.attackCooldown = 1.65;
+            boss.attackAnimTimer = 0.45;
+            engagedRaiders.forEach((raider) => {
+              const rStats = raider.getComputedStats();
+              const takenDmg = Math.max(18, Math.round((boss.atk || 169) - rStats.def * 0.35));
+              raider.hp = Math.max(0, raider.hp - takenDmg);
+              combatEffects.spawnDamagePopup(raider.x, raider.y, takenDmg, false, '#fda4af');
+
+              if (raider.hp <= 0) {
+                raider.hp = Math.round(raider.maxHp * 0.25);
+                raider.x = 0;
+                raider.y = 20;
+                raider.waypoints = [];
+                raider.currentTargetMonster = null;
+                raider.state = 'IDLE';
+                raider.stateTimer = 0.8;
+                BOSS_SANCTUM.fallenHunterIds.add(raider.id);
+                interactionManager.spawnBubble(raider, '💫 보스전 부상 후퇴!', '#fca5a5');
+              }
+            });
+          }
+          updateBossRaidHudButton();
+        }
+      }
+
       // [초월 환생의 제단 최상급 중간보스 리스폰 및 교전 반격]
       const rbBoss = REBIRTH_ALTAR.boss;
       if (rbBoss) {
@@ -14771,8 +15953,8 @@
         }
       }
 
-      // 사냥터 헌터 수(최대 5명) 체크 후 몬스터 수 동적 증감 및 리스폰 타이머 갱신
-      HUNTING_GROUNDS.forEach((hg) => {
+      // 사냥터 헌터 수(일반 최대 5명, 환생 전용 사냥터 최대 8명) 체크 후 몬스터 수 동적 증감 및 리스폰 타이머 갱신
+      ALL_FIELD_GROUNDS.forEach((hg) => {
         const scaling = getHuntingGroundScaling(hg, hunters);
 
         // 헌터 수 증가 시 최대 몬스터 수까지 추가 스폰 (0.1% 확률로 중간 보스 등장 판정)
@@ -14797,6 +15979,29 @@
               hg.monsters[mIdx] = respawned;
             }
           } else if (m.hp > 0) {
+            // 천공의 섬(sky_island_field) 몬스터가 영역 밖에 위치해 있을 경우 천공의 섬 내부 좌표로 즉시 복귀
+            if (hg.id === SKY_ISLAND_GROUND.id) {
+              const b = hg.bounds;
+              const isOutsideSky = (
+                m.x < b.x + 40 ||
+                m.x > b.x + b.w - 40 ||
+                m.y < b.y + 76 ||
+                m.y > b.y + b.h - 24
+              );
+              if (isOutsideSky) {
+                const safeX = b.x + 75 + Math.random() * (b.w - 150);
+                const safeY = b.y + 92 + Math.random() * (b.h - 120);
+                m.x = safeX;
+                m.y = safeY;
+                m.spawnX = safeX;
+                m.spawnY = safeY;
+                m.wanderX = safeX;
+                m.wanderY = safeY;
+                m.provoked = false;
+                m.aggroTargetId = null;
+              }
+            }
+
             // 중급 사냥터(mid_field_20_40) 이상 구역은 근처 헌터를 발견 시 먼저 선공
             const isAggressiveZone = hg.id !== 'beginner_field';
             if (isAggressiveZone && !m.provoked) {
@@ -14892,70 +16097,22 @@
       SUPREME_TOWN_GUARD.update(dt);
       ARCANE_TOWN_GUARD.update(dt);
 
-      // [보스 레이드 진행 상태 업데이트]
-      if (BOSS_SANCTUM.status === 'PREPARING') {
-        BOSS_SANCTUM.prepTimer -= dt;
-        updateBossRaidHudButton();
-        if (BOSS_SANCTUM.prepTimer <= 0) {
-          BOSS_SANCTUM.prepTimer = 0;
-          BOSS_SANCTUM.status = 'ACTIVE';
-          BOSS_SANCTUM.fallenHunterIds.clear();
-          hunters.forEach((h) => {
-            if (h.state === 'REBIRTH_ALTAR_HUNT') return;
-            interactionManager.spawnBubble(h, '⚔️ 정비 완료! 전원 보스 성소 돌격!', '#fb7185');
-            h.pickNextDestination();
-          });
-          updateBossRaidHudButton();
-          showToast('⚔️ 1분 정비 종료! 모든 헌터가 보스 성소로 진격합니다!');
-        }
-      } else if (BOSS_SANCTUM.status === 'ACTIVE') {
-        updateBossRaidHudButton();
-        const activeRaiders = hunters.filter(h => !BOSS_SANCTUM.fallenHunterIds.has(h.id));
-        if (activeRaiders.length === 0) {
-          failBossRaidAndReset('참가 헌터 전원 전멸');
-        } else {
-          const boss = BOSS_SANCTUM.boss;
-          if (boss.attackAnimTimer > 0) {
-            boss.attackAnimTimer = Math.max(0, boss.attackAnimTimer - dt);
-          }
-          // 보스 고대 재생력 (전투력이 부족하면 재생량을 뚫지 못함)
-          if (boss.hp > 0 && boss.hp < boss.maxHp) {
-            boss.hp = Math.min(boss.maxHp, boss.hp + (boss.regenPerSec || 260) * dt);
-          }
-
-          boss.attackCooldown = (boss.attackCooldown || 0) - dt;
-          const engaged = activeRaiders.filter(h => !BOSS_SANCTUM.fallenHunterIds.has(h.id) && Math.hypot(h.x - boss.x, h.y - boss.y) <= boss.range + 55);
-          if (engaged.length > 0 && boss.attackCooldown <= 0) {
-            boss.attackCooldown = 1.25;
-            boss.attackAnimTimer = 0.45;
-
-            const currentStage = boss.stage || BOSS_SANCTUM.bossStage || 1;
-            let targetsToHit = engaged;
-            if (currentStage >= 3 && engaged.length > 2) {
-              const shuffled = [...engaged];
-              for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-              }
-              targetsToHit = shuffled.slice(0, 2);
+      // [3환생 이상 헌터 천공의 섬 게이트 출정 유도]
+      if (BOSS_SANCTUM.status === 'CLOSED') {
+        const hasSkyGate = village.getAllBuildings().some(b => b.type === 'sky_island_gate');
+        if (hasSkyGate) {
+          for (let i = 0; i < hunters.length; i++) {
+            const h = hunters[i];
+            if (!h || h.hp <= 0) continue;
+            if ((h.rebirthCount || 0) < SKY_ISLAND_GROUND.minRebirth) continue;
+            if (h.activeGroundId === SKY_ISLAND_GROUND.id) continue;
+            if (h.targetBuildingType === 'sky_island_portal') continue;
+            if (h.state === 'IN_DUNGEON' || h.state === 'REBIRTH_ALTAR_HUNT') continue;
+            const isHealthyForGate = h.hp >= h.maxHp * 0.45 && h.fatigue < 78;
+            if (!isHealthyForGate) continue;
+            if (h.state === 'IDLE' || (h.state === 'HUNTING_FIELD' && Math.random() < dt * 0.35)) {
+              sendRebirthHunterToSkyIslandGate(h);
             }
-
-            // 보스 광역/다중 지진 강타 (3~10단계 보스는 최대 2명 대상 공격)
-            targetsToHit.forEach((target) => {
-              const stats = target.getComputedStats();
-              const mitigated = Math.max(36, Math.round(boss.atk - stats.def * 0.35));
-              target.hp = Math.max(0, target.hp - mitigated);
-              combatEffects.spawnDamagePopup(target.x, target.y, mitigated, false, '#f43f5e');
-              if (target.hp <= 0) {
-                target.hp = Math.round(target.maxHp * 0.25);
-                target.x = 0;
-                target.y = 20;
-                target.waypoints = [];
-                target.state = 'IDLE';
-                BOSS_SANCTUM.fallenHunterIds.add(target.id);
-                interactionManager.spawnBubble(target, '💫 보스 강타에 쓰러져 귀환!', '#fca5a5');
-              }
-            });
           }
         }
       }
@@ -15424,6 +16581,8 @@
           earnedGold: h.earnedGold || 0,
           bestDungeonFloor: h.bestDungeonFloor || 0,
           equippedInsigniaId: h.equippedInsigniaId || null,
+          equippedWingId: h.equippedWingId || null,
+          wingEnhance: h.wingEnhance || 0,
           monsterKillAlignmentProgress: h.monsterKillAlignmentProgress || 0,
           x: h.x,
           y: h.y,
@@ -15490,10 +16649,10 @@
           py = altCoord.y;
         }
         const hasValidBuilding = pData.building && BUILDING_CATALOG[pData.building.type];
-        const bLv = hasValidBuilding ? Math.max(1, Math.min(MAX_BUILDING_LEVEL, pData.building.level || 1)) : 1;
+        const catMaxLv = hasValidBuilding ? (BUILDING_CATALOG[pData.building.type].maxLevel || MAX_BUILDING_LEVEL) : MAX_BUILDING_LEVEL;
+        const bLv = hasValidBuilding ? Math.max(1, Math.min(catMaxLv, pData.building.level || 1)) : 1;
         const rawUnlock = hasValidBuilding ? (pData.building.unlockedMaxLevel || bLv) : 1;
-        const validUnlock = Math.max(bLv, Math.min(Math.max(rawUnlock, maxAllowedUnlock >= bLv ? rawUnlock : bLv), MAX_BUILDING_LEVEL));
-
+        const validUnlock = Math.max(bLv, Math.min(Math.max(rawUnlock, maxAllowedUnlock >= bLv ? rawUnlock : bLv), catMaxLv));
         const plotId = pData.id || `plot_migrated_${village.plots.length}`;
         const plot = village.addPlot(
           plotId,
@@ -15624,6 +16783,12 @@
           if (typeof hData.bestDungeonFloor === 'number') restored.bestDungeonFloor = hData.bestDungeonFloor;
           if (hData.equippedInsigniaId && ITEM_CATALOG[hData.equippedInsigniaId]) {
             restored.equippedInsigniaId = hData.equippedInsigniaId;
+          }
+          if (hData.equippedWingId && ITEM_CATALOG[hData.equippedWingId]) {
+            restored.equippedWingId = hData.equippedWingId;
+          }
+          if (typeof hData.wingEnhance === 'number') {
+            restored.wingEnhance = Math.max(0, Math.min(15, Math.floor(hData.wingEnhance)));
           }
 
           restored.pickNextDestination();
@@ -15884,6 +17049,8 @@
           po: (hpPot !== 2 || mpPot !== 2) ? [hpPot, mpPot] : undefined,
           bf: h.bestDungeonFloor || 0,
           ins: h.equippedInsigniaId || undefined,
+          wg: h.equippedWingId || undefined,
+          we: h.wingEnhance || 0,
           x: Math.round(h.x ?? 0),
           y: Math.round(h.y ?? 20),
           sk: skillProg.length > 0 ? skillProg : undefined
@@ -15994,8 +17161,10 @@
           personalGold: h.g,
           bento: h.be || 0,
           inventoryJson: JSON.stringify(inventoryItems),
-          bestDungeonFloor: h.bf || 0,
-          equippedInsigniaId: h.ins || null,
+          bestDungeonFloor: h.bestDungeonFloor || 0,
+          equippedInsigniaId: h.equippedInsigniaId || null,
+          equippedWingId: h.equippedWingId || null,
+          wingEnhance: h.wingEnhance || 0,
           x: h.x,
           y: h.y,
           skillsJson: JSON.stringify(skillsObj)
