@@ -4015,26 +4015,41 @@
       },
       // 헌터가 도전할 목표 층수 선정 (장비 티어 & 강화 상태 기반 안전 층수 + 돌파 도전)
       pickChallengeFloor(hunter, dungeonLevel) {
-        const maxOpenFloor = dungeonLevel * 10;
-        const { power, effectiveTierAvg, avgEnhance, isFullT5, isFullT10 } = this.evaluateHunterPower(hunter);
+        const maxOpenFloor = Math.max(1, dungeonLevel * 10);
+        const { power, avgTier, avgEnhance, effectiveTierAvg, isFullT5, isFullT10 } = this.evaluateHunterPower(hunter);
 
-        let safeFloor = 1;
+        let highestEligibleFloor = 0;
         for (let f = 1; f <= maxOpenFloor; f++) {
           if (f >= 50 && (!isFullT5 || avgEnhance < this.getRequiredAvgEnhance(50))) break;
           if (f >= 100 && (!isFullT10 || avgEnhance < this.getRequiredAvgEnhance(100))) break;
-          const reqEffTier = this.getRequiredMinTierAvg(f) + this.getRequiredAvgEnhance(f) / 14;
-          if (effectiveTierAvg >= reqEffTier && power >= this.getRequiredCombatPower(f) * 0.9) {
-            safeFloor = f;
+
+          const reqMinTier = this.getRequiredMinTierAvg(f);
+          const reqEnhance = this.getRequiredAvgEnhance(f);
+          const reqEffectiveTier = reqMinTier + (reqEnhance / 14);
+          const reqPower = this.getRequiredCombatPower(f);
+
+          if (
+            avgTier + 0.02 >= reqMinTier &&
+            avgEnhance + 0.02 >= reqEnhance &&
+            effectiveTierAvg + 0.02 >= reqEffectiveTier &&
+            power >= reqPower * 0.95
+          ) {
+            highestEligibleFloor = f;
           } else {
             break;
           }
         }
 
-        const nextFrontier = Math.min(maxOpenFloor, Math.max(1, hunter.bestDungeonFloor + 1));
-        if (Math.random() < 0.6) {
-          return Math.min(maxOpenFloor, Math.max(safeFloor, nextFrontier));
+        if (highestEligibleFloor <= 0) {
+          return 0;
         }
-        return Math.max(1, safeFloor);
+
+        const safeFloor = Math.max(1, highestEligibleFloor);
+        const nextFrontier = Math.min(highestEligibleFloor, Math.max(1, hunter.bestDungeonFloor + 1));
+        if (Math.random() < 0.55) {
+          return Math.min(highestEligibleFloor, Math.max(safeFloor, nextFrontier));
+        }
+        return safeFloor;
       },
       // 실제 던전 공략 성공 여부 및 피해량 계산 (장비 티어 + 강화 상태 종합 판정)
       resolveClearAttempt(hunter, floor) {
@@ -7442,6 +7457,14 @@
               const dungeonBld = village.getAllBuildings().find(b => b.type === 'dungeon');
               if (dungeonBld) {
                 const floor = DUNGEON_DIFFICULTY.pickChallengeFloor(this, dungeonBld.level);
+                if (!floor || floor <= 0) {
+                  this.state = 'IDLE';
+                  this.stateTimer = 1.2;
+                  this.targetBuildingName = '';
+                  this.targetBuildingType = '';
+                  interactionManager.spawnBubble(this, '🛡️ 권장 장비 미달 · 던전 도전 보류!', '#fca5a5');
+                  return;
+                }
                 const exploreMult = this.personality?.exploreSpeedMult || 1;
                 this.state = 'IN_DUNGEON';
                 this.dungeonFloor = floor;
