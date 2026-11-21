@@ -13627,9 +13627,8 @@
         ctx.arc(bld.x, archTop + archH * 0.55, 16 + Math.sin(performance.now() * 0.008) * 4, 0, Math.PI * 2);
         ctx.fill();
 
-        // 던전 입구 상단에 입장 중인 헌터 목록 배지 표시
-        const tagText = `⚔️ 탐험 중 (${explorers.length}명): ` +
-          explorers.map(h => `${h.name}(B${h.dungeonFloor}F)`).join(', ');
+        // 던전 입구 상단에 입장 중인 헌터 인원수만 표시 (개별 이름 미출력)
+        const tagText = `⚔️ 던전 탐험 중: ${explorers.length}명`;
         ctx.font = 'bold 11px sans-serif';
         const tw = ctx.measureText(tagText).width;
         const boxW = tw + 18;
