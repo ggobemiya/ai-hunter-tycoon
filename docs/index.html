@@ -6519,23 +6519,6 @@
           }
         }
 
-        // 윤회 성역의 영혼결정 등 매입 가능한 전리품을 3개 이상 보유한 경우 잡화상점 방문 우선 판매
-        const sellableCount = this.inventory
-          ? this.inventory.getEntriesByCategory().reduce((sum, e) => (e.def && e.def.sellable ? sum + (e.qty || 0) : sum), 0)
-          : 0;
-        if (sellableCount >= 3) {
-          const generalStore = buildings.find(b => b.type === 'generalstore');
-          if (generalStore) {
-            this.setDestinationWithGatePath(generalStore.x, generalStore.y + generalStore.h / 2 + 16);
-            this.targetBuildingName = generalStore.name;
-            this.targetBuildingType = generalStore.type;
-            this.targetGroundId = null;
-            this.state = 'WALKING';
-            interactionManager.spawnBubble(this, '🛍️ 전리품·영혼결정 판매하러 잡화상점으로!', '#fde047');
-            return;
-          }
-        }
-
         // 마을에 있을 때 모든 상태가 정상이고 골드 여유가 있다면 장비 강화 최우선
         const inTown = this.x < TOWN_EAST_GATE.wallX;
         const isHealthy = this.hp >= this.maxHp * 0.7 && this.mp >= this.maxMp * 0.5 && this.hunger >= 50 && this.fatigue <= 60;
@@ -7816,18 +7799,14 @@
           for (const slot of slots) {
             const cond = this.checkTierUpgradeCondition(slot, lv);
             if (cond.canUpgrade) {
-              const rebirthEssenceBefore = this.inventory ? this.inventory.getCount('loot_rebirth_essence') : 0;
               this.personalGold -= cond.rule.goldCost;
               this.inventory.consumeCraftingMaterials(cond.rule.matCost);
-              const rebirthEssenceAfter = this.inventory ? this.inventory.getCount('loot_rebirth_essence') : 0;
-              const usedRebirthEssence = Math.max(0, rebirthEssenceBefore - rebirthEssenceAfter);
               this.equipment[slot].tier = cond.nextTier;
               this.equipment[slot].enhance = 0;
               this.recalculateVitals(false);
               baseFee = 70 + lv * 30;
-              const essenceNote = usedRebirthEssence > 0 ? ` (🌠영혼결정 ${usedRebirthEssence}개 투입)` : '';
-              interactionManager.spawnBubble(this, `⚒️ T${cond.nextTier} 장비 승급 성공!${essenceNote}`, '#fde047');
-              showToast(`⚒️ ${this.name} [${this.getEquipDisplayName(slot)}] T${cond.nextTier} 승급 완료!${essenceNote}`);
+              interactionManager.spawnBubble(this, `⚒️ T${cond.nextTier} 장비 승급 성공!`, '#fde047');
+              showToast(`⚒️ ${this.name} [${this.getEquipDisplayName(slot)}] T${cond.nextTier} 승급 완료!`);
               break;
             }
           }
