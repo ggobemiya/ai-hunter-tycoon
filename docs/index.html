@@ -2389,6 +2389,7 @@
 
     <div class="nav-cluster">
       <button class="nav-action-btn boss-btn" id="btnBossRaidControl">🔥 보스 필드 오픈</button>
+      <button class="nav-action-btn boss-btn" id="btnOrcSubjugationRaid">👹 오크 토벌</button>
       <button class="nav-action-btn abandon-boss-btn" id="btnAbandonBossRaid" style="display: none;" title="진행 중인 보스 레이드를 포기하고 헌터들을 철수시킵니다">🏳️ 포기</button>
       <div class="nav-divider"></div>
       <button class="nav-action-btn" id="btnSaveCloud" title="진행 상황 저장">💾 저장</button>
@@ -2989,6 +2990,7 @@
     const MP_POTION_MAX_STACK = 3;
     const REBORN_HP_POTION_MAX_STACK = 10;
     const REBORN_MP_POTION_MAX_STACK = 5;
+    const EQUIP_FRAGMENT_MAX_STACK = 100000;
     const MAX_BUILDING_LEVEL = 10;
     const MAX_EQUIP_TIER = 10;
 
@@ -3071,6 +3073,8 @@
       status: 'CLOSED', // 'CLOSED' | 'PREPARING' | 'ACTIVE'
       prepTimer: 0,
       prepDuration: 60, // 1분(60초) 정비 시간
+      raidTimer: 0,
+      raidDuration: 180, // 티어보스 오픈 후 3분(180초) 제한시간
       bossStage: 1,     // 1단계(Lv.20 T1 +3강) ~ 10단계(Lv.95 T10 +12강)
       maxBossStage: 10,
       allStagesCleared: false,
@@ -3170,6 +3174,22 @@
         resetRebirthAltarBoss(true);
       }
 
+      // 천공의 섬에 체류 중인 3환생 이상 헌터가 제단출정을 지시받으면 먼저 천공의 섬에서 마을로 복귀시킨 뒤 제단으로 이동
+      const siBounds = SKY_ISLAND_GROUND.bounds;
+      const isOnSkyIsland = (
+        hunter.activeGroundId === SKY_ISLAND_GROUND.id ||
+        hunter.skyIslandPortalWarp === true ||
+        (
+          hunter.x >= siBounds.x - 24 &&
+          hunter.x <= siBounds.x + siBounds.w + 24 &&
+          hunter.y >= siBounds.y - 24 &&
+          hunter.y <= siBounds.y + siBounds.h + 24
+        )
+      );
+      if (isOnSkyIsland) {
+        teleportHunterFromSkyIslandToTown(hunter, '✨ 천공의 섬 이탈 · 환생 제단 출정!');
+      }
+
       hunter.currentTargetMonster = REBIRTH_ALTAR.boss;
       hunter.currentTargetHunter = null;
       hunter.activeGroundId = null;
@@ -3234,16 +3254,17 @@
       const stageHpMult = s === 2
         ? 0.5
         : (s === 4 ? 0.25 : (s >= 5 ? 0.2 : (s >= 3 ? 0.5 : 1)));
+      const tier7PlusHpMult = s >= 7 ? 3 : 1;
       const stageAtkMult = s === 2
         ? 0.8
         : (s === 7 ? 0.55 : (s >= 8 ? 0.455 : (s >= 5 ? 0.7 : 1)));
       // 6티어(6단계) 이상 보스 체력 회복력(초당 재생)을 80%(0.8배)로 적용
       const tier6PlusRegenFactor = s >= 6 ? 0.8 : 1.0;
-      const baseRegenMult = (s >= 6 ? (stageHpMult * 0.6) : stageHpMult) * tier6PlusRegenFactor;
-      const stage7RegenMult = s >= 7 ? (baseRegenMult * 0.2) : baseRegenMult;
-      const stage8RegenMult = s >= 8 ? (stage7RegenMult * 0.55) : stage7RegenMult;
-      const stage9RegenMult = s === 9 ? (stage8RegenMult * 0.55) : stage8RegenMult;
-      const stageRegenMult = s >= 10 ? (stage9RegenMult * 0.45) : stage9RegenMult;
+      const baseRegenMult = (s >= 6 ? (stageHpMult * 1) : stageHpMult) * tier6PlusRegenFactor;
+      const stage7RegenMult = s >= 7 ? (baseRegenMult * 1) : baseRegenMult;
+      const stage8RegenMult = s >= 8 ? (stage7RegenMult * 1) : stage7RegenMult;
+      const stage9RegenMult = s === 9 ? (stage8RegenMult * 1) : stage8RegenMult;
+      const stageRegenMult = s >= 10 ? (stage9RegenMult * 1) : stage9RegenMult;
 
       return {
         stage: s,
@@ -3255,7 +3276,7 @@
         recHunters,
         reqLabel: `${reqStageOrRebirthLabel} · T${reqTier} ${reqEnhanceLabel} · ${recHunters}인`,
         fullName: theme.title,
-        maxHp: Math.round(baseHpBoosted * combinedScale * hunterCountScale * stageHpMult),
+        maxHp: Math.round(baseHpBoosted * combinedScale * hunterCountScale * stageHpMult * tier7PlusHpMult),
         atk: Math.round(169 * atkScale * stageAtkMult),
         def: Math.round(155 * atkScale),
         regenPerSec: Math.round(baseRegenBoosted * combinedScale * hunterCountScale * stageRegenMult),
@@ -4044,7 +4065,7 @@
 
     const ORC_RESPAWN_DURATION_MS = 60000;
     const ORC_MAX_LEVEL = 99;
-    const ORC_MAX_LEVEL_TOTAL_KILLS = 1500;
+    const ORC_MAX_LEVEL_TOTAL_KILLS = 500;
 
     // 오크 유형별 전용 스킬 정의 (일반 오크: 패시브 1 · 액티브 2 / 오크 로드: 패시브 2 · 액티브 3 / 오크 대전사: 패시브 2 · 액티브 3)
     const ORC_DEDICATED_SKILLS = {
@@ -4115,7 +4136,7 @@
       return ORC_DEDICATED_SKILLS[key] || ORC_DEDICATED_SKILLS.regular;
     }
 
-    // 레벨 L 도달에 필요한 누적 KILL 카운트 (Lv.1: 0킬, Lv.2: 10킬 ~ Lv.99: 1,500킬)
+    // 레벨 L 도달에 필요한 누적 KILL 카운트 (Lv.1: 0킬, Lv.2: 10킬 ~ Lv.99: 500킬)
     function getOrcCumulativeKillsForLevel(level = 1) {
       const lv = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(level) || 1)));
       if (lv <= 1) return 0;
@@ -4125,7 +4146,7 @@
       return Math.round(10 + (ORC_MAX_LEVEL_TOTAL_KILLS - 10) * Math.pow(t, 1.38));
     }
 
-    // 현재 레벨에서 다음 레벨업까지 필요한 목표 누적 KILL 카운트 (Lv.1 -> 10킬, Lv.98 -> 1,500킬)
+    // 현재 레벨에서 다음 레벨업까지 필요한 목표 누적 KILL 카운트 (Lv.1 -> 10킬, Lv.98 -> 500킬)
     function getOrcNextLevelKillTarget(level = 1) {
       const lv = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(level) || 1)));
       if (lv >= ORC_MAX_LEVEL) return ORC_MAX_LEVEL_TOTAL_KILLS;
@@ -4181,12 +4202,15 @@
       const gearHpMult = isRegularOrc ? (1 + (equipTierScale - 1) * 0.08) : 1;
       const gearAtkBonus = isRegularOrc ? equipTierScale * 26 : 0;
       const gearDefBonus = isRegularOrc ? equipTierScale * 20 : 0;
+      const regularOrcStatMult = isRegularOrc ? 2.0 : 1.0;
+      const regularOrcLv99HpMult = (isRegularOrc && lv >= ORC_MAX_LEVEL) ? 5.0 : 1;
+      const overlordLv99HpMult = (isChief && lv >= ORC_MAX_LEVEL) ? 10.0 : 1;
 
       const isRangedShaman = Boolean(skillSet.isRanged) || isShaman;
       return {
         equipTier,
-        maxHp: Math.round(baseHp * mult * gearHpMult * (1 + pasHpBonus)),
-        atk: Math.round((baseAtk * mult + gearAtkBonus) * (1 + pasAtkBonus)),
+        maxHp: Math.round(baseHp * mult * gearHpMult * regularOrcStatMult * regularOrcLv99HpMult * overlordLv99HpMult * (1 + pasHpBonus)),
+        atk: Math.round((baseAtk * mult + gearAtkBonus) * regularOrcStatMult * (1 + pasAtkBonus)),
         def: Math.round((baseDef * mult + gearDefBonus) * (1 + pasDefBonus)),
         isRanged: isRangedShaman,
         range: isRangedShaman ? (skillSet.rangedRange || 162) : (isGw ? 44 : 34)
@@ -6221,6 +6245,122 @@
       { id: 'distracted', name: '산만한', icon: '🦋', kind: 'penalty', effectText: '전리품 획득량 -15%', lootMult: 0.85 }
     ];
 
+    /**
+     * 헌터의 환생 차수(5환생 이상)를 반영한 유효 성격 프로필 반환
+     * - 5환생(rebirthCount >= 5) 달성 시 'penalty' 성격의 마이너스(-) 효과는 플러스(+)로 반전되고 2배(x2)로 적용
+     */
+    function getEffectivePersonalityProfile(personality, rebirthCount = 0) {
+      if (!personality || typeof personality !== 'object') {
+        return {
+          kind: 'none',
+          isRebirth5InvertedPenalty: false,
+          effectText: '',
+          speedBonus: 0,
+          atkMult: 0,
+          defMult: 0,
+          critBonus: 0,
+          hpMult: 0,
+          mpMult: 0,
+          fatigueMult: 1,
+          hungerMult: 1,
+          mpSave: 1,
+          exploreSpeedMult: 1,
+          goldMult: 1,
+          lootMult: 1,
+          healMult: 1,
+          personalGoldMult: 1,
+          extraMat: 0
+        };
+      }
+
+      const isRebirth5Penalty = personality.kind === 'penalty' && (Number(rebirthCount) || 0) >= LEVEL_REBIRTH_CONFIG.maxRebirths;
+      if (!isRebirth5Penalty) {
+        return {
+          ...personality,
+          isRebirth5InvertedPenalty: false,
+          speedBonus: personality.speedBonus || 0,
+          atkMult: personality.atkMult || 0,
+          defMult: personality.defMult || 0,
+          critBonus: personality.critBonus || 0,
+          hpMult: personality.hpMult || 0,
+          mpMult: personality.mpMult || 0,
+          fatigueMult: personality.fatigueMult ?? 1,
+          hungerMult: personality.hungerMult ?? 1,
+          mpSave: personality.mpSave ?? 1,
+          exploreSpeedMult: personality.exploreSpeedMult ?? 1,
+          goldMult: personality.goldMult ?? 1,
+          lootMult: personality.lootMult ?? 1,
+          healMult: personality.healMult ?? 1,
+          personalGoldMult: personality.personalGoldMult ?? 1,
+          extraMat: personality.extraMat || 0
+        };
+      }
+
+      const flipRatioDown = (val) => {
+        const base = typeof val === 'number' ? val : 1;
+        // 예: 1.45(+45% 소모) -> 1 - (0.45 * 2) = 0.10 (-90% 절감/감소)
+        return Math.max(0.1, Number((1 - (base - 1) * 2).toFixed(4)));
+      };
+
+      const flipRatioUp = (val) => {
+        const base = typeof val === 'number' ? val : 1;
+        // 예: 0.80(-20% 보상) -> 1 + (0.20 * 2) = 1.40 (+40% 증가)
+        return Number((1 + (1 - base) * 2).toFixed(4));
+      };
+
+      const speedBonus = -(personality.speedBonus || 0) * 2;
+      const atkMult = -(personality.atkMult || 0) * 2;
+      const defMult = -(personality.defMult || 0) * 2;
+      const critBonus = -(personality.critBonus || 0) * 2;
+      const hpMult = -(personality.hpMult || 0) * 2;
+      const mpMult = -(personality.mpMult || 0) * 2;
+      const fatigueMult = personality.fatigueMult !== undefined ? flipRatioDown(personality.fatigueMult) : 1;
+      const hungerMult = personality.hungerMult !== undefined ? flipRatioDown(personality.hungerMult) : 1;
+      const mpSave = personality.mpSave !== undefined ? flipRatioDown(personality.mpSave) : 1;
+      const exploreSpeedMult = personality.exploreSpeedMult !== undefined ? flipRatioDown(personality.exploreSpeedMult) : 1;
+      const goldMult = personality.goldMult !== undefined ? flipRatioUp(personality.goldMult) : 1;
+      const lootMult = personality.lootMult !== undefined ? flipRatioUp(personality.lootMult) : 1;
+      const healMult = personality.healMult !== undefined ? flipRatioUp(personality.healMult) : 1;
+      const personalGoldMult = personality.personalGoldMult !== undefined ? flipRatioUp(personality.personalGoldMult) : 1;
+
+      const effectParts = [];
+      if (speedBonus !== 0) effectParts.push(`이동 속도 ${speedBonus > 0 ? `+${speedBonus}` : speedBonus}`);
+      if (atkMult !== 0) effectParts.push(`공격력 ${atkMult > 0 ? `+${Math.round(atkMult * 100)}%` : `${Math.round(atkMult * 100)}%`}`);
+      if (defMult !== 0) effectParts.push(`방어력 ${defMult > 0 ? `+${Math.round(defMult * 100)}%` : `${Math.round(defMult * 100)}%`}`);
+      if (critBonus !== 0) effectParts.push(`치명타 확률 ${critBonus > 0 ? `+${critBonus}%` : `${critBonus}%`}`);
+      if (hpMult !== 0) effectParts.push(`최대 체력 ${hpMult > 0 ? `+${Math.round(hpMult * 100)}%` : `${Math.round(hpMult * 100)}%`}`);
+      if (mpMult !== 0) effectParts.push(`최대 MP ${mpMult > 0 ? `+${Math.round(mpMult * 100)}%` : `${Math.round(mpMult * 100)}%`}`);
+      if (personality.hungerMult !== undefined) effectParts.push(`포만감 소모 -${Math.round((1 - hungerMult) * 100)}%`);
+      if (personality.fatigueMult !== undefined) effectParts.push(`피로도 누적 -${Math.round((1 - fatigueMult) * 100)}%`);
+      if (personality.goldMult !== undefined) effectParts.push(`던전 골드 +${Math.round((goldMult - 1) * 100)}%`);
+      if (personality.personalGoldMult !== undefined) effectParts.push(`개인 골드 정산 +${Math.round((personalGoldMult - 1) * 100)}%`);
+      if (personality.mpSave !== undefined) effectParts.push(`던전 MP 소모 -${Math.round((1 - mpSave) * 100)}%`);
+      if (personality.healMult !== undefined) effectParts.push(`시설 회복 효율 +${Math.round((healMult - 1) * 100)}%`);
+      if (personality.exploreSpeedMult !== undefined) effectParts.push(`던전 탐험 시간 -${Math.round((1 - exploreSpeedMult) * 100)}%`);
+      if (personality.lootMult !== undefined) effectParts.push(`전리품 획득량 +${Math.round((lootMult - 1) * 100)}%`);
+
+      return {
+        ...personality,
+        isRebirth5InvertedPenalty: true,
+        effectText: `${effectParts.join(' & ')} (5환생 반전 x2)`,
+        speedBonus,
+        atkMult,
+        defMult,
+        critBonus,
+        hpMult,
+        mpMult,
+        fatigueMult,
+        hungerMult,
+        mpSave,
+        exploreSpeedMult,
+        goldMult,
+        lootMult,
+        healMult,
+        personalGoldMult,
+        extraMat: personality.extraMat || 0
+      };
+    }
+
     const JOB_WEAPON_NAMES = {
       '버서커': [
         '수습생 손도끼', '강철 배틀액스', '미스릴 대부', '용살자의 쌍날도끼', '신화 라그나로크',
@@ -6515,7 +6655,7 @@
         enhanceDefBonusPct: 0.04,
         enhanceCritBonus: 1,
         enhanceSpeedBonus: 2,
-        desc: '천공의 섬 몬스터 사냥 시 0.1% 확률로 획득하는 성역의 날개. 착용 시 공격력/방어력 +20%, 치명타 +8%, 이동속도 +16 상승 (천공 대장간 강화 시 추가 상승)'
+        desc: '천공의 섬 몬스터 사냥 시 0.01% 확률로 획득하는 성역의 날개. 착용 시 공격력/방어력 +20%, 치명타 +8%, 이동속도 +16 상승 (천공 대장간 강화 시 추가 상승)'
       }
     };
 
@@ -6555,17 +6695,27 @@
         if (!id || amount <= 0) return false;
         const def = ITEM_CATALOG[id];
         const isSingleton = def && SINGLETON_EQUIP_CATEGORIES.has(def.category);
+        const isEquipFragment = id === 'equip_fragment';
         const existing = this.items.get(id);
         if (existing) {
           if (isSingleton) {
             existing.qty = 1;
             return false;
           }
+          if (isEquipFragment) {
+            const nextQty = Math.min(EQUIP_FRAGMENT_MAX_STACK, existing.qty + amount);
+            const added = nextQty > existing.qty;
+            existing.qty = nextQty;
+            return added;
+          }
           existing.qty += amount;
           return true;
         }
         if (this.items.size >= this.maxSlots) return false;
-        this.items.set(id, { id, qty: isSingleton ? 1 : amount });
+        const initialQty = isSingleton
+          ? 1
+          : (isEquipFragment ? Math.min(EQUIP_FRAGMENT_MAX_STACK, amount) : amount);
+        this.items.set(id, { id, qty: initialQty });
         return true;
       }
 
@@ -6673,9 +6823,13 @@
           if (entry && entry.id && entry.qty > 0) {
             const def = ITEM_CATALOG[entry.id];
             const isSingleton = def && SINGLETON_EQUIP_CATEGORIES.has(def.category);
+            const rawQty = Math.floor(entry.qty);
+            const cappedQty = isSingleton
+              ? 1
+              : (entry.id === 'equip_fragment' ? Math.min(EQUIP_FRAGMENT_MAX_STACK, rawQty) : rawQty);
             this.items.set(entry.id, {
               id: entry.id,
-              qty: isSingleton ? 1 : Math.floor(entry.qty)
+              qty: cappedQty
             });
           }
         });
@@ -6740,7 +6894,7 @@
           }
         });
 
-        const p = this.personality;
+        const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
         const speedPassiveBonus = this.skills.passives.reduce((acc, sk) => acc + (sk.speedBonus || 0), 0) + (p.speedBonus || 0);
 
         this.x = x;
@@ -6809,6 +6963,7 @@
         this.equippedInsigniaId = (preset.equippedInsigniaId && ITEM_CATALOG[preset.equippedInsigniaId])
           ? preset.equippedInsigniaId
           : null;
+        this.syncAutoEquipInsignia();
         this.equippedWingId = (preset.equippedWingId && ITEM_CATALOG[preset.equippedWingId])
         ? preset.equippedWingId
         : null;
@@ -7120,7 +7275,32 @@
         return ITEM_CATALOG[this.equippedInsigniaId] || null;
       }
 
-      getMonsterDamageMultiplier() {
+      getMonsterDamageMultiplier(target = null) {
+        const isOrcEntity = Boolean(
+          target &&
+          (
+            target.isOrcUnit ||
+            target.orcRef ||
+            target.isGreatWarrior ||
+            target.role === '군락지 지배자' ||
+            target.role === '오크 대전사' ||
+            target.role === '전위 수비대' ||
+            target.role === '후방 수비대' ||
+            target.role === '토템 주술진' ||
+            target.role === '외곽 순찰대' ||
+            target.role === '본진 호위대'
+          )
+        );
+        const isTierBossEntity = Boolean(
+          target &&
+          (
+            target === BOSS_SANCTUM.boss ||
+            target.isBossTarget ||
+            target.kind === 'ancient_guardian' ||
+            (typeof target.stage === 'number' && target.regenPerSec !== undefined)
+          )
+        );
+        if (isOrcEntity || isTierBossEntity) return 1.0;
         const ins = this.getEquippedInsignia();
         return ins ? (1 + (ins.monsterDmgBonusPct || 0)) : 1.0;
       }
@@ -7131,6 +7311,38 @@
         if (!this.inventory || this.inventory.getCount(insigniaId) <= 0) return false;
         this.equippedInsigniaId = insigniaId;
         return true;
+      }
+
+      syncAutoEquipInsignia() {
+        if (!this.inventory) return false;
+        let bestId = null;
+        let bestBonus = -1;
+
+        if (this.equippedInsigniaId && this.inventory.getCount(this.equippedInsigniaId) > 0) {
+          const curDef = ITEM_CATALOG[this.equippedInsigniaId];
+          if (curDef && curDef.category === 'insignia') {
+            bestId = this.equippedInsigniaId;
+            bestBonus = curDef.monsterDmgBonusPct || 0;
+          }
+        }
+
+        for (let i = 0; i < REGIONAL_INSIGNIA_IDS.length; i++) {
+          const insId = REGIONAL_INSIGNIA_IDS[i];
+          if (this.inventory.getCount(insId) <= 0) continue;
+          const def = ITEM_CATALOG[insId];
+          if (!def) continue;
+          const bonus = def.monsterDmgBonusPct || 0;
+          if (bonus > bestBonus) {
+            bestBonus = bonus;
+            bestId = insId;
+          }
+        }
+
+        if (bestId && this.equippedInsigniaId !== bestId) {
+          this.equippedInsigniaId = bestId;
+          return true;
+        }
+        return Boolean(bestId);
       }
 
       getEquippedWing() {
@@ -7197,7 +7409,7 @@
       getRequiredExp() {
         const baseExp = Math.round(80 + Math.pow(this.level, 1.35) * 18);
         const rebirthCount = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Number(this.rebirthCount) || 0));
-        const rebirthExpMult = rebirthCount > 0 ? rebirthCount * 10 : 1;
+        const rebirthExpMult = rebirthCount > 0 ? rebirthCount * 100 : 1;
         return Math.round(baseExp * rebirthExpMult);
       }
 
@@ -7223,7 +7435,7 @@
 
       // 레벨 및 환생 횟수를 반영한 최대 HP/MP 재산출
       recalculateVitals(fillFull = false) {
-        const p = this.personality || {};
+        const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
         const rebirthMult = 1 + this.rebirthCount * LEVEL_REBIRTH_CONFIG.rebirthStatBonusPerStack;
         const hpPassiveMult = this.skills.passives.reduce(
           (acc, sk) => acc + (sk.hpMult || 0) * this.getSkillLevelMultiplier(sk),
@@ -7314,7 +7526,7 @@
         const critBonus = Math.min(25, acc.tier * 2) + Math.floor(acc.enhance * 0.6) + Math.floor(w.enhance * 0.4);
 
         const passives = this.skills?.passives || [];
-        const p = this.personality || {};
+        const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
         const rebirthMult = 1 + this.rebirthCount * LEVEL_REBIRTH_CONFIG.rebirthStatBonusPerStack;
         const rebirthCrit = this.rebirthCount * LEVEL_REBIRTH_CONFIG.rebirthCritBonusPerStack;
 
@@ -7616,6 +7828,7 @@
         }
 
         // 마을에 있을 때 모든 상태가 정상이고 골드 여유가 있다면 장비 강화 최우선
+        this.syncAutoEquipInsignia();
         this.syncAutoEquipWing();
         const wingEnhanceCost = this.getWingEnhanceCost();
         const hasWingEnhanceBudget = Boolean(
@@ -8068,7 +8281,7 @@
               const isCrit = Math.random() * 100 < stats.crit;
               const skillCast = Math.random() < 0.48 ? this.tryUseActiveSkill(stats) : null;
               const mult = (isCrit ? 1.5 : 0.92) * (skillCast ? skillCast.dmgMult : 1);
-              const dmg = Math.max(15, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier()));
+              const dmg = Math.max(15, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier(boss)));
 
               if (combat.style === 'RANGED') {
                 combatEffects.spawnProjectile({
@@ -8452,7 +8665,7 @@
               const isCrit = Math.random() * 100 < stats.crit;
               const skillCast = Math.random() < 0.45 ? this.tryUseActiveSkill(stats) : null;
               const mult = (isCrit ? 1.5 : 0.9) * (skillCast ? skillCast.dmgMult : 1);
-              const dmg = Math.max(12, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier()));
+              const dmg = Math.max(12, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier(targetMonster)));
 
               if (combat.style === 'RANGED') {
                 // 원거리 직업: 화살 또는 마법 구체 투사체 발사
@@ -8501,7 +8714,7 @@
 
         if (this.state === 'IN_DUNGEON') {
           const passives = this.skills?.passives || [];
-          const p = this.personality || {};
+          const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
           const mpSave = passives.reduce((acc, sk) => acc * (sk.mpSave || 1), 1) * (p.mpSave || 1);
           const fatigueResist = passives.reduce((acc, sk) => acc * (sk.fatigueResist || 1), 1) * (p.fatigueMult || 1);
           const hungerMult = p.hungerMult || 1;
@@ -8790,7 +9003,7 @@
       applyFacilityService(bldType) {
         const bld = village.getAllBuildings().find(b => b.type === bldType);
         const lv = bld ? bld.level : 1;
-        const p = this.personality || {};
+        const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
         const healMult = p.healMult || 1;
         let baseFee = 0;
 
@@ -10182,7 +10395,7 @@
 
         const nextCost = hunter.getWingEnhanceCost();
         const enhanceNote = !equippedWing
-          ? '📍 획득 방법: [천공의 섬] 몬스터 처치 시 0.1% 확률로 드랍'
+          ? '📍 획득 방법: [천공의 섬] 몬스터 처치 시 0.01% 확률로 드랍'
           : (wEnh >= 15
               ? '🌟 최대 날개 강화(+15강 MAX) 달성'
               : `🪽 다음 날개 강화(+${wEnh + 1}강) 비용: ${formatGold(nextCost)} G (천공 대장간)`);
@@ -10505,12 +10718,12 @@
         });
 
         const fragDef = ITEM_CATALOG.equip_fragment;
-        const fragQty = h.inventory ? h.inventory.getCount('equip_fragment') : 0;
+        const fragQty = Math.min(EQUIP_FRAGMENT_MAX_STACK, h.inventory ? h.inventory.getCount('equip_fragment') : 0);
         const equipFragmentSectionHtml = `
           <div class="inventory-section" style="border-color:rgba(56,189,248,0.34);">
             <div class="inventory-section-head">
               <span>🧩 장비 강화·승급 전용 재화</span>
-              <span style="font-size:10.5px;color:#fca5a5;font-weight:800;">잡화상점 판매 불가</span>
+              <span style="font-size:10.5px;color:#fca5a5;font-weight:800;">최대 ${EQUIP_FRAGMENT_MAX_STACK.toLocaleString()}개 · 판매 불가</span>
             </div>
             <div class="inventory-grid" style="grid-template-columns:1fr;">
               <div class="inv-slot-card ${fragQty > 0 ? 'has-item' : ''}" style="flex-direction:row;justify-content:space-between;padding:9px 12px;text-align:left;" title="${fragDef.desc}">
@@ -10518,11 +10731,11 @@
                   <span class="inv-slot-icon" style="font-size:22px;">${fragDef.icon}</span>
                   <div>
                     <div class="inv-slot-name" style="font-size:12px;">${fragDef.name} <span style="font-size:10px;color:#fca5a5;">[판매 불가]</span></div>
-                    <div class="inv-slot-sub">몬스터 처치 시 획득 · 장비 강화 및 티어 승급 전용 재화</div>
+                    <div class="inv-slot-sub">몬스터 처치 시 획득 · 최대 ${EQUIP_FRAGMENT_MAX_STACK.toLocaleString()}개 보관 가능</div>
                   </div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;">
-                  <div class="inv-slot-qty" style="font-size:13px;color:#38bdf8;">${fragQty.toLocaleString()}개</div>
+                  <div class="inv-slot-qty" style="font-size:13px;color:#38bdf8;">${fragQty.toLocaleString()} / ${EQUIP_FRAGMENT_MAX_STACK.toLocaleString()}개</div>
                   <div class="inv-slot-sub" style="color:#86efac;">강화/승급 사용</div>
                 </div>
               </div>
@@ -10588,7 +10801,8 @@
 
       const pBox = document.getElementById('hunterPersonalityBox');
       if (pBox && h.personality) {
-        const isTrait = h.personality.kind === 'trait';
+        const effP = getEffectivePersonalityProfile(h.personality, h.rebirthCount);
+        const isTrait = h.personality.kind === 'trait' || effP.isRebirth5InvertedPenalty;
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignSign = alignInfo.value > 0 ? `+${alignInfo.value}` : `${alignInfo.value}`;
         const alignHtml = `
@@ -10608,12 +10822,15 @@
                <span>🏅 보스 인장 슬롯</span>
                <span>미착용 (중간보스 처치 시 획득)</span>
              </div>`;
+        const badgeLabel = effP.isRebirth5InvertedPenalty
+          ? '✦ 5환생 반전(x2)'
+          : (h.personality.kind === 'trait' ? '▲ 고유 특성' : '▼ 성격 패널티');
         pBox.innerHTML = `
           <div class="personality-header">
             <span>${h.personality.icon} 성격: ${h.personality.name}</span>
-            <span class="${isTrait ? 'personality-tag-trait' : 'personality-tag-penalty'}">${isTrait ? '▲ 고유 특성' : '▼ 성격 패널티'}</span>
+            <span class="${isTrait ? 'personality-tag-trait' : 'personality-tag-penalty'}">${badgeLabel}</span>
           </div>
-          <div style="color:${isTrait ? '#86efac' : '#fca5a5'};font-weight:700;">${h.personality.effectText}</div>
+          <div style="color:${isTrait ? '#86efac' : '#fca5a5'};font-weight:700;">${effP.effectText}</div>
           ${alignHtml}
           ${insHtml}
         `;
@@ -10840,7 +11057,7 @@
                 ${equippedWing ? `<span style="color:#38bdf8;font-weight:800;">+${wEnh}</span>` : ''}
               </div>
               <div style="display:flex;align-items:center;gap:5px;">
-                <span class="equip-req-badge ${equippedWing ? 'ready' : 'locked'}">${equippedWing ? `공방 +${wingAtkPct}%` : '천공 0.1%'}</span>
+                <span class="equip-req-badge ${equippedWing ? 'ready' : 'locked'}">${equippedWing ? `공방 +${wingAtkPct}%` : '천공 0.01%'}</span>
                 <span style="color:#94a3b8;font-size:10px;">${isWingSelected ? '▾' : '▸'}</span>
               </div>
             </div>
@@ -11158,7 +11375,8 @@
         body.dataset.renderedIds = currentIds;
         body.innerHTML = `<div class="hunter-roster-grid">${hunters.map(h => {
           const stats = h.getComputedStats();
-          const isTrait = h.personality?.kind === 'trait';
+          const effP = getEffectivePersonalityProfile(h.personality, h.rebirthCount);
+          const isTrait = h.personality?.kind === 'trait' || effP.isRebirth5InvertedPenalty;
           const alignInfo = getAlignmentInfo(h.alignment);
           const jIcon = jobIcons[h.baseJob || h.job] || '⚔️';
           const eq = h.equipment || {};
@@ -11184,7 +11402,7 @@
               </div>
               <div class="roster-sub-row">
                 <span data-role="rebirth">${rebirthStarsHtml}</span>
-                <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${h.personality.effectText}</span>
+                <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${effP.effectText}</span>
               </div>
               <div class="roster-card-meta" style="color:#fef08a;font-weight:700;">
                 <span data-role="colosseum-pts">${formatColosseumRosterHtml(colRec)}</span>
@@ -11471,7 +11689,7 @@
         `;
       } else if (tabKey === 'personality') {
         body.innerHTML = `
-          <div style="font-size:12px;color:#cbd5e1;">헌터 영입 시 총 <b>32종의 개성 있는 성격</b> 중 하나가 무작위로 부여되며, <b>고유 특성(18종)</b> 또는 <b>패널티(14종)</b> 중 한 가지를 지닙니다.</div>
+          <div style="font-size:12px;color:#cbd5e1;">헌터 영입 시 총 <b>32종의 개성 있는 성격</b> 중 하나가 무작위로 부여되며, <b>고유 특성(18종)</b> 또는 <b>패널티(14종)</b> 중 한 가지를 지닙니다. ★패널티 성격이 꼭 나쁜게 아닙니다.★</div>
           <div class="personality-guide-grid">
             ${HUNTER_PERSONALITIES.map(p => {
               const isTrait = p.kind === 'trait';
@@ -11691,6 +11909,10 @@
     // ============================================================================
     // 상단·하단 UI 버튼 이벤트 바인딩
     // ============================================================================
+    function isTier5BossDefeated() {
+      return Boolean(BOSS_SANCTUM.allStagesCleared || (BOSS_SANCTUM.bossStage || 1) >= 6);
+    }
+
     function recruitNewHunter() {
       const recruitCost = 200;
       const maxCap = getMaxHunterCapacity();
@@ -11705,6 +11927,7 @@
       gameState.gold -= recruitCost;
       const archetype = JOB_ARCHETYPES[Math.floor(Math.random() * JOB_ARCHETYPES.length)];
       const randomName = generateRandomHunterName(hunters);
+      const recruitTier = isTier5BossDefeated() ? 4 : 1;
       const newHunter = new Hunter(
         `h_${Date.now()}_${Math.floor(Math.random() * 999)}`,
         {
@@ -11713,10 +11936,10 @@
           level: 1,
           rebirthCount: 0,
           equipment: {
-            weapon:    { tier: 1, enhance: 0 },
-            armor:     { tier: 1, enhance: 0 },
-            helmet:    { tier: 1, enhance: 0 },
-            accessory: { tier: 1, enhance: 0 }
+            weapon:    { tier: recruitTier, enhance: 0 },
+            armor:     { tier: recruitTier, enhance: 0 },
+            helmet:    { tier: recruitTier, enhance: 0 },
+            accessory: { tier: recruitTier, enhance: 0 }
           }
         },
         (Math.random() - 0.5) * 60,
@@ -11727,7 +11950,7 @@
       if (document.getElementById('hunterRosterBackdrop')?.classList.contains('open')) {
         renderHunterRosterModal(true);
       }
-      showToast(`⚔️ Lv.1 ${newHunter.job} '${newHunter.name}' 합류! (전 부위 T1 +0강)`);
+      showToast(`⚔️ Lv.1 ${newHunter.job} '${newHunter.name}' 합류! (전 부위 T${recruitTier} +0강)`);
     }
 
     document.getElementById('btnRecruitHunter')?.addEventListener('click', recruitNewHunter);
@@ -11782,12 +12005,79 @@
       }
       showToast(`✨ [1회 한정] 3T 장비 착용 Lv.1 ${summoned.job} '${summoned.name}' 헌터 소환 완료!`);
     });
-    document.getElementById('btnCommandRebirthAltar')?.addEventListener('click', () => {
-      if (!gameState.selectedHunterId) return;
-      const targetHunter = hunters.find(item => item.id === gameState.selectedHunterId);
-      if (!targetHunter) return;
-      commandRebirthAltarHunt(targetHunter, true);
-    });
+
+    function summonTestRebirth5Hunter() {
+      const maxCap = getMaxHunterCapacity();
+      if (hunters.length >= maxCap) {
+        showToast(`⚠️ 마을 회관 정원(${maxCap}명)이 가득 찼습니다! 회관을 업그레이드하세요.`);
+        return;
+      }
+
+      const archetype = JOB_ARCHETYPES[Math.floor(Math.random() * JOB_ARCHETYPES.length)];
+      const randomName = generateRandomHunterName(hunters);
+      const advPath = [];
+      let curNodeId = null;
+
+      for (let tier = 1; tier <= LEVEL_REBIRTH_CONFIG.maxRebirths; tier++) {
+        let choices = [];
+        if (tier === 1) {
+          choices = JOB_ADVANCEMENT_TREE[archetype.job]?.tiers?.[0] || [];
+        } else {
+          const prevNode = curNodeId ? JOB_ADVANCEMENT_NODES_BY_ID[curNodeId] : null;
+          choices = prevNode && prevNode.childrenIds?.length > 0
+            ? prevNode.childrenIds.map(id => JOB_ADVANCEMENT_NODES_BY_ID[id]).filter(Boolean)
+            : (JOB_ADVANCEMENT_TREE[archetype.job]?.tiers?.[tier - 1] || []);
+        }
+        const picked = choices[Math.floor(Math.random() * choices.length)] || null;
+        if (picked) {
+          advPath.push(picked.id);
+          curNodeId = picked.id;
+        }
+      }
+
+      const finalNode = curNodeId ? JOB_ADVANCEMENT_NODES_BY_ID[curNodeId] : null;
+      const testHunter = new Hunter(
+        `h_test_rb5_${Date.now()}_${Math.floor(Math.random() * 999)}`,
+        {
+          ...archetype,
+          name: randomName,
+          baseJob: archetype.job,
+          job: archetype.job,
+          currentJobName: finalNode ? finalNode.name : archetype.job,
+          advancementPath: advPath,
+          advancementTier: advPath.length,
+          level: 1,
+          rebirthCount: LEVEL_REBIRTH_CONFIG.maxRebirths,
+          personalGold: 500000,
+          bento: getMaxBentoCapacity(1, LEVEL_REBIRTH_CONFIG.maxRebirths),
+          potions: {
+            hp: getMaxHpPotionCapacity(1, LEVEL_REBIRTH_CONFIG.maxRebirths),
+            mp: getMaxMpPotionCapacity(1, LEVEL_REBIRTH_CONFIG.maxRebirths)
+          },
+          equipment: {
+            weapon:    { tier: 4, enhance: 10 },
+            armor:     { tier: 4, enhance: 10 },
+            helmet:    { tier: 4, enhance: 10 },
+            accessory: { tier: 4, enhance: 10 }
+          }
+        },
+        (Math.random() - 0.5) * 60,
+        22 + (Math.random() - 0.5) * 20
+      );
+
+      testHunter.pickNextDestination();
+      hunters.push(testHunter);
+      updateResourceHUD();
+      if (document.getElementById('hunterRosterBackdrop')?.classList.contains('open')) {
+        renderHunterRosterModal(true);
+      }
+      if (typeof scheduleAutoSave === 'function') {
+        scheduleAutoSave(400);
+      }
+      interactionManager.spawnBubble(testHunter, `🌟 테스트 5환생 (${testHunter.currentJobName}) 강림!`, '#fde047');
+      showToast(`🌟 [테스트] 5환생 [${testHunter.currentJobName}] '${testHunter.name}' 헌터 소환 완료!`);
+    }
+
     document.getElementById('btnCloseHunterPanel')?.addEventListener('click', closeHunterPanel);
     document.getElementById('btnClosePanel')?.addEventListener('click', closeBuildingPanel);
     document.getElementById('btnCloseMonsterPopup')?.addEventListener('click', closeMonsterPopup);
@@ -12388,7 +12678,17 @@
     document.getElementById('btnConfirmDemolishAction')?.addEventListener('click', commitDemolishBuilding);
     function updateBossRaidHudButton() {
       const btn = document.getElementById('btnBossRaidControl');
+      const orcSubjBtn = document.getElementById('btnOrcSubjugationRaid');
       const abandonBtn = document.getElementById('btnAbandonBossRaid');
+      if (orcSubjBtn) {
+        const allOrcsLv99 = Array.isArray(ORC_STRONGHOLD_ZONE?.orcs) &&
+          ORC_STRONGHOLD_ZONE.orcs.length > 0 &&
+          ORC_STRONGHOLD_ZONE.orcs.every(o => o && (o.level || 1) >= ORC_MAX_LEVEL);
+        orcSubjBtn.disabled = !allOrcsLv99;
+        orcSubjBtn.title = allOrcsLv99
+          ? '모든 오크가 Lv.99에 도달했습니다! 클릭하여 60초 정비 후 오크의 숲 토벌전을 시작하세요.'
+          : '모든 오크가 Lv.99에 도달해야 활성화됩니다.';
+      }
       if (!btn) return;
       const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
       if (BOSS_SANCTUM.status === 'CLOSED') {
@@ -12401,8 +12701,11 @@
         if (abandonBtn) abandonBtn.style.display = 'inline-flex';
       } else {
         const hpPct = Math.max(0, Math.ceil((BOSS_SANCTUM.boss.hp / BOSS_SANCTUM.boss.maxHp) * 100));
+        const remSec = Math.max(0, Math.ceil(BOSS_SANCTUM.raidTimer || 0));
+        const mm = String(Math.floor(remSec / 60)).padStart(2, '0');
+        const ss = String(remSec % 60).padStart(2, '0');
         btn.disabled = true;
-        btn.textContent = `⚔️ T${cfg.stage} 보스 (${hpPct}%)`;
+        btn.textContent = `⚔️ T${cfg.stage} 보스 (${hpPct}%) · ${mm}:${ss}`;
         if (abandonBtn) abandonBtn.style.display = 'inline-flex';
       }
     }
@@ -12418,6 +12721,7 @@
       }
       BOSS_SANCTUM.status = 'PREPARING';
       BOSS_SANCTUM.prepTimer = BOSS_SANCTUM.prepDuration;
+      BOSS_SANCTUM.raidTimer = BOSS_SANCTUM.raidDuration;
       BOSS_SANCTUM.fallenHunterIds.clear();
       resetBossSanctumMonster();
 
@@ -12445,6 +12749,31 @@
     function failBossRaidAndReset(reason) {
       BOSS_SANCTUM.status = 'CLOSED';
       BOSS_SANCTUM.prepTimer = 0;
+      BOSS_SANCTUM.raidTimer = 0;
+      BOSS_SANCTUM.fallenHunterIds.clear();
+      resetBossSanctumMonster();
+
+      hunters.forEach((h) => {
+        if (h.state === 'REBIRTH_ALTAR_HUNT') return;
+        h.currentTargetMonster = null;
+        if (h.y < -340 && h.x > 600 && h.x < 1200) {
+          h.x = 840 + Math.random() * 200;
+          h.y = -320;
+        }
+        h.state = 'IDLE';
+        h.stateTimer = 0.5;
+      });
+
+      updateBossRaidHudButton();
+      showToast(`💀 보스 레이드 실패 (${reason})! 보스 체력이 모두 회복되고 성소가 다시 봉인되었습니다.`);
+    }
+
+    function abandonBossRaidByUser() {
+      if (BOSS_SANCTUM.status === 'CLOSED') return;
+
+      BOSS_SANCTUM.status = 'CLOSED';
+      BOSS_SANCTUM.prepTimer = 0;
+      BOSS_SANCTUM.raidTimer = 0;
       BOSS_SANCTUM.fallenHunterIds.clear();
       resetBossSanctumMonster();
 
@@ -12499,6 +12828,20 @@
     }
 
     document.getElementById('btnBossRaidControl')?.addEventListener('click', openBossSanctumByUser);
+    document.getElementById('btnOrcSubjugationRaid')?.addEventListener('click', () => {
+      const allOrcsLv99 = Array.isArray(ORC_STRONGHOLD_ZONE?.orcs) &&
+        ORC_STRONGHOLD_ZONE.orcs.length > 0 &&
+        ORC_STRONGHOLD_ZONE.orcs.every(o => o && (o.level || 1) >= ORC_MAX_LEVEL);
+      if (!allOrcsLv99) {
+        showToast('🔒 모든 오크가 Lv.99에 도달해야 [오크 토벌] 버튼을 사용할 수 있습니다.');
+        return;
+      }
+      if (typeof startOrcSubjugationRaid === 'function') {
+        startOrcSubjugationRaid();
+      } else {
+        showToast('👹 오크 토벌 작전을 개시합니다!');
+      }
+    });
     document.getElementById('btnAbandonBossRaid')?.addEventListener('click', abandonBossRaidByUser);
 
     document.getElementById('btnOpenHelpModal')?.addEventListener('click', () => {
@@ -14037,14 +14380,18 @@
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
+        const isTopSubjugationOnly = isTop && typeof isOrcStrongholdPassageOpen === 'function' && isOrcStrongholdPassageOpen();
         const levelBracketText = isRebirthField
           ? `[1환생 이상 전용 · Lv.1~99]`
-          : `[적정 Lv.${hg.minRecLv}~${hg.maxRecLv}]`;
-        ctx.fillText(`${hg.icon} ${hg.name} ${levelBracketText}`, b.x + 30, b.y + 30);
+          : (isTopSubjugationOnly ? '' : `[적정 Lv.${hg.minRecLv}~${hg.maxRecLv}]`);
+        ctx.fillText(
+          levelBracketText ? `${hg.icon} ${hg.name} ${levelBracketText}` : `${hg.icon} ${hg.name}`,
+          b.x + 30,
+          b.y + 30
+        );
 
         ctx.fillStyle = '#fde68a';
         ctx.font = '11px sans-serif';
-        const isTopSubjugationOnly = isTop && typeof isOrcStrongholdPassageOpen === 'function' && isOrcStrongholdPassageOpen();
         ctx.fillText(
           isRebirthField
             ? '🔒 1환생↑ 헌터 전용 · 전 구간 기본 EXP 적용 · 윤회 성역의 영혼결정 드랍'
@@ -17672,8 +18019,8 @@
           const scaling = getHuntingGroundScaling(ground, hunters);
           monster.respawn = monster.isFieldMiniBoss ? (monster.respawnDelay || 25) : scaling.respawnDelay;
 
-          // [천공의 섬 전용 0.1% 확률 날개 아이템 드랍]
-          if (ground && ground.id === SKY_ISLAND_GROUND.id && Math.random() < 0.001) {
+          // [천공의 섬 전용 0.01% 확률 날개 아이템 드랍]
+          if (ground && ground.id === SKY_ISLAND_GROUND.id && Math.random() < 0.0001) {
             const wingId = 'sky_sanctuary_wings';
             const wingDef = ITEM_CATALOG[wingId];
             if (wingDef && hunter.inventory) {
@@ -17683,8 +18030,8 @@
                 if (!hunter.equippedWingId) {
                   hunter.equipWing(wingId);
                 }
-                interactionManager.spawnBubble(hunter, `🪽 [0.1%] ${wingDef.name} 획득 & 착용!`, '#7dd3fc');
-                showToast(`🪽 경축! '${hunter.name}' 헌터가 천공의 섬에서 [0.1%] 확률로 [${wingDef.name}]을(를) 획득했습니다!`);
+                interactionManager.spawnBubble(hunter, `🪽 [0.01%] ${wingDef.name} 획득 & 착용!`, '#7dd3fc');
+                showToast(`🪽 경축! '${hunter.name}' 헌터가 천공의 섬에서 [0.01%] 확률로 [${wingDef.name}]을(를) 획득했습니다!`);
               } else {
                 showToast(`🪽 '${hunter.name}' 헌터는 이미 [${wingDef.name}]을(를) 보유 중입니다.`);
               }
@@ -17699,18 +18046,16 @@
               const alreadyOwned = hunter.inventory.getCount(insId) >= 1;
               if (!alreadyOwned) {
                 hunter.inventory.addItem(insId, 1);
-                const curIns = hunter.getEquippedInsignia();
-                if (!curIns || (insDef.monsterDmgBonusPct || 0) >= (curIns.monsterDmgBonusPct || 0)) {
-                  hunter.equippedInsigniaId = insId;
-                }
+                hunter.syncAutoEquipInsignia();
                 const dmgPct = Math.round((insDef.monsterDmgBonusPct || 0) * 100);
                 showToast(`🏅 ${hunter.name}이(가) [${insDef.name}] 획득 & 착용! (몬스터 대상 입히는 피해 +${dmgPct}%)`);
               } else {
+                hunter.syncAutoEquipInsignia();
                 showToast(`🏅 ${hunter.name}은(는) 이미 [${insDef.name}]을(를) 보유 중입니다. (인장 종류별 최대 1개)`);
               }
             }
           }
-          const p = hunter.personality || {};
+          const p = getEffectivePersonalityProfile(hunter.personality, hunter.rebirthCount);
           const expMult = ground.getExpMultiplier(hunter.level);
           const finalExp = Math.max(1, Math.round(ground.baseExp * expMult * (isMiniBoss ? 5 : 1)));
           const rolledBaseGold = ground.goldDropRange
@@ -18037,7 +18382,7 @@
         if (altarBoss.hp <= 0) {
           altarBoss.hp = 0;
           altarBoss.respawn = REBIRTH_ALTAR.respawnDelay;
-          const p = hunter.personality || {};
+          const p = getEffectivePersonalityProfile(hunter.personality, hunter.rebirthCount);
           const hunterGoldGain = Math.round((altarBoss.rewardHunterGold || 8500) * (p.personalGoldMult || 1));
           const villageGoldGain = altarBoss.rewardVillageGold || 12000;
           const expGain = altarBoss.rewardExp || 4800;
@@ -18052,11 +18397,8 @@
             const alreadyOwnedIns = insDef ? hunter.inventory.getCount(insId) >= 1 : true;
             if (insDef && !alreadyOwnedIns) {
               hunter.inventory.addItem(insId, 1);
-              const curIns = hunter.getEquippedInsignia();
-              if (!curIns || (insDef.monsterDmgBonusPct || 0) >= (curIns.monsterDmgBonusPct || 0)) {
-                hunter.equippedInsigniaId = insId;
-              }
             }
+            hunter.syncAutoEquipInsignia();
           }
 
           hunter.gainExp(expGain);
@@ -18269,6 +18611,7 @@
         if (BOSS_SANCTUM.prepTimer <= 0) {
           BOSS_SANCTUM.status = 'ACTIVE';
           BOSS_SANCTUM.prepTimer = 0;
+          BOSS_SANCTUM.raidTimer = BOSS_SANCTUM.raidDuration;
           updateBossRaidHudButton();
 
           const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
@@ -18309,6 +18652,12 @@
           h => h && h.hp > 0 && !BOSS_SANCTUM.fallenHunterIds.has(h.id) && h.state !== 'REBIRTH_ALTAR_HUNT'
         );
 
+        BOSS_SANCTUM.raidTimer = Math.max(0, (BOSS_SANCTUM.raidTimer ?? BOSS_SANCTUM.raidDuration) - dt);
+        if (BOSS_SANCTUM.raidTimer <= 0) {
+          failBossRaidAndReset('제한시간 5분 초과');
+          return;
+        }
+
         if (activeRaiders.length === 0) {
           failBossRaidAndReset('참가 헌터 전원 전투 불능');
         } else if (boss && boss.hp > 0) {
@@ -18324,7 +18673,10 @@
           const engagedRaidersAll = activeRaiders.filter(
             h => h.state === 'BOSS_RAID' && Math.hypot(h.x - boss.x, h.y - boss.y) <= (boss.range || 152)
           );
-          const maxSimultaneousTargets = (boss.stage || BOSS_SANCTUM.bossStage) >= 7 ? 3 : engagedRaidersAll.length;
+          const currentBossStage = boss.stage || BOSS_SANCTUM.bossStage;
+          const maxSimultaneousTargets = currentBossStage >= 7
+            ? (3 + (currentBossStage - 6))
+            : engagedRaidersAll.length;
           const engagedRaiders = engagedRaidersAll.slice(0, maxSimultaneousTargets);
 
           if (engagedRaiders.length > 0 && boss.attackCooldown <= 0) {
@@ -19432,6 +19784,7 @@
           if (typeof hData.wingEnhance === 'number') {
             restored.wingEnhance = Math.max(0, Math.min(15, Math.floor(hData.wingEnhance)));
           }
+          restored.syncAutoEquipInsignia();
           restored.syncAutoEquipWing();
 
           restored.pickNextDestination();
@@ -20219,6 +20572,7 @@
 
         BOSS_SANCTUM.status = 'CLOSED';
         BOSS_SANCTUM.prepTimer = 0;
+        BOSS_SANCTUM.raidTimer = 0;
         BOSS_SANCTUM.bossStage = 1;
         BOSS_SANCTUM.allStagesCleared = false;
         BOSS_SANCTUM.fallenHunterIds.clear();
