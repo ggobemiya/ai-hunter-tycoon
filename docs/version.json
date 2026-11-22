@@ -1,9 +1,9 @@
 {
-  "version": 31,
+  "version": 32,
   "original_filename": "2d.html",
-  "sha256": "575d7be3e27ab6dad71be2ffeb3f3e4f9678ce1201c3469153bdcd1bb7a7bb33",
-  "bytes": 821929,
-  "published_at": "2026-11-21T11:03:03.954767+00:00",
-  "archive": "releases/v31/",
-  "upload_job": "upload-85ccc262955d01df0e673e0d"
+  "sha256": "eee9d2fdcc9fdc130e2616d5675ab1ef1cfa21ad3d77d12d49d4234ca88ca699",
+  "bytes": 902230,
+  "published_at": "2026-11-22T04:46:37.730397+00:00",
+  "archive": "releases/v32/",
+  "upload_job": "upload-0b05ade4868a466e9fb62561"
 }

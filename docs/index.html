@@ -3408,6 +3408,28 @@
         entity.y = entity.y <= -352.5 ? (-365 - radius) : (-340 + radius);
       }
 
+      // [최상급 사냥터 오른쪽 옆: 👹 오크 군락지 · 모든 헌터 진입 불가]
+      if (typeof ORC_STRONGHOLD_ZONE !== 'undefined') {
+        const ob = ORC_STRONGHOLD_ZONE.bounds;
+        const pad = radius + 6;
+        if (
+          entity.x >= ob.x - pad &&
+          entity.x <= ob.x + ob.w + pad &&
+          entity.y >= ob.y - pad &&
+          entity.y <= ob.y + ob.h + pad
+        ) {
+          const dLeft = Math.abs(entity.x - (ob.x - pad));
+          const dRight = Math.abs((ob.x + ob.w + pad) - entity.x);
+          const dTop = Math.abs(entity.y - (ob.y - pad));
+          const dBottom = Math.abs((ob.y + ob.h + pad) - entity.y);
+          const minD = Math.min(dLeft, dRight, dTop, dBottom);
+          if (minD === dLeft) entity.x = ob.x - pad;
+          else if (minD === dRight) entity.x = ob.x + ob.w + pad;
+          else if (minD === dTop) entity.y = ob.y - pad;
+          else entity.y = ob.y + ob.h + pad;
+        }
+      }
+
       // 환생 전용 사냥터 내부(x >= 1430, y: 365~785)에 미환생 헌터가 들어온 경우 중급 사냥터 입구로 밀어냄
       if (entity instanceof Hunter && (entity.rebirthCount || 0) < 1) {
         if (entity.x >= 1430 - radius && entity.y >= 360 && entity.y <= 795) {
@@ -3551,7 +3573,7 @@
         hunter.x >= 1382 && hunter.x <= 1438 &&
         ((hunter.rebirthCount || 0) < 1 || hunter.y < 553 || hunter.y > 597)
       );
-      const outOfPlayableBounds = hunter.x < -640 || hunter.x > 2560 || hunter.y < -820 || hunter.y > 1270;
+      const outOfPlayableBounds = hunter.x < -640 || hunter.x > 2240 || hunter.y < -820 || hunter.y > 1270;
 
       if (hunter.stuckMoveTimer >= 1.2 || inWallBand || inMidSouthWall || inHighSouthWall || inTopEastWall || inMidEastWall || outOfPlayableBounds) {
         hunter.stuckMoveTimer = 0;
@@ -3840,7 +3862,8 @@
           valueMultiplier: 16.0
         },
         baseMonsterCount: 4,
-        maxMonsterCount: 12,
+        maxMonsterCount: 20,
+        maxCountedHunters: 8,
         miniBossConfig: {
           bossStageRef: 7,
           kind: 'field_miniboss',
@@ -3912,6 +3935,751 @@
     };
 
     const ALL_FIELD_GROUNDS = [...HUNTING_GROUNDS, SKY_ISLAND_GROUND];
+
+    /**
+     * ============================================================================
+     * 최상급 사냥터 오른쪽 옆 적대 구역: 👹 오크 군락지 (헌터 진입 불가)
+     * - 최상급 사냥터(x: 1430~2210, y: -340~340) 바로 동쪽(x: 2250~2980)에 배치
+     * - 가시 방책과 붉은 결계로 봉쇄되어 모든 헌터가 진입할 수 없음
+     * ============================================================================
+     */
+    const ORC_STRONGHOLD_ZONE = {
+      id: 'orc_stronghold_zone',
+      name: '오크 군락지 (붉은 철혈 분지)',
+      icon: '👹',
+      enterableByHunters: false,
+      bounds: { x: 2250, y: -340, w: 730, h: 680 },
+      centerX: 2615,
+      centerY: 0,
+      baseCount: 5,
+      perTierClearBonus: 2,
+      maxCount: 20,
+      greatWarriorConfig: {
+        isGreatWarrior: true,
+        name: '👑 오크 대전사',
+        role: '오크 대전사',
+        x: 2615,
+        y: 92,
+        size: 27,
+        color: '#7f1d1d',
+        horn: '#fde047'
+      },
+      reinforcementTemplates: [
+        { name: '오크 강철돌격병', role: '전위 수비대', size: 16, color: '#4d7c0f', horn: '#e2e8f0' },
+        { name: '오크 광전사', role: '전위 수비대', size: 16, color: '#65a30d', horn: '#e2e8f0' },
+        { name: '오크 혈투주술사', role: '토템 주술진', size: 15, color: '#7e22ce', horn: '#f472b6' },
+        { name: '오크 중갑파쇄병', role: '후방 수비대', size: 17, color: '#3f6212', horn: '#cbd5e1' },
+        { name: '오크 정예척후병', role: '외곽 순찰대', size: 15, color: '#4d7c0f', horn: '#fef08a' },
+        { name: '오크 핏빛근위병', role: '본진 호위대', size: 17, color: '#991b1b', horn: '#fde047' }
+      ],
+      orcs: [
+        { name: '오크 로드', role: '군락지 지배자', x: 2615, y: -20, size: 22, color: '#991b1b', horn: '#fde047' },
+        { name: '오크 강철돌격병', role: '전위 수비대', x: 2370, y: -120, size: 16, color: '#4d7c0f', horn: '#e2e8f0' },
+        { name: '오크 광전사', role: '전위 수비대', x: 2390, y: 135, size: 16, color: '#65a30d', horn: '#e2e8f0' },
+        { name: '오크 혈투주술사', role: '토템 주술진', x: 2780, y: -150, size: 15, color: '#7e22ce', horn: '#f472b6' },
+        { name: '오크 중갑파쇄병', role: '후방 수비대', x: 2810, y: 145, size: 17, color: '#3f6212', horn: '#cbd5e1' }
+      ]
+    };
+
+    // 오크 군락지 ↔ 최상급 사냥터 연결 통로 (5티어 보스 처치 시 개방)
+    const ORC_STRONGHOLD_PASSAGE = {
+      xMin: 2210,
+      xMax: 2250,
+      yMin: -14,
+      yMax: 46,
+      centerY: 16,
+      topSideEntryX: 2195,
+      strongholdSideEntryX: 2272
+    };
+
+    function isOrcStrongholdPassageOpen() {
+      if (typeof BOSS_SANCTUM === 'undefined') return false;
+      return Boolean(BOSS_SANCTUM.allStagesCleared || (BOSS_SANCTUM.bossStage || 1) >= 6);
+    }
+
+    function enforceOrcPassageMovement(entity, prevX, radius = 14) {
+      if (!entity || typeof ORC_STRONGHOLD_ZONE === 'undefined') return;
+      const ob = ORC_STRONGHOLD_ZONE.bounds;
+      const borderX = ob.x;
+      const passageOpen = isOrcStrongholdPassageOpen();
+      const inPassageY =
+        entity.y >= ORC_STRONGHOLD_PASSAGE.yMin + radius * 0.35 &&
+        entity.y <= ORC_STRONGHOLD_PASSAGE.yMax - radius * 0.35;
+
+      // 상·하·동 외곽 경계 클램프
+      if (entity.x > ob.x + ob.w - radius) entity.x = ob.x + ob.w - radius;
+      if (entity.x >= borderX - radius) {
+        if (entity.y < ob.y + radius) entity.y = ob.y + radius;
+        if (entity.y > ob.y + ob.h - radius) entity.y = ob.y + ob.h - radius;
+      }
+
+      // 서쪽 경계(최상급 사냥터 ↔ 오크 군락지) 출입 제한: 5티어 보스 처치 후 통로 구간(yMin~yMax)으로만 출입
+      const wasInStronghold = prevX >= borderX;
+      const nowInStronghold = entity.x >= borderX;
+      if (wasInStronghold !== nowInStronghold) {
+        if (!passageOpen || !inPassageY) {
+          entity.x = wasInStronghold ? (borderX + radius) : (borderX - radius);
+        }
+      } else if (!passageOpen && entity.x > borderX - radius && entity.x < borderX + radius) {
+        entity.x = prevX >= borderX ? (borderX + radius) : (borderX - radius);
+      } else if (passageOpen && !inPassageY && entity.x > borderX - radius && entity.x < borderX + radius) {
+        entity.x = prevX >= borderX ? (borderX + radius) : (borderX - radius);
+      }
+    }
+
+    function getClearedBossTierCount() {
+      if (BOSS_SANCTUM.allStagesCleared) {
+        return BOSS_SANCTUM.maxBossStage;
+      }
+      return Math.max(0, Math.min(BOSS_SANCTUM.maxBossStage, (BOSS_SANCTUM.bossStage || 1) - 1));
+    }
+
+    function syncOrcStrongholdPopulation(notifyOnGreatWarriorSpawn = false) {
+      const clearedTiers = getClearedBossTierCount();
+      const shouldSpawnGreatWarrior = clearedTiers >= 10 || Boolean(BOSS_SANCTUM.allStagesCleared);
+      const hadGreatWarrior = ORC_STRONGHOLD_ZONE.orcs.some(o => o && o.isGreatWarrior);
+
+      // 기존 오크 대전사를 제외한 일반 오크 병력만 우선 추출해 20마리 한도를 정확히 유지
+      const regularOrcs = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior);
+      const targetRegularCount = Math.min(
+        ORC_STRONGHOLD_ZONE.maxCount,
+        ORC_STRONGHOLD_ZONE.baseCount + clearedTiers * ORC_STRONGHOLD_ZONE.perTierClearBonus
+      );
+
+      if (regularOrcs.length > targetRegularCount) {
+        regularOrcs.length = targetRegularCount;
+      }
+
+      const b = ORC_STRONGHOLD_ZONE.bounds;
+      const campCenterX = b.x + b.w * 0.5;
+      const campCenterY = b.y + b.h * 0.52;
+      const templates = ORC_STRONGHOLD_ZONE.reinforcementTemplates;
+
+      while (regularOrcs.length < targetRegularCount) {
+        const idx = regularOrcs.length;
+        const tpl = templates[(idx - 1) % templates.length];
+        const ringStep = Math.floor((idx - 5) / 6);
+        const angle = ((idx - 5) * 1.08) + ringStep * 0.45;
+        const radiusX = Math.min(285, 165 + ringStep * 52 + (idx % 2) * 18);
+        const radiusY = Math.min(235, 130 + ringStep * 42 + ((idx + 1) % 2) * 16);
+        const ox = Math.max(b.x + 55, Math.min(b.x + b.w - 55, Math.round(campCenterX + Math.cos(angle) * radiusX)));
+        const oy = Math.max(b.y + 85, Math.min(b.y + b.h - 45, Math.round(campCenterY + Math.sin(angle) * radiusY)));
+
+        regularOrcs.push(ensureOrcUnitFields({
+          id: `orc_reg_${idx}`,
+          name: tpl.name,
+          role: tpl.role,
+          x: ox,
+          y: oy,
+          homeX: ox,
+          homeY: oy,
+          size: tpl.size,
+          color: tpl.color,
+          horn: tpl.horn
+        }, idx));
+      }
+
+      regularOrcs.forEach((o, i) => ensureOrcUnitFields(o, i));
+
+      if (shouldSpawnGreatWarrior) {
+        const existingGw = ORC_STRONGHOLD_ZONE.orcs.find(o => o && o.isGreatWarrior);
+        const gwHomeX = Math.round(b.x + b.w * 0.5);
+        const gwHomeY = Math.round(b.y + b.h * 0.52 + 86);
+        const gw = ensureOrcUnitFields(existingGw || {
+          ...ORC_STRONGHOLD_ZONE.greatWarriorConfig,
+          id: 'orc_great_warrior',
+          x: gwHomeX,
+          y: gwHomeY,
+          homeX: gwHomeX,
+          homeY: gwHomeY
+        }, regularOrcs.length);
+        gw.homeX = gwHomeX;
+        gw.homeY = gwHomeY;
+        ORC_STRONGHOLD_ZONE.orcs = [...regularOrcs, gw];
+        if (!hadGreatWarrior) {
+          console.warn('[오크 군락지 경보] 10티어 보스 처치 여파로 오크 야영지 본진 앞에 [👑 오크 대전사]가 강림했습니다!');
+        }
+      } else {
+        ORC_STRONGHOLD_ZONE.orcs = regularOrcs;
+      }
+    }
+
+    const ORC_RESPAWN_DURATION_MS = 60000;
+    const ORC_MAX_LEVEL = 99;
+    const ORC_MAX_LEVEL_TOTAL_KILLS = 1500;
+
+    // 레벨 L 도달에 필요한 누적 KILL 카운트 (Lv.1: 0킬, Lv.2: 10킬 ~ Lv.99: 1,500킬)
+    function getOrcCumulativeKillsForLevel(level = 1) {
+      const lv = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(level) || 1)));
+      if (lv <= 1) return 0;
+      if (lv === 2) return 10;
+      if (lv >= ORC_MAX_LEVEL) return ORC_MAX_LEVEL_TOTAL_KILLS;
+      const t = (lv - 2) / (ORC_MAX_LEVEL - 2);
+      return Math.round(10 + (ORC_MAX_LEVEL_TOTAL_KILLS - 10) * Math.pow(t, 1.38));
+    }
+
+    // 현재 레벨에서 다음 레벨업까지 필요한 목표 누적 KILL 카운트 (Lv.1 -> 10킬, Lv.98 -> 1,500킬)
+    function getOrcNextLevelKillTarget(level = 1) {
+      const lv = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(level) || 1)));
+      if (lv >= ORC_MAX_LEVEL) return ORC_MAX_LEVEL_TOTAL_KILLS;
+      return getOrcCumulativeKillsForLevel(lv + 1);
+    }
+
+    // 누적 KILL 카운트로부터 현재 레벨 산출 (1~99)
+    function computeOrcLevelFromTotalKills(totalKills = 0) {
+      const kills = Math.max(0, Math.floor(Number(totalKills) || 0));
+      let lv = 1;
+      while (lv < ORC_MAX_LEVEL && kills >= getOrcCumulativeKillsForLevel(lv + 1)) {
+        lv += 1;
+      }
+      return lv;
+    }
+
+    function getOrcCombatStats(orc) {
+      const lv = Math.max(1, Math.floor(Number(orc?.level) || 1));
+      const isGw = Boolean(orc?.isGreatWarrior) || orc?.role === '오크 대전사';
+      const isChief = orc?.role === '군락지 지배자' || orc?.name === '오크 로드' || orc?.name === '오크 대장' || orc?.name === '오크 철혈대족장';
+      const isHeavy = orc?.role === '후방 수비대';
+      const isShaman = orc?.role === '토템 주술진';
+
+      // 오크 로드(군락지 지배자): 기존 오크 대장(24000 / 920 / 310) 대비 기본 능력치 2배 및 레벨 성장률 2배(0.28) 적용
+      const baseHp = isGw ? 42000 : (isChief ? 48000 : (isHeavy ? 14500 : (isShaman ? 11500 : 12800)));
+      const baseAtk = isGw ? 1480 : (isChief ? 1840 : (isShaman ? 690 : (isHeavy ? 640 : 590)));
+      const baseDef = isGw ? 480 : (isChief ? 620 : (isHeavy ? 250 : 185));
+
+      const perLevelGrowth = isChief ? 0.28 : 0.14;
+      const mult = 1 + (lv - 1) * perLevelGrowth;
+      return {
+        maxHp: Math.round(baseHp * mult),
+        atk: Math.round(baseAtk * mult),
+        def: Math.round(baseDef * mult),
+        range: isShaman ? 145 : (isGw ? 44 : 34)
+      };
+    }
+
+    function ensureOrcUnitFields(orc, index = 0) {
+      if (!orc || typeof orc !== 'object') return orc;
+      if (orc.role === '군락지 지배자' || orc.name === '오크 대장' || orc.name === '오크 철혈대족장') {
+        orc.name = '오크 로드';
+      }
+      if (!orc.id) {
+        orc.id = orc.isGreatWarrior ? 'orc_great_warrior' : `orc_unit_${index}`;
+      }
+      if (typeof orc.homeX !== 'number') orc.homeX = orc.x;
+      if (typeof orc.homeY !== 'number') orc.homeY = orc.y;
+      orc.killCount = Math.max(0, Math.floor(Number(orc.killCount) || 0));
+      orc.monsterKillCount = Math.max(0, Math.floor(Number(orc.monsterKillCount) || 0));
+      const explicitTotal = Math.floor(Number(orc.totalKillCount) || 0);
+      orc.totalKillCount = Math.max(explicitTotal, orc.killCount + orc.monsterKillCount);
+
+      const savedLv = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(orc.level) || 1)));
+      const minKillsForSavedLv = getOrcCumulativeKillsForLevel(savedLv);
+      if (orc.totalKillCount < minKillsForSavedLv) {
+        orc.totalKillCount = minKillsForSavedLv;
+        const accounted = orc.killCount + orc.monsterKillCount;
+        if (accounted < orc.totalKillCount) {
+          orc.monsterKillCount += (orc.totalKillCount - accounted);
+        }
+      }
+
+      orc.level = computeOrcLevelFromTotalKills(orc.totalKillCount);
+      orc.nextLevelKills = getOrcNextLevelKillTarget(orc.level);
+      orc.isDead = Boolean(orc.isDead);
+      orc.respawnRemainingMs = orc.isDead
+        ? Math.max(0, Math.min(ORC_RESPAWN_DURATION_MS, Math.floor(Number(orc.respawnRemainingMs) || ORC_RESPAWN_DURATION_MS)))
+        : 0;
+
+      const stats = getOrcCombatStats(orc);
+      orc.maxHp = stats.maxHp;
+      if (orc.isDead) {
+        orc.hp = 0;
+      } else if (typeof orc.hp !== 'number' || orc.hp <= 0) {
+        orc.hp = orc.maxHp;
+      } else {
+        orc.hp = Math.min(orc.maxHp, orc.hp);
+      }
+      if (typeof orc.attackCooldown !== 'number') orc.attackCooldown = 0.6 + (index % 5) * 0.15;
+      if (typeof orc.attackAnimTimer !== 'number') orc.attackAnimTimer = 0;
+      if (typeof orc.facing !== 'number') orc.facing = -1;
+      if (typeof orc.walkCycle !== 'number') orc.walkCycle = (index % 6) * 0.9;
+      if (typeof orc.sortieTimer !== 'number') orc.sortieTimer = 3 + (index % 7) * 2.4;
+      if (typeof orc.fullHealReadyTimer !== 'number') orc.fullHealReadyTimer = 0;
+      if (typeof orc.wanderX !== 'number') orc.wanderX = orc.x;
+      if (typeof orc.wanderY !== 'number') orc.wanderY = orc.y;
+      if (typeof orc.wanderTimer !== 'number') orc.wanderTimer = 0.5 + (index % 5) * 0.6;
+      if (!orc.aiMode) orc.aiMode = 'GUARD';
+      if (!('currentTarget' in orc)) orc.currentTarget = null;
+      return orc;
+    }
+
+    function levelUpOrcUnit(orc, levelsGained = 1) {
+      if (!orc) return;
+      const gain = Math.max(1, Math.floor(levelsGained));
+      orc.level = Math.max(1, (orc.level || 1) + gain);
+      orc.expToNext = getOrcRequiredExp(orc.level);
+      const stats = getOrcCombatStats(orc);
+      orc.maxHp = stats.maxHp;
+      if (!orc.isDead) {
+        orc.hp = orc.maxHp;
+        combatEffects.spawnDamagePopup(orc.x, orc.y - 24, `⬆️ LV.${orc.level}!`, true, '#fde047');
+        combatEffects.spawnMeleeSlash({
+          x: orc.x,
+          y: orc.y - 4,
+          facing: 1,
+          slashType: 'MAGIC_BURST',
+          color: '#facc15'
+        });
+      }
+    }
+    function registerOrcKill(orc, targetType = 'monster') {
+      if (!orc) return;
+      ensureOrcUnitFields(orc);
+      const prevLevel = orc.level || 1;
+
+      if (targetType === 'hunter') {
+        orc.killCount += 1;
+      } else {
+        orc.monsterKillCount += 1;
+      }
+      orc.totalKillCount = orc.killCount + orc.monsterKillCount;
+      orc.level = computeOrcLevelFromTotalKills(orc.totalKillCount);
+      orc.nextLevelKills = getOrcNextLevelKillTarget(orc.level);
+
+      const stats = getOrcCombatStats(orc);
+      orc.maxHp = stats.maxHp;
+
+      if (orc.level > prevLevel && !orc.isDead) {
+        orc.hp = orc.maxHp;
+        combatEffects.spawnDamagePopup(
+          orc.x,
+          orc.y - 24,
+          `⬆️ LV.${orc.level}! (${orc.totalKillCount} KILL)`,
+          true,
+          '#fde047'
+        );
+        combatEffects.spawnMeleeSlash({
+          x: orc.x,
+          y: orc.y - 4,
+          facing: 1,
+          slashType: 'MAGIC_BURST',
+          color: '#facc15'
+        });
+      }
+    }
+
+    function recordOrcMonsterKill(orc) {
+      registerOrcKill(orc, 'monster');
+    }
+
+    function recordOrcHunterKill(orc) {
+      registerOrcKill(orc, 'hunter');
+    }
+
+    function killOrcUnit(orc) {
+      if (!orc || orc.isDead) return;
+      ensureOrcUnitFields(orc);
+      const b = ORC_STRONGHOLD_ZONE.bounds;
+      orc.isDead = true;
+      orc.hp = 0;
+      orc.respawnRemainingMs = ORC_RESPAWN_DURATION_MS;
+      orc.aiMode = 'DEAD';
+      orc.x = Math.round(b.x + b.w * 0.5);
+      orc.y = Math.round(b.y + b.h * 0.52 + 64);
+      combatEffects.spawnDamagePopup(orc.x, orc.y - 18, '💀 전사 (60초 후 부활)', true, '#fca5a5');
+    }
+
+    function reviveOrcUnitAtStronghold(orc) {
+      if (!orc) return;
+      ensureOrcUnitFields(orc);
+      const b = ORC_STRONGHOLD_ZONE.bounds;
+      const campX = Math.round(b.x + b.w * 0.5);
+      const campY = Math.round(b.y + b.h * 0.52 + 72);
+      orc.isDead = false;
+      orc.respawnRemainingMs = 0;
+      orc.aiMode = 'GUARD';
+      orc.fullHealReadyTimer = 10.0;
+      orc.x = campX + Math.round((Math.random() - 0.5) * 44);
+      orc.y = campY + Math.round((Math.random() - 0.5) * 20);
+      const stats = getOrcCombatStats(orc);
+      orc.maxHp = stats.maxHp;
+      orc.hp = orc.maxHp;
+      combatEffects.spawnDamagePopup(orc.x, orc.y - 22, `♻️ Lv.${orc.level} 부활!`, true, '#86efac');
+      combatEffects.spawnMeleeSlash({
+        x: orc.x,
+        y: orc.y - 4,
+        facing: 1,
+        slashType: 'MAGIC_BURST',
+        color: '#4ade80'
+      });
+    }
+
+    function updateOrcStrongholdUnits(dt) {
+      const topGround = HUNTING_GROUNDS.find(g => g.id === 'top_field_70_99');
+      const ob = ORC_STRONGHOLD_ZONE.bounds;
+      const campX = ob.x + ob.w * 0.5;
+      const campY = ob.y + ob.h * 0.52;
+      const passageOpen = isOrcStrongholdPassageOpen();
+      const passage = ORC_STRONGHOLD_PASSAGE;
+
+      ORC_STRONGHOLD_ZONE.orcs.forEach((orc, idx) => {
+        ensureOrcUnitFields(orc, idx);
+
+        // 1) 사망 상태: 군락지 본진 앞에서 1분(60,000ms) 카운트다운 후 부활
+        if (orc.isDead) {
+          orc.respawnRemainingMs = Math.max(0, (orc.respawnRemainingMs || 0) - dt * 1000);
+          if (orc.respawnRemainingMs <= 0) {
+            reviveOrcUnitAtStronghold(orc);
+          }
+          return;
+        }
+
+        const stats = getOrcCombatStats(orc);
+        orc.maxHp = stats.maxHp;
+        if (orc.hp > orc.maxHp) orc.hp = orc.maxHp;
+        orc.attackCooldown = Math.max(0, (orc.attackCooldown || 0) - dt);
+        orc.attackAnimTimer = Math.max(0, (orc.attackAnimTimer || 0) - dt);
+
+        // 2) 군락지 내부 체력 완전 회복 및 회복 완료 후 10초 출정 대기 타이머
+        const isInsideStronghold = (
+          orc.x >= ob.x &&
+          orc.x <= ob.x + ob.w &&
+          orc.y >= ob.y &&
+          orc.y <= ob.y + ob.h
+        );
+        if (isInsideStronghold) {
+          if (orc.hp < orc.maxHp) {
+            orc.hp = orc.maxHp;
+            orc.fullHealReadyTimer = 10.0;
+          } else if ((orc.fullHealReadyTimer || 0) > 0) {
+            orc.fullHealReadyTimer = Math.max(0, orc.fullHealReadyTimer - dt);
+          }
+        }
+
+        // 5티어 보스 처치 전에는 연결 길이 닫혀 있으므로 출정 불가
+        if (!passageOpen && orc.aiMode === 'SORTIE') {
+          orc.aiMode = 'GUARD';
+        }
+
+        if (orc.aiMode === 'GUARD') {
+          orc.sortieTimer = Math.max(0, (orc.sortieTimer || 0) - dt);
+          const hx = orc.homeX ?? campX;
+          const hy = orc.homeY ?? campY;
+
+          // 최상급 사냥터에서 군락지로 복귀 중이라면 반드시 연결 통로(passage)를 거쳐 귀환
+          if (orc.x < ob.x) {
+            const needAlignY = orc.y < passage.yMin + 6 || orc.y > passage.yMax - 6;
+            const wpX = needAlignY ? passage.topSideEntryX : passage.strongholdSideEntryX;
+            const wpY = needAlignY ? passage.centerY : Math.max(passage.yMin + 6, Math.min(passage.yMax - 6, orc.y));
+            const dx = wpX - orc.x;
+            const dy = wpY - orc.y;
+            const d = Math.max(1, Math.hypot(dx, dy));
+            const prevX = orc.x;
+            if (Math.abs(dx) > 0.5) orc.facing = dx >= 0 ? 1 : -1;
+            orc.walkCycle = (orc.walkCycle || 0) + dt * 10;
+            orc.x += (dx / d) * 52 * dt;
+            orc.y += (dy / d) * 52 * dt;
+            enforceOrcPassageMovement(orc, prevX, 14);
+            return;
+          }
+
+          // 군락지(마을) 내부 자유 배회 이동 및 출정 대기 조건 검사
+          orc.wanderTimer = Math.max(0, (orc.wanderTimer || 0) - dt);
+          const wx = orc.wanderX ?? hx;
+          const wy = orc.wanderY ?? hy;
+          const dWander = Math.hypot(wx - orc.x, wy - orc.y);
+          if (dWander > 6) {
+            const prevX = orc.x;
+            if (Math.abs(wx - orc.x) > 0.5) orc.facing = (wx - orc.x) >= 0 ? 1 : -1;
+            orc.walkCycle = (orc.walkCycle || 0) + dt * 8.5;
+            orc.x += ((wx - orc.x) / dWander) * 40 * dt;
+            orc.y += ((wy - orc.y) / dWander) * 40 * dt;
+            enforceOrcPassageMovement(orc, prevX, 14);
+          } else if (orc.wanderTimer <= 0) {
+            orc.wanderTimer = 1.4 + Math.random() * 2.6;
+            const padX = 48;
+            const padYTop = 82;
+            const padYBot = 42;
+            orc.wanderX = ob.x + padX + Math.random() * Math.max(40, ob.w - padX * 2);
+            orc.wanderY = ob.y + padYTop + Math.random() * Math.max(40, ob.h - padYTop - padYBot);
+          }
+
+          if (
+            passageOpen &&
+            topGround &&
+            orc.hp >= orc.maxHp &&
+            (orc.fullHealReadyTimer || 0) <= 0 &&
+            orc.sortieTimer <= 0
+          ) {
+            orc.aiMode = 'SORTIE';
+          }
+          return;
+        }
+
+        // SORTIE 모드: 호전성이 강력해 죽기 전까지 절대 군락지로 복귀하지 않고 최상급 사냥터에서 지속 교전
+        if (!passageOpen || !topGround) {
+          orc.aiMode = 'GUARD';
+          orc.currentTarget = null;
+          orc.sortieTimer = 4 + Math.random() * 4;
+          return;
+        }
+
+        const tb = topGround.bounds;
+        // 1) 살아있는 출정 오크 간 반발(Separation) 벡터 계산 (반경 76px 이내 겹침 방지)
+        const computeOrcSeparation = () => {
+          let sepX = 0;
+          let sepY = 0;
+          const sepRadius = 76;
+          for (let j = 0; j < ORC_STRONGHOLD_ZONE.orcs.length; j++) {
+            const other = ORC_STRONGHOLD_ZONE.orcs[j];
+            if (!other || other === orc || other.isDead || other.hp <= 0) continue;
+            if (other.x >= ORC_STRONGHOLD_ZONE.bounds.x - 10) continue;
+            const odx = orc.x - other.x;
+            const ody = orc.y - other.y;
+            const odist = Math.hypot(odx, ody);
+            if (odist > 0.001 && odist < sepRadius) {
+              const weight = (sepRadius - odist) / sepRadius;
+              sepX += (odx / odist) * weight;
+              sepY += (ody / odist) * weight;
+            } else if (odist <= 0.001) {
+              const fallbackAng = ((idx - j) * 1.15);
+              sepX += Math.cos(fallbackAng);
+              sepY += Math.sin(fallbackAng);
+            }
+          }
+          return { sepX, sepY };
+        };
+
+        // 군락지 내부에 있을 때는 먼저 연결 통로(passage.yMin ~ passage.yMax) 입구를 통과해 최상급 사냥터로 진입
+        if (orc.x >= passage.topSideEntryX) {
+          const needAlignY = orc.y < passage.yMin + 6 || orc.y > passage.yMax - 6;
+          const wpX = needAlignY ? passage.strongholdSideEntryX : passage.topSideEntryX - 18;
+          const wpY = needAlignY
+            ? passage.centerY
+            : Math.max(passage.yMin + 6, Math.min(passage.yMax - 6, orc.y));
+          const dx = wpX - orc.x;
+          const dy = wpY - orc.y;
+          const dist = Math.max(1, Math.hypot(dx, dy));
+          const prevX = orc.x;
+          if (Math.abs(dx) > 0.5) orc.facing = dx >= 0 ? 1 : -1;
+          orc.walkCycle = (orc.walkCycle || 0) + dt * 11;
+          orc.x += (dx / dist) * 58 * dt;
+          orc.y += (dy / dist) * 58 * dt;
+          enforceOrcPassageMovement(orc, prevX, 14);
+          return;
+        }
+
+        // 2) 다른 오크가 이미 교전/조준 중인 타겟 수를 카운트해 중복 뭉침 사냥 방지
+        const countOrcsOnTarget = (candidate) => {
+          let cnt = 0;
+          for (let j = 0; j < ORC_STRONGHOLD_ZONE.orcs.length; j++) {
+            const other = ORC_STRONGHOLD_ZONE.orcs[j];
+            if (!other || other === orc || other.isDead || other.hp <= 0) continue;
+            if (other.currentTarget === candidate) {
+              cnt++;
+            } else if (Math.hypot(other.x - candidate.x, other.y - candidate.y) < 58) {
+              cnt++;
+            }
+          }
+          return cnt;
+        };
+
+        // 최상급 사냥터 내 살아있는 헌터 또는 몬스터 탐색 (점유 타겟 패널티 적용)
+        let bestTarget = null;
+        let bestIsHunter = false;
+        let bestScore = Infinity;
+
+        for (let i = 0; i < hunters.length; i++) {
+          const h = hunters[i];
+          if (!h || h.hp <= 0 || h.state !== 'HUNTING_FIELD' || h.activeGroundId !== topGround.id) continue;
+          const d = Math.hypot(h.x - orc.x, h.y - orc.y);
+          const crowdPenalty = countOrcsOnTarget(h) * 260;
+          const score = d + crowdPenalty;
+          if (score < bestScore) {
+            bestScore = score;
+            bestTarget = h;
+            bestIsHunter = true;
+          }
+        }
+
+        for (let i = 0; i < topGround.monsters.length; i++) {
+          const m = topGround.monsters[i];
+          if (!m || m.hp <= 0) continue;
+          const d = Math.hypot(m.x - orc.x, m.y - orc.y);
+          const crowdPenalty = countOrcsOnTarget(m) * 260;
+          const score = (d * 0.94) + crowdPenalty;
+          if (score < bestScore) {
+            bestScore = score;
+            bestTarget = m;
+            bestIsHunter = false;
+          }
+        }
+
+        orc.currentTarget = bestTarget;
+
+        // 3) 교전 대상이 없을 때 오크 고유 인덱스별 분산 구역(Sector)을 순찰하여 전장에 고르게 배치
+        if (!bestTarget) {
+          const cols = 4;
+          const rows = 5;
+          const sectorIdx = idx % (cols * rows);
+          const col = sectorIdx % cols;
+          const row = Math.floor(sectorIdx / cols);
+          const padX = 68;
+          const padYTop = 88;
+          const padYBot = 52;
+          const usableW = Math.max(120, tb.w - padX * 2);
+          const usableH = Math.max(120, tb.h - padYTop - padYBot);
+          const sectorX = tb.x + padX + ((col + 0.5) / cols) * usableW;
+          const sectorY = tb.y + padYTop + ((row + 0.5) / rows) * usableH;
+
+          const { sepX, sepY } = computeOrcSeparation();
+          const dx = sectorX - orc.x;
+          const dy = sectorY - orc.y;
+          const d = Math.hypot(dx, dy);
+          let moveX = d > 14 ? (dx / d) : 0;
+          let moveY = d > 14 ? (dy / d) : 0;
+          moveX += sepX * 1.45;
+          moveY += sepY * 1.45;
+          const mLen = Math.hypot(moveX, moveY);
+          if (mLen > 0.05) {
+            const prevX = orc.x;
+            if (Math.abs(moveX) > 0.1) orc.facing = moveX >= 0 ? 1 : -1;
+            orc.walkCycle = (orc.walkCycle || 0) + dt * 9;
+            orc.x += (moveX / mLen) * 46 * dt;
+            orc.y += (moveY / mLen) * 46 * dt;
+            orc.x = Math.max(tb.x + 32, Math.min(tb.x + tb.w - 32, orc.x));
+            orc.y = Math.max(tb.y + 72, Math.min(tb.y + tb.h - 32, orc.y));
+            enforceOrcPassageMovement(orc, prevX, 14);
+          }
+          return;
+        }
+
+        // 타겟 주변에서도 오크 고유 각도로 포위 위치를 분산시켜 한 점에 겹치지 않도록 유도
+        const flankAngle = ((idx % 8) / 8) * Math.PI * 2;
+        const flankOffset = Math.min(22, stats.range * 0.55);
+        const aimX = bestTarget.x + Math.cos(flankAngle) * flankOffset;
+        const aimY = bestTarget.y + Math.sin(flankAngle) * flankOffset;
+        const dx = aimX - orc.x;
+        const dy = aimY - orc.y;
+        const distToTarget = Math.hypot(bestTarget.x - orc.x, bestTarget.y - orc.y);
+        const distToAim = Math.hypot(dx, dy);
+        if (Math.abs(bestTarget.x - orc.x) > 0.5) {
+          orc.facing = (bestTarget.x - orc.x) >= 0 ? 1 : -1;
+        }
+
+        const { sepX, sepY } = computeOrcSeparation();
+
+        if (distToTarget > stats.range) {
+          const prevX = orc.x;
+          const dirX = (dx / Math.max(1, distToAim)) + sepX * 1.25;
+          const dirY = (dy / Math.max(1, distToAim)) + sepY * 1.25;
+          const norm = Math.max(0.001, Math.hypot(dirX, dirY));
+          orc.walkCycle = (orc.walkCycle || 0) + dt * 11;
+          orc.x += (dirX / norm) * 54 * dt;
+          orc.y += (dirY / norm) * 54 * dt;
+          orc.x = Math.max(tb.x + 28, Math.min(tb.x + tb.w - 28, orc.x));
+          orc.y = Math.max(tb.y + 68, Math.min(tb.y + tb.h - 28, orc.y));
+          enforceOrcPassageMovement(orc, prevX, 14);
+          return;
+        } else if (Math.hypot(sepX, sepY) > 0.08) {
+          // 사거리 내에서 교전 중에도 인접 오크와 겹치면 측면으로 미세 간격 조정
+          const prevX = orc.x;
+          const sepNorm = Math.hypot(sepX, sepY);
+          orc.x += (sepX / sepNorm) * 34 * dt;
+          orc.y += (sepY / sepNorm) * 34 * dt;
+          orc.x = Math.max(tb.x + 28, Math.min(tb.x + tb.w - 28, orc.x));
+          orc.y = Math.max(tb.y + 68, Math.min(tb.y + tb.h - 28, orc.y));
+          enforceOrcPassageMovement(orc, prevX, 14);
+        }
+
+        if (orc.attackCooldown <= 0) {
+          orc.attackCooldown = 1.05;
+          orc.attackAnimTimer = 0.36;
+          const isCrit = Math.random() < 0.22;
+          const dmg = Math.max(25, Math.round(stats.atk * (isCrit ? 1.45 : 1.0)));
+
+          combatEffects.spawnMeleeSlash({
+            x: orc.x + (dx >= 0 ? 16 : -16),
+            y: orc.y - 2,
+            facing: dx >= 0 ? 1 : -1,
+            slashType: orc.role === '토템 주술진' ? 'MAGIC_BURST' : 'MELEE',
+            color: orc.isGreatWarrior ? '#facc15' : '#ef4444'
+          });
+
+          if (bestIsHunter) {
+            const hStats = bestTarget.getComputedStats();
+            const takenByHunter = Math.max(15, Math.round(dmg - hStats.def * 0.28));
+            bestTarget.hp = Math.max(0, bestTarget.hp - takenByHunter);
+            combatEffects.spawnDamagePopup(bestTarget.x, bestTarget.y, takenByHunter, isCrit, '#fb7185');
+
+            if (bestTarget.hp <= 0) {
+              recordOrcHunterKill(orc);
+              bestTarget.hp = Math.round(bestTarget.maxHp * 0.25);
+              bestTarget.x = (Math.random() - 0.5) * 60;
+              bestTarget.y = 20;
+              bestTarget.waypoints = [];
+              bestTarget.state = 'IDLE';
+              bestTarget.stateTimer = 0.8;
+              bestTarget.activeGroundId = null;
+              bestTarget.currentTargetMonster = null;
+              bestTarget.currentTargetHunter = null;
+              interactionManager.spawnBubble(bestTarget, `💀 ${orc.name}(Lv.${orc.level})에게 패배 후 귀환...`, '#fca5a5');
+            }
+          } else {
+            bestTarget.hp = Math.max(0, bestTarget.hp - dmg);
+            combatEffects.spawnDamagePopup(bestTarget.x, bestTarget.y, dmg, isCrit, '#fde047');
+
+            if (bestTarget.hp <= 0) {
+              bestTarget.hp = 0;
+              bestTarget.provoked = false;
+              bestTarget.aggroTargetId = null;
+              const scaling = getHuntingGroundScaling(topGround, hunters);
+              bestTarget.respawn = bestTarget.isFieldMiniBoss ? (bestTarget.respawnDelay || 25) : scaling.respawnDelay;
+              recordOrcMonsterKill(orc);
+            }
+          }
+        }
+      });
+    }
+
+    // 사냥터 내 사냥 중인 헌터 수(및 최상급 사냥터 출정 오크 수)에 따른 목표 몬스터 수 및 리젠 시간 계산
+    function getHuntingGroundScaling(ground, hunterList) {
+      const hunterCount = (Array.isArray(hunterList) ? hunterList : []).filter(
+        h => h && h.hp > 0 && h.state === 'HUNTING_FIELD' && h.activeGroundId === ground.id
+      ).length;
+
+      let orcCount = 0;
+      if (
+        ground &&
+        ground.id === 'top_field_70_99' &&
+        typeof ORC_STRONGHOLD_ZONE !== 'undefined' &&
+        Array.isArray(ORC_STRONGHOLD_ZONE.orcs)
+      ) {
+        const tb = ground.bounds;
+        const strongholdLeftX = ORC_STRONGHOLD_ZONE.bounds.x;
+        orcCount = ORC_STRONGHOLD_ZONE.orcs.filter((o) => {
+          if (!o || o.isDead || (o.hp || 0) <= 0) return false;
+          const isOutOfStronghold = o.x < strongholdLeftX || o.aiMode === 'SORTIE';
+          const inTopFieldArea =
+            o.x >= tb.x - 20 &&
+            o.x <= strongholdLeftX + 10 &&
+            o.y >= tb.y - 30 &&
+            o.y <= tb.y + tb.h + 30;
+          return isOutOfStronghold && inTopFieldArea;
+        }).length;
+      }
+
+      const rawCount = hunterCount + orcCount;
+      const maxCap = ground.maxCountedHunters || (ground.id === 'top_field_70_99' ? 8 : 5);
+      const countedHunters = Math.min(maxCap, rawCount);
+      const targetMonsterCount = Math.min(
+        ground.maxMonsterCount,
+        ground.baseMonsterCount + countedHunters * 2 // 기본 4마리 ~ 5기 시 12마리 (최상급·환생 사냥터 8기 시 20마리)
+      );
+      const respawnDelay = Math.max(1.0, 4.5 - countedHunters * 0.65); // 0기: 4.5초 ~ 8기: 1.0초
+      return { rawCount, hunterCount, orcCount, countedHunters, targetMonsterCount, respawnDelay };
+    }
+
+    ORC_STRONGHOLD_ZONE.orcs.forEach((o, i) => ensureOrcUnitFields(o, i));
 
     function isSkyIslandOpened() {
       return true;
@@ -4122,20 +4890,6 @@
         respawn: 0,
         attackCooldown: 0.6 + Math.random() * 0.6
       };
-    }
-    // 사냥터 내 사냥 중인 헌터 수(기본 최대 5명, 환생 전용 사냥터는 최대 8명 카운트)에 따른 목표 몬스터 수 및 리젠 시간 계산
-    function getHuntingGroundScaling(ground, hunterList) {
-      const rawCount = hunterList.filter(
-        h => h.state === 'HUNTING_FIELD' && h.activeGroundId === ground.id
-      ).length;
-      const maxCap = ground.maxCountedHunters || 5;
-      const countedHunters = Math.min(maxCap, rawCount);
-      const targetMonsterCount = Math.min(
-        ground.maxMonsterCount,
-        ground.baseMonsterCount + countedHunters * 2 // 기본 4마리 ~ 5명 시 12마리 (환생 전용 사냥터 8명 시 20마리)
-      );
-      const respawnDelay = Math.max(1.0, 4.5 - countedHunters * 0.65); // 0명: 4.5초 ~ 8명: 1.0초
-      return { rawCount, countedHunters, targetMonsterCount, respawnDelay };
     }
 
     ALL_FIELD_GROUNDS.forEach((hg) => {
@@ -6240,6 +6994,22 @@
         return true;
       }
 
+      syncAutoEquipWing() {
+        if (!this.inventory) return false;
+        if (this.equippedWingId && this.inventory.getCount(this.equippedWingId) > 0) {
+          return true;
+        }
+        for (const wId of SKY_WING_ITEM_IDS) {
+          if (this.inventory.getCount(wId) > 0) {
+            this.equippedWingId = wId;
+            this.recalculateVitals(false);
+            return true;
+          }
+        }
+        this.equippedWingId = null;
+        return false;
+      }
+
       getWingEnhanceCost() {
         const enh = Math.max(0, Math.min(15, this.wingEnhance || 0));
         if (enh >= 15) return Infinity;
@@ -6679,6 +7449,28 @@
         }
 
         // 마을에 있을 때 모든 상태가 정상이고 골드 여유가 있다면 장비 강화 최우선
+        this.syncAutoEquipWing();
+        const wingEnhanceCost = this.getWingEnhanceCost();
+        const hasWingEnhanceBudget = Boolean(
+          this.getEquippedWing() &&
+          (this.wingEnhance || 0) < 15 &&
+          (this.wingEnhanceCooldown || 0) <= 0 &&
+          this.personalGold >= wingEnhanceCost &&
+          this.hp >= this.maxHp * 0.45 &&
+          this.fatigue < 80
+        );
+        if (hasWingEnhanceBudget) {
+          const skySmithy = buildings.find(b => b.type === 'sky_smithy');
+          if (skySmithy) {
+            this.setDestinationWithGatePath(skySmithy.x, skySmithy.y + skySmithy.h / 2 + 16);
+            this.targetBuildingName = skySmithy.name;
+            this.targetBuildingType = skySmithy.type;
+            this.targetGroundId = null;
+            this.state = 'WALKING';
+            return;
+          }
+        }
+
         const inTown = this.x < TOWN_EAST_GATE.wallX;
         const isHealthy = this.hp >= this.maxHp * 0.7 && this.mp >= this.maxMp * 0.5 && this.hunger >= 50 && this.fatigue <= 60;
         const smithy = buildings.find(b => b.type === 'smithy');
@@ -6758,16 +7550,6 @@
               this.state = 'WALKING';
               return;
             }
-          }
-          const skySmithy = buildings.find(b => b.type === 'sky_smithy');
-          const wingEnhanceCost = this.getWingEnhanceCost();
-          if (skySmithy && this.getEquippedWing() && (this.wingEnhance || 0) < 15 && (this.wingEnhanceCooldown || 0) <= 0 && this.personalGold >= wingEnhanceCost) {
-            this.setDestinationWithGatePath(skySmithy.x, skySmithy.y + skySmithy.h / 2 + 16);
-            this.targetBuildingName = skySmithy.name;
-            this.targetBuildingType = skySmithy.type;
-            this.targetGroundId = null;
-            this.state = 'WALKING';
-            return;
           }
           const enchanter = buildings.find(b => b.type === 'enchanter');
           const nextEnhance = (!skipEnhance && (this.enhanceCooldown || 0) <= 0 && !canPromoteAnyNow)
@@ -7984,6 +8766,7 @@
             }
           }
         } else if (bldType === 'sky_smithy') {
+          this.syncAutoEquipWing();
           const equippedWing = this.getEquippedWing();
           const curEnh = Math.max(0, this.wingEnhance || 0);
           const enhCost = this.getWingEnhanceCost();
@@ -8000,7 +8783,7 @@
           this.personalGold -= enhCost;
           this.wingEnhanceCooldown = 14;
           baseFee = Math.round(enhCost * 0.25) + lv * 120;
-          const successChance = Math.min(0.95, Math.max(0.30, 0.85 - curEnh * 0.038 + lv * 0.025));
+          const successChance = Math.min(0.45, Math.max(0.03, 0.32 - curEnh * 0.025 + lv * 0.01));
           if (Math.random() < successChance) {
             this.wingEnhance = curEnh + 1;
             this.recalculateVitals(false);
@@ -8366,7 +9149,7 @@
       }
 
       _clampTargetBounds() {
-        this.targetX = Math.max(-750, Math.min(2150, this.targetX));
+        this.targetX = Math.max(-750, Math.min(3050, this.targetX));
         this.targetY = Math.max(-780, Math.min(1260, this.targetY));
       }
 
@@ -8728,6 +9511,34 @@
 
     // 사냥터 및 환생 제단 내 살아있는 몬스터 히트 판정
     function getMonsterAt(wx, wy) {
+      if (typeof ORC_STRONGHOLD_ZONE !== 'undefined' && Array.isArray(ORC_STRONGHOLD_ZONE.orcs)) {
+        for (let oIdx = ORC_STRONGHOLD_ZONE.orcs.length - 1; oIdx >= 0; oIdx--) {
+          const orc = ORC_STRONGHOLD_ZONE.orcs[oIdx];
+          if (!orc || orc.isDead || orc.hp <= 0) continue;
+          const hitRadius = orc.isGreatWarrior ? 32 : 24;
+          if (Math.hypot(wx - orc.x, wy - orc.y) <= hitRadius) {
+            ensureOrcUnitFields(orc, oIdx);
+            const oStats = getOrcCombatStats(orc);
+            return {
+              monster: {
+                ...orc,
+                isOrcUnit: true,
+                orcRef: orc,
+                atk: oStats.atk,
+                def: oStats.def
+              },
+              ground: {
+                id: ORC_STRONGHOLD_ZONE.id,
+                name: `${ORC_STRONGHOLD_ZONE.name} · ${orc.role}`,
+                icon: '👹',
+                baseExp: 0,
+                baseGold: 0
+              }
+            };
+          }
+        }
+      }
+
       const sanctumBoss = BOSS_SANCTUM.boss;
       if (sanctumBoss && sanctumBoss.hp > 0 && Math.hypot(wx - sanctumBoss.x, wy - sanctumBoss.y) <= 58) {
         const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
@@ -8786,6 +9597,47 @@
       const popup = document.getElementById('monsterInfoPopup');
       const m = gameState.selectedMonsterRef;
       let ground = null;
+      if (gameState.selectedMonsterGroundId === ORC_STRONGHOLD_ZONE.id && m?.orcRef) {
+        const liveOrc = m.orcRef;
+        if (!liveOrc || liveOrc.isDead || liveOrc.hp <= 0 || !ORC_STRONGHOLD_ZONE.orcs.includes(liveOrc)) {
+          closeMonsterPopup();
+          return;
+        }
+        ensureOrcUnitFields(liveOrc);
+        const oStats = getOrcCombatStats(liveOrc);
+        const nameEl = document.getElementById('monsterPopupName');
+        const zoneEl = document.getElementById('monsterPopupZone');
+        const atkEl = document.getElementById('monsterPopupAtk');
+        const expEl = document.getElementById('monsterPopupExp');
+        const goldEl = document.getElementById('monsterPopupGold');
+        const healHoldSec = Math.ceil(liveOrc.fullHealReadyTimer || 0);
+        const modeTag = liveOrc.aiMode === 'SORTIE'
+          ? '⚔️ 최상급 사냥터 출정 중'
+          : (!isOrcStrongholdPassageOpen()
+              ? '🔒 군락지 수비 (5티어 보스 처치 시 길 개방)'
+              : (healHoldSec > 0
+                  ? `⏳ 회복 완료 · ${healHoldSec}초 후 출정 가능`
+                  : '✅ 출정 대기 완료'));
+        const statLabels = popup?.querySelectorAll('.monster-stat-label');
+        if (statLabels && statLabels.length >= 3) {
+          statLabels[0].textContent = '⚔️ 공격/방어';
+          statLabels[1].textContent = '💀 누적 KILL';
+          statLabels[2].textContent = '🎯 사냥 내역';
+        }
+
+        if (nameEl) nameEl.textContent = `${liveOrc.name} (Lv.${liveOrc.level})`;
+        if (zoneEl) {
+          zoneEl.textContent = `👹 ${liveOrc.role} · ${modeTag} · HP ${Math.max(0, Math.ceil(liveOrc.hp)).toLocaleString()} / ${liveOrc.maxHp.toLocaleString()}`;
+        }
+        if (atkEl) atkEl.textContent = `${oStats.atk.toLocaleString()} / ${oStats.def.toLocaleString()}`;
+        if (expEl) {
+          expEl.textContent = liveOrc.level >= ORC_MAX_LEVEL
+            ? `${(liveOrc.totalKillCount || 0).toLocaleString()} KILL (MAX)`
+            : `${(liveOrc.totalKillCount || 0).toLocaleString()} / ${(liveOrc.nextLevelKills || 10).toLocaleString()} KILL`;
+        }
+        if (goldEl) goldEl.textContent = `헌터 ${liveOrc.killCount || 0} · 몬스터 ${liveOrc.monsterKillCount || 0}`;
+        return;
+      }
       if (gameState.selectedMonsterGroundId === BOSS_SANCTUM.id) {
         const cfg = getBossStageConfig(BOSS_SANCTUM.bossStage);
         ground = {
@@ -8834,6 +9686,13 @@
                 : (ground.goldDropRange
                     ? `${formatGold(ground.goldDropRange.min)}~${formatGold(ground.goldDropRange.max)} G`
                     : `${formatGold(ground.baseGold)} G`)));
+
+      const statLabels = popup?.querySelectorAll('.monster-stat-label');
+      if (statLabels && statLabels.length >= 3) {
+        statLabels[0].textContent = '⚔️ 공격력';
+        statLabels[1].textContent = '✨ 경험치';
+        statLabels[2].textContent = '💰 골드';
+      }
 
       if (nameEl) nameEl.textContent = m.name;
       if (zoneEl) {
@@ -12963,6 +13822,769 @@
         });
       });
 
+      // [최상급 사냥터 오른쪽 옆: 👹 오크 군락지 렌더링 · 헌터 진입 불가]
+      if (typeof ORC_STRONGHOLD_ZONE !== 'undefined') {
+        const ob = ORC_STRONGHOLD_ZONE.bounds;
+        const tOrc = performance.now() * 0.0035;
+
+        // 붉은 황토·화산재 군락지 대지
+        ctx.save();
+        ctx.fillStyle = '#2b1311';
+        ctx.beginPath();
+        ctx.roundRect(ob.x, ob.y, ob.w, ob.h, 24);
+        ctx.fill();
+
+        // 내부 균열 & 야영지 구역 음영
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(ob.x, ob.y, ob.w, ob.h, 24);
+        ctx.clip();
+
+        ctx.fillStyle = 'rgba(127, 29, 29, 0.24)';
+        ctx.beginPath();
+        ctx.arc(ob.x + ob.w * 0.52, ob.y + ob.h * 0.5, 190, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 오크 대족장 막사 & 전쟁 토템 기둥
+        const tentX = ob.x + ob.w * 0.52;
+        const tentY = ob.y + ob.h * 0.42;
+
+        // [오크 군락지 중앙: 👹 오크 야영지 본진 건물]
+        const campX = ob.x + ob.w * 0.5;
+        const campY = ob.y + ob.h * 0.52;
+        const campW = 196;
+        const campH = 128;
+        const campLeft = campX - campW / 2;
+        const campTop = campY - campH / 2;
+
+        // 야영지 바닥 다져진 흙마당 & 그림자
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+        ctx.beginPath();
+        ctx.ellipse(campX, campY + 34, 118, 42, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 야영지 외곽 목책 방벽 (좌·우 원목 기둥)
+        for (let px = campLeft - 14; px <= campLeft + campW + 14; px += 14) {
+          if (px > campX - 28 && px < campX + 28) continue;
+          ctx.fillStyle = '#451a03';
+          ctx.strokeStyle = '#1c1917';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(px - 4, campTop + campH + 14);
+          ctx.lineTo(px - 4, campTop + campH - 12);
+          ctx.lineTo(px, campTop + campH - 20);
+          ctx.lineTo(px + 4, campTop + campH - 12);
+          ctx.lineTo(px + 4, campTop + campH + 14);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // 좌·우 보조 막사 2동
+        [-68, 68].forEach((sideX) => {
+          const sx = campX + sideX;
+          const sy = campY + 8;
+          ctx.fillStyle = '#57534e';
+          ctx.strokeStyle = '#1c1917';
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.moveTo(sx - 30, sy + 24);
+          ctx.lineTo(sx, sy - 22);
+          ctx.lineTo(sx + 30, sy + 24);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#7f1d1d';
+          ctx.beginPath();
+          ctx.moveTo(sx - 20, sy + 24);
+          ctx.lineTo(sx, sy - 10);
+          ctx.lineTo(sx + 20, sy + 24);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // 중앙 대족장 본진 건물 (거대 가죽·철갑 지붕 요새 막사)
+        ctx.fillStyle = '#292524';
+        ctx.strokeStyle = '#0c0a09';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.roundRect(campX - 54, campTop + 34, 108, 62, 8);
+        ctx.fill();
+        ctx.stroke();
+
+        // 붉은 가죽 & 강철 리브 대지붕
+        ctx.fillStyle = '#7f1d1d';
+        ctx.strokeStyle = '#dc2626';
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.moveTo(campX - 66, campTop + 42);
+        ctx.lineTo(campX - 36, campTop - 16);
+        ctx.lineTo(campX + 36, campTop - 16);
+        ctx.lineTo(campX + 66, campTop + 42);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // 지붕 위 교차 거대 엄니(상아) 장식
+        ctx.strokeStyle = '#fef3c7';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(campX - 24, campTop - 4);
+        ctx.quadraticCurveTo(campX - 42, campTop - 28, campX - 18, campTop - 38);
+        ctx.moveTo(campX + 24, campTop - 4);
+        ctx.quadraticCurveTo(campX + 42, campTop - 28, campX + 18, campTop - 38);
+        ctx.stroke();
+
+        // 본진 아치형 출입구
+        ctx.fillStyle = '#0c0a09';
+        ctx.beginPath();
+        ctx.roundRect(campX - 18, campTop + 54, 36, 42, [16, 16, 0, 0]);
+        ctx.fill();
+        ctx.strokeStyle = '#78350f';
+        ctx.lineWidth = 2.2;
+        ctx.stroke();
+
+        // 출입구 상단 오크 해골 문장
+        ctx.fillStyle = '#e7e5e4';
+        ctx.beginPath();
+        ctx.arc(campX, campTop + 34, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.arc(campX - 3.2, campTop + 33, 1.8, 0, Math.PI * 2);
+        ctx.arc(campX + 3.2, campTop + 33, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 야영지 앞 이글거리는 전쟁 화로 2기 & 붉은 깃발
+        [-38, 38].forEach((fx) => {
+          const bx = campX + fx;
+          const by = campTop + 88;
+          ctx.fillStyle = '#44403c';
+          ctx.beginPath();
+          ctx.arc(bx, by, 8, 0, Math.PI);
+          ctx.fill();
+
+          const flameR = 5.5 + Math.sin(tOrc * 3.5 + fx) * 1.4;
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.arc(bx, by - 3, flameR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath();
+          ctx.arc(bx, by - 3, flameR * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // 야영지 중앙 건물 명판
+        const campLabel = '👹 오크 야영지 본진';
+        ctx.font = 'bold 11.5px sans-serif';
+        const campTw = ctx.measureText(campLabel).width;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect(campX - campTw / 2 - 10, campTop + campH - 18, campTw + 20, 20, 6);
+        ctx.fill();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#fca5a5';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(campLabel, campX, campTop + campH - 8);
+
+        // 중앙 전쟁 토템 2기
+        [-135, 135].forEach((ox) => {
+          const tx = tentX + ox;
+          const ty = tentY + 18;
+          ctx.fillStyle = '#57534e';
+          ctx.fillRect(tx - 8, ty - 28, 16, 48);
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(tx, ty - 16, 4.5 + Math.sin(tOrc * 2 + ox) * 1.1, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+
+        // 외곽 진홍빛 봉쇄 결계 테두리
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3.2;
+        ctx.setLineDash([12, 6]);
+        ctx.beginPath();
+        ctx.roundRect(ob.x, ob.y, ob.w, ob.h, 24);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 최상급 사냥터와의 경계선(서쪽 면): 5티어 보스 처치 시 연결 길 개방, 그 외에는 가시 방책으로 봉쇄
+        const passageOpen = isOrcStrongholdPassageOpen();
+        const psg = ORC_STRONGHOLD_PASSAGE;
+
+        if (passageOpen) {
+          // 5티어 보스 처치 후 개방된 연결 길 바닥 & 횃불 기둥 렌더링
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(psg.xMin - 8, psg.yMin, (psg.xMax - psg.xMin) + 16, psg.yMax - psg.yMin);
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.beginPath();
+          ctx.moveTo(psg.xMin - 4, psg.centerY);
+          ctx.lineTo(psg.xMax + 4, psg.centerY);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 통로 상·하 문주 횃불
+          [psg.yMin, psg.yMax].forEach((py) => {
+            ctx.fillStyle = '#292524';
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(ob.x - 14, py, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          });
+        }
+
+        ctx.strokeStyle = '#fca5a5';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        if (passageOpen) {
+          ctx.moveTo(ob.x - 14, ob.y + 18);
+          ctx.lineTo(ob.x - 14, psg.yMin - 4);
+          ctx.moveTo(ob.x - 14, psg.yMax + 4);
+          ctx.lineTo(ob.x - 14, ob.y + ob.h - 18);
+        } else {
+          ctx.moveTo(ob.x - 14, ob.y + 18);
+          ctx.lineTo(ob.x - 14, ob.y + ob.h - 18);
+        }
+        ctx.stroke();
+
+        for (let sy = ob.y + 30; sy <= ob.y + ob.h - 30; sy += 34) {
+          if (passageOpen && sy >= psg.yMin - 10 && sy <= psg.yMax + 10) continue;
+          ctx.fillStyle = '#78350f';
+          ctx.strokeStyle = '#ef4444';
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(ob.x - 22, sy + 7);
+          ctx.lineTo(ob.x - 6, sy);
+          ctx.lineTo(ob.x - 22, sy - 7);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        // 오크 군락지 상단 안내 표지판
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(ob.x + 18, ob.y + 16, 460, 44, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('👹 오크 군락지 (붉은 철혈 분지) [헌터 진입 불가 구역]', ob.x + 30, ob.y + 30);
+
+        ctx.fillStyle = '#fde68a';
+        ctx.font = '11px sans-serif';
+        const regularOrcCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior).length;
+        const hasGreatWarrior = ORC_STRONGHOLD_ZONE.orcs.some(o => o && o.isGreatWarrior);
+        const passageStatusNote = passageOpen ? '🛤️ 연결 길 개방됨 (통로 전용 출입)' : '🔒 5티어 보스 처치 시 연결 길 개방';
+        ctx.fillText(
+          hasGreatWarrior
+            ? `${passageStatusNote} · 주둔 ${regularOrcCount}/${ORC_STRONGHOLD_ZONE.maxCount}마리 + 👑 오크 대전사 강림!`
+            : `${passageStatusNote} · 주둔 병력 ${regularOrcCount} / ${ORC_STRONGHOLD_ZONE.maxCount}마리 (티어 보스 클리어당 +2마리)`,
+          ob.x + 30,
+          ob.y + 47
+        );
+
+        // 군락지 내부 상주 오크 병력 렌더링 (근육질 체형 · 하악 엄니 · 강철 견갑 · 병종별 무기 · 10티어 오크 대전사)
+        ORC_STRONGHOLD_ZONE.orcs.forEach((orc, idx) => {
+          ensureOrcUnitFields(orc, idx);
+
+          // 사망 후 군락지에서 1분(60초) 부활 대기 중인 오크 카운트다운 표시
+          if (orc.isDead) {
+            const remSec = Math.max(1, Math.ceil((orc.respawnRemainingMs || 0) / 1000));
+            const ghostX = (ob.x + ob.w * 0.5) + ((idx % 5) - 2) * 54;
+            const ghostY = (ob.y + ob.h * 0.52 + 64) + Math.floor(idx / 5) * 20;
+            const deadLabel = `⏳ ${orc.name} Lv.${orc.level} (${remSec}s)`;
+            ctx.save();
+            ctx.font = 'bold 10px sans-serif';
+            const dtw = ctx.measureText(deadLabel).width;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.beginPath();
+            ctx.roundRect(ghostX - dtw / 2 - 6, ghostY - 8, dtw + 12, 16, 5);
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(248, 113, 113, 0.7)';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+            ctx.fillStyle = '#fca5a5';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(deadLabel, ghostX, ghostY);
+            ctx.restore();
+            return;
+          }
+
+          const breathe = Math.sin(tOrc * 1.6 + idx * 1.3) * 1.4;
+          const isGreatWarrior = Boolean(orc.isGreatWarrior) || orc.role === '오크 대전사';
+          const sc = (orc.size || (isGreatWarrior ? 27 : 16)) / 16;
+          const isChief = orc.role === '군락지 지배자';
+          const isShaman = orc.role === '토템 주술진';
+          const isHeavy = orc.role === '후방 수비대';
+          const skinBase = isGreatWarrior ? '#7f1d1d' : (orc.color || '#4d7c0f');
+          const skinHighlight = isGreatWarrior ? '#dc2626' : (isChief ? '#b91c1c' : (isShaman ? '#9333ea' : '#65a30d'));
+          const skinShadow = '#1c1917';
+          const orcFacing = (orc.facing || -1) >= 0 ? 1 : -1;
+          const isAttacking = (orc.attackAnimTimer || 0) > 0;
+          const atkProg = isAttacking ? Math.max(0, Math.min(1, 1 - (orc.attackAnimTimer / 0.36))) : 0;
+          const lungeX = isAttacking
+            ? orcFacing * (atkProg < 0.32 ? -(atkProg / 0.32) * 3.5 : Math.sin(((atkProg - 0.32) / 0.68) * Math.PI) * 8.5)
+            : 0;
+          const bodyTilt = isAttacking
+            ? orcFacing * (atkProg < 0.32 ? -0.14 : Math.sin(((atkProg - 0.32) / 0.68) * Math.PI) * 0.24)
+            : 0;
+          const walkBob = orc.aiMode === 'SORTIE' ? Math.abs(Math.sin(orc.walkCycle || 0)) * 2.2 : 0;
+
+          ctx.save();
+          ctx.translate(orc.x, orc.y);
+
+          // 10티어 오크 대전사 전용 이중 회전 진홍·황금 패기 오라 (대족장 단일 오라와 구별)
+          if (isGreatWarrior) {
+            ctx.save();
+            ctx.translate(0, 18 * sc);
+            ctx.scale(1, 0.44);
+
+            // 외곽 황금 룬 링 (정방향 회전)
+            ctx.save();
+            ctx.rotate(tOrc * 1.15);
+            ctx.strokeStyle = 'rgba(250, 204, 21, 0.9)';
+            ctx.lineWidth = 2.6;
+            ctx.setLineDash([10, 5]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 36 * sc, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // 내곽 진홍빛 패기 링 (역방향 회전)
+            ctx.save();
+            ctx.rotate(-tOrc * 1.55);
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.92)';
+            ctx.lineWidth = 2.4;
+            ctx.setLineDash([7, 4]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 26 * sc, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+          } else if (isChief) {
+            ctx.save();
+            ctx.translate(0, 18 * sc);
+            ctx.scale(1, 0.42);
+            ctx.rotate(tOrc * 0.9);
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.72)';
+            ctx.lineWidth = 2.4;
+            ctx.setLineDash([8, 5]);
+            ctx.beginPath();
+            ctx.arc(0, 0, 32 * sc, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+          }
+
+          // 바닥 접지 그림자
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+          ctx.beginPath();
+          ctx.ellipse(lungeX * 0.5, 18 * sc, 18 * sc, 6.5 * sc, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.save();
+          ctx.scale(sc, sc);
+          ctx.translate(lungeX, -breathe * 0.6 - walkBob);
+          ctx.rotate(bodyTilt);
+          ctx.scale(orcFacing, 1);
+
+          // 1. 굵은 다리 & 징 박힌 가죽/황금 전투화
+          ctx.fillStyle = skinShadow;
+          ctx.fillRect(-10, 8, 7.5, 10);
+          ctx.fillRect(2.5, 8, 7.5, 10);
+          ctx.fillStyle = isGreatWarrior ? '#7f1d1d' : '#44403c';
+          ctx.strokeStyle = isGreatWarrior ? '#facc15' : '#0c0a09';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.roundRect(-11.5, 13, 9.5, 6, 2);
+          ctx.roundRect(2, 13, 9.5, 6, 2);
+          ctx.fill();
+          ctx.stroke();
+
+          // 2. 오크 대전사 / 대족장 전장 망토
+          if (isGreatWarrior || isChief) {
+            ctx.fillStyle = isGreatWarrior ? '#270505' : '#450a0a';
+            ctx.strokeStyle = isGreatWarrior ? '#facc15' : '#7f1d1d';
+            ctx.lineWidth = isGreatWarrior ? 2 : 1.6;
+            ctx.beginPath();
+            ctx.moveTo(-15, -8);
+            ctx.lineTo(-24, 17);
+            ctx.lineTo(24, 17);
+            ctx.lineTo(15, -8);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          }
+
+          // 3. 근육질 역삼각형 상체 & 대흉근·복근 음영
+          ctx.fillStyle = skinBase;
+          ctx.strokeStyle = isGreatWarrior ? '#facc15' : skinShadow;
+          ctx.lineWidth = isGreatWarrior ? 2.2 : 2;
+          ctx.beginPath();
+          ctx.moveTo(-16, -9);
+          ctx.lineTo(16, -9);
+          ctx.lineTo(11, 9);
+          ctx.lineTo(-11, 9);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // 대흉근 & 복근 하이라이트 (오크 대전사는 황금 흉갑 테두리 포함)
+          ctx.fillStyle = skinHighlight;
+          ctx.beginPath();
+          ctx.roundRect(-12, -7.5, 10.5, 6.5, 2.5);
+          ctx.roundRect(1.5, -7.5, 10.5, 6.5, 2.5);
+          ctx.fill();
+
+          if (isGreatWarrior) {
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 1.3;
+            ctx.beginPath();
+            ctx.moveTo(-9, -6);
+            ctx.lineTo(0, 1);
+            ctx.lineTo(9, -6);
+            ctx.stroke();
+          }
+
+          ctx.strokeStyle = 'rgba(12, 10, 9, 0.55)';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(0, -7);
+          ctx.lineTo(0, 5);
+          ctx.moveTo(-6, 1.5);
+          ctx.lineTo(6, 1.5);
+          ctx.stroke();
+
+          // 가죽 전쟁 벨트 & 해골/황금 버클
+          ctx.fillStyle = '#292524';
+          ctx.fillRect(-11.5, 5.5, 23, 4.5);
+          ctx.fillStyle = (isGreatWarrior || isChief) ? '#facc15' : '#94a3b8';
+          ctx.beginPath();
+          ctx.arc(0, 7.8, isGreatWarrior ? 3.8 : 3.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 4. 굵은 팔뚝 & 손목 완갑
+          [-1, 1].forEach((side) => {
+            ctx.fillStyle = skinBase;
+            ctx.strokeStyle = skinShadow;
+            ctx.lineWidth = 1.7;
+            ctx.beginPath();
+            ctx.roundRect(side > 0 ? 13 : -20, -6, 7, 15, 3.5);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = isGreatWarrior ? '#f59e0b' : '#57534e';
+            ctx.fillRect(side > 0 ? 13 : -20, 4, 7, 4);
+          });
+
+          // 5. 어깨 강철/진홍-황금 가시 견갑
+          [-15.5, 15.5].forEach((sx, sIdx) => {
+            const dir = sIdx === 0 ? -1 : 1;
+            ctx.fillStyle = isGreatWarrior ? '#991b1b' : (isShaman ? '#581c87' : (isChief ? '#7f1d1d' : '#57534e'));
+            ctx.strokeStyle = (isGreatWarrior || isChief) ? '#facc15' : '#1c1917';
+            ctx.lineWidth = isGreatWarrior ? 2 : 1.6;
+            ctx.beginPath();
+            ctx.arc(sx, -8, isGreatWarrior ? 7.6 : (isHeavy || isChief ? 6.8 : 5.6), Math.PI, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 견갑 위 솟은 강철/황금 가시
+            ctx.fillStyle = isGreatWarrior ? '#fde047' : '#e2e8f0';
+            ctx.beginPath();
+            ctx.moveTo(sx + dir * 2, -12);
+            ctx.lineTo(sx + dir * 7.8, -19.5);
+            ctx.lineTo(sx + dir * 5.8, -10.5);
+            ctx.closePath();
+            ctx.fill();
+          });
+
+          // 6. 우락부락한 오크 두상 · 뾰족한 귀 · 찌푸린 눈썹뼈 · 하악 엄니(송곳니)
+          ctx.fillStyle = skinBase;
+          ctx.strokeStyle = skinShadow;
+          ctx.lineWidth = 1.8;
+          ctx.beginPath();
+          ctx.roundRect(-8.5, -22, 17, 15, 5.5);
+          ctx.fill();
+          ctx.stroke();
+
+          // 양옆 뾰족한 오크 귀
+          ctx.fillStyle = skinHighlight;
+          ctx.beginPath();
+          ctx.moveTo(-8.5, -16);
+          ctx.lineTo(-15.5, -19.5);
+          ctx.lineTo(-8.5, -12.5);
+          ctx.moveTo(8.5, -16);
+          ctx.lineTo(15.5, -19.5);
+          ctx.lineTo(8.5, -12.5);
+          ctx.fill();
+          ctx.stroke();
+
+          // 두꺼운 눈썹뼈 & 붉은/황금 야수 안광
+          ctx.fillStyle = skinShadow;
+          ctx.beginPath();
+          ctx.moveTo(-7, -17.5);
+          ctx.lineTo(-1.5, -15.5);
+          ctx.lineTo(-1.5, -14);
+          ctx.lineTo(-7, -15.5);
+          ctx.moveTo(7, -17.5);
+          ctx.lineTo(1.5, -15.5);
+          ctx.lineTo(1.5, -14);
+          ctx.lineTo(7, -15.5);
+          ctx.fill();
+
+          ctx.fillStyle = isGreatWarrior ? '#fde047' : (isShaman ? '#f0abfc' : '#ef4444');
+          ctx.beginPath();
+          ctx.arc(-4, -14.2, isGreatWarrior ? 1.8 : 1.5, 0, Math.PI * 2);
+          ctx.arc(4, -14.2, isGreatWarrior ? 1.8 : 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 튀어나온 아래턱 & 위로 솟은 하악 엄니(송곳니) 한 쌍 (오크 대전사는 대형 엄니)
+          ctx.fillStyle = skinHighlight;
+          ctx.fillRect(-6.5, -11.5, 13, 4.5);
+          ctx.strokeStyle = skinShadow;
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.moveTo(-5, -9.5);
+          ctx.lineTo(5, -9.5);
+          ctx.stroke();
+
+          const tuskTipY = isGreatWarrior ? -17.2 : -14.8;
+          const tuskOutX = isGreatWarrior ? 8.2 : 7.2;
+          ctx.fillStyle = '#fefce8';
+          ctx.strokeStyle = '#78350f';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(-6, -9.5);
+          ctx.lineTo(-tuskOutX, tuskTipY);
+          ctx.lineTo(-3.4, -10.2);
+          ctx.moveTo(6, -9.5);
+          ctx.lineTo(tuskOutX, tuskTipY);
+          ctx.lineTo(3.4, -10.2);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // 병종별 투구 / 상투 / 오크 대전사 삼중 뿔 투구
+          if (isGreatWarrior) {
+            ctx.fillStyle = '#450a0a';
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.9;
+            ctx.beginPath();
+            ctx.arc(0, -19.5, 9.5, Math.PI, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 삼중 황금 뿔 투구 장식
+            ctx.fillStyle = '#fde047';
+            ctx.strokeStyle = '#78350f';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(-8, -20);
+            ctx.lineTo(-16.5, -32.5);
+            ctx.lineTo(-4.5, -22.5);
+            ctx.moveTo(8, -20);
+            ctx.lineTo(16.5, -32.5);
+            ctx.lineTo(4.5, -22.5);
+            ctx.moveTo(-2.6, -24);
+            ctx.lineTo(0, -34.5);
+            ctx.lineTo(2.6, -24);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else if (isChief) {
+            ctx.fillStyle = '#292524';
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.6;
+            ctx.beginPath();
+            ctx.arc(0, -19.5, 9, Math.PI, 0);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // 대족장 쌍뿔 장식
+            ctx.fillStyle = '#fde047';
+            ctx.beginPath();
+            ctx.moveTo(-7.5, -20);
+            ctx.lineTo(-14.5, -30);
+            ctx.lineTo(-4.5, -22.5);
+            ctx.moveTo(7.5, -20);
+            ctx.lineTo(14.5, -30);
+            ctx.lineTo(4.5, -22.5);
+            ctx.fill();
+          } else if (isShaman) {
+            // 주술사 깃털 & 해골 장식 머리띠
+            ctx.fillStyle = '#ec4899';
+            ctx.beginPath();
+            ctx.moveTo(-2, -22);
+            ctx.lineTo(-5, -31);
+            ctx.lineTo(0, -24);
+            ctx.lineTo(4, -31);
+            ctx.lineTo(3, -22);
+            ctx.fill();
+          } else {
+            // 전사 상투 머리
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath();
+            ctx.arc(0, -24.5, 3.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // 7. 병종별 리얼 무기 (오크 대전사 거대 양날 진홍-황금 전장대부 / 대족장 쌍날 대부 / 주술사 해골 주술봉)
+          ctx.save();
+          ctx.translate(18, 2);
+          let orcWeaponAngle = 0.28 + Math.sin(tOrc * 1.5 + idx) * 0.06;
+          if (isAttacking) {
+            if (isShaman) {
+              // 혈투주술사: 지팡이를 높이 들어 올려 보랏빛 주술 파동 시전
+              orcWeaponAngle = -0.35 - Math.sin(atkProg * Math.PI) * 0.65;
+            } else {
+              // 전사/중갑병/대족장/오크 대전사: 머리 위로 치켜들었다가 전방으로 내려찍기 스윙
+              orcWeaponAngle = atkProg < 0.32
+                ? (0.28 - (atkProg / 0.32) * 1.35)
+                : (-1.07 + ((atkProg - 0.32) / 0.68) * 2.45);
+            }
+          }
+          ctx.rotate(orcWeaponAngle);
+          if (isGreatWarrior) {
+            // 오크 대전사 거대 양날 진홍-황금 전장대부
+            ctx.fillStyle = '#292524';
+            ctx.fillRect(-2.2, -32, 4.4, 42);
+            ctx.fillStyle = '#facc15';
+            ctx.fillRect(-2.6, -34, 5.2, 3);
+
+            ctx.fillStyle = '#991b1b';
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.moveTo(2, -31);
+            ctx.quadraticCurveTo(18.5, -34, 19.5, -21);
+            ctx.quadraticCurveTo(18.5, -9, 2, -12);
+            ctx.moveTo(-2, -31);
+            ctx.quadraticCurveTo(-18.5, -34, -19.5, -21);
+            ctx.quadraticCurveTo(-18.5, -9, -2, -12);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+          } else if (isShaman) {
+            // 해골 주술 지팡이
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-1.6, -26, 3.2, 34);
+            ctx.fillStyle = '#f5f5f4';
+            ctx.beginPath();
+            ctx.arc(0, -27, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#e879f9';
+            ctx.shadowColor = '#c084fc';
+            ctx.shadowBlur = isAttacking ? 16 : 9;
+            ctx.beginPath();
+            ctx.arc(0, -33, (isAttacking ? 4.8 : 3.2) + Math.sin(tOrc * 3) * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+          } else if (isHeavy) {
+            // 중갑 가시 철퇴
+            ctx.fillStyle = '#292524';
+            ctx.fillRect(-1.8, -24, 3.6, 32);
+            ctx.fillStyle = '#64748b';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.arc(0, -26, 6.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+          } else {
+            // 오크 강철 전투도끼 (대족장은 대형 쌍날 도끼)
+            ctx.fillStyle = '#451a03';
+            ctx.fillRect(-1.8, -26, 3.6, 34);
+            ctx.fillStyle = isChief ? '#e2e8f0' : '#94a3b8';
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath();
+            ctx.moveTo(1.5, -25);
+            ctx.quadraticCurveTo(14, -27, 15, -18);
+            ctx.quadraticCurveTo(14, -10, 1.5, -12);
+            if (isChief) {
+              ctx.moveTo(-1.5, -25);
+              ctx.quadraticCurveTo(-14, -27, -15, -18);
+              ctx.quadraticCurveTo(-14, -10, -1.5, -12);
+            }
+            ctx.fill();
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 공격 타격 순간 무기 참격 호 / 주술 파동 이펙트
+          if (isAttacking && atkProg >= 0.3) {
+            const slashFade = Math.max(0, 1 - ((atkProg - 0.3) / 0.7));
+            ctx.save();
+            ctx.globalAlpha = slashFade;
+            if (isShaman) {
+              ctx.strokeStyle = '#e879f9';
+              ctx.lineWidth = 2.4;
+              ctx.beginPath();
+              ctx.arc(22, -16, 8 + (1 - slashFade) * 14, 0, Math.PI * 2);
+              ctx.stroke();
+            } else {
+              ctx.strokeStyle = isGreatWarrior ? '#fde047' : '#ef4444';
+              ctx.lineWidth = isGreatWarrior ? 4.2 : 3.2;
+              ctx.beginPath();
+              ctx.arc(16, -2, isGreatWarrior ? 26 : 20, -Math.PI * 0.45, Math.PI * 0.48);
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          ctx.restore(); // scale & breathe 종료
+          // 체력 바 & 이름·레벨 명판 (오크 대전사는 황금 테두리 진홍 명판)
+          const labelY = -36 * sc;
+          const hpRatio = Math.max(0, Math.min(1, (orc.hp || 0) / Math.max(1, orc.maxHp || 1)));
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+          ctx.fillRect(-20, labelY - 16, 40, 4.5);
+          ctx.fillStyle = isGreatWarrior ? '#facc15' : '#ef4444';
+          ctx.fillRect(-19, labelY - 15, 38 * hpRatio, 2.5);
+
+          const orcDisplayLabel = `${orc.name} · Lv.${orc.level || 1}`;
+          ctx.font = isGreatWarrior ? 'bold 11.5px sans-serif' : 'bold 10.5px sans-serif';
+          const tw = ctx.measureText(orcDisplayLabel).width;
+          ctx.fillStyle = isGreatWarrior ? 'rgba(69, 10, 10, 0.94)' : 'rgba(15, 23, 42, 0.85)';
+          ctx.beginPath();
+          ctx.roundRect(-tw / 2 - 7, labelY - 9, tw + 14, isGreatWarrior ? 17 : 15, 5);
+          ctx.fill();
+          if (isGreatWarrior) {
+            ctx.strokeStyle = '#facc15';
+            ctx.lineWidth = 1.6;
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = (isGreatWarrior || isChief) ? '#fde047' : '#fecaca';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(orcDisplayLabel, 0, labelY - 0.5);
+          ctx.restore();
+        });
+
+        ctx.restore();
+      }
+
       // [최상급 사냥터 위쪽 3환생 이상 전용 구역: ☁️ 천공의 섬 · 도보 이동 불가 · 포탈 전용]
       {
         const sbSky = SKY_ISLAND_GROUND.bounds;
@@ -15989,6 +17611,20 @@
           const step = pr.speed * dt;
           if (dist <= step + 8) {
             if (pr.isMonsterProj) {
+              if (pr.isOrcTarget) {
+                const targetOrc = pr.target;
+                if (targetOrc && !targetOrc.isDead && targetOrc.hp > 0) {
+                  const oStats = getOrcCombatStats(targetOrc);
+                  const takenDmg = Math.max(12, Math.round(pr.dmg - oStats.def * 0.22));
+                  targetOrc.hp = Math.max(0, targetOrc.hp - takenDmg);
+                  this.spawnDamagePopup(targetOrc.x, targetOrc.y - 10, takenDmg, false, '#fca5a5');
+                  if (targetOrc.hp <= 0) {
+                    killOrcUnit(targetOrc);
+                  }
+                }
+                this.projectiles.splice(i, 1);
+                continue;
+              }
               // 원거리 몬스터(숲 고블린궁수 / 보스) 투사체가 헌터에게 적중
               const targetHunter = pr.target;
               if ((targetHunter.state === 'HUNTING_FIELD' || targetHunter.state === 'BOSS_RAID' || targetHunter.state === 'REBIRTH_ALTAR_HUNT') && targetHunter.hp > 0) {
@@ -16158,6 +17794,7 @@
           BOSS_SANCTUM.prepTimer = 0;
           BOSS_SANCTUM.fallenHunterIds.clear();
           resetBossSanctumMonster();
+          syncOrcStrongholdPopulation(true);
           updateBossRaidHudButton();
 
           gameState.gold += clearedCfg.rewardVillageGold;
@@ -16175,9 +17812,10 @@
             h.stateTimer = 0.5;
             interactionManager.spawnBubble(h, `🏆 T${clearedCfg.stage} 보스 토벌 성공!`, '#fde047');
           });
+          const regularCountAfter = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior).length;
           const nextMsg = hasNextStage
-            ? `건물 Lv.${clearedCfg.stage + 1} 해금 개방 · 다음 보스 [${nextCfg.fullName}] 출현!`
-            : `최종 T10 보스 제패 달성!`;
+            ? `건물 Lv.${clearedCfg.stage + 1} 해금 개방 · 오크 군락지 병력 ${regularCountAfter}/${ORC_STRONGHOLD_ZONE.maxCount}마리로 증원 · 다음 보스 [${nextCfg.fullName}] 출현!`
+            : `최종 T10 보스 제패 달성 · 오크 야영지 본진 앞에 [👑 오크 대전사] 출현! (주둔 ${regularCountAfter}/${ORC_STRONGHOLD_ZONE.maxCount}마리)`;
           showToast(`🎉 T${clearedCfg.stage} 보스 토벌 (+${formatGold(clearedCfg.rewardVillageGold)}G)! ${nextMsg}`);
         }
       },
@@ -16443,21 +18081,84 @@
       ALL_FIELD_GROUNDS.forEach((hg) => {
         const scaling = getHuntingGroundScaling(hg, hunters);
 
-        // 헌터 수 증가 시 최대 몬스터 수까지 추가 스폰 (0.1% 확률로 중간 보스 등장 판정)
+        // 헌터/오크 수 증가 시 최대 몬스터 수까지 추가 스폰 (0.1% 확률로 중간 보스 등장 판정)
         while (hg.monsters.length < scaling.targetMonsterCount) {
-          hg.monsters.push(createGroundMonster(hg, hg.monsters.length, true));
+          const spawned = createGroundMonster(hg, hg.monsters.length, true);
+          spawned.respawn = 0;
+          hg.monsters.push(spawned);
         }
 
-        // 헌터가 빠져나가면 처치된(hp <= 0) 몬스터 초과 슬롯부터 정리
+        // 헌터/오크가 빠져나가면 처치된(hp <= 0) 몬스터 초과 슬롯부터 정리
         if (hg.monsters.length > scaling.targetMonsterCount) {
           const deadIdx = hg.monsters.findIndex(m => m.hp <= 0);
           if (deadIdx !== -1) {
             hg.monsters.splice(deadIdx, 1);
+          } else if (hg.id === 'top_field_70_99') {
+            // 최상급 사냥터에 헌터/오크가 줄어들어 살아있는 몬스터가 목표치를 초과하면 주기적으로 초과 개체 디스폰
+            hg.despawnTimer = (hg.despawnTimer || 0) + dt;
+            if (hg.despawnTimer >= 2.6) {
+              hg.despawnTimer = 0;
+
+              const activeCombatants = [
+                ...hunters.filter(h => h && h.hp > 0 && h.state === 'HUNTING_FIELD' && h.activeGroundId === hg.id),
+                ...(typeof ORC_STRONGHOLD_ZONE !== 'undefined' && Array.isArray(ORC_STRONGHOLD_ZONE.orcs)
+                  ? ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isDead && (o.hp || 0) > 0 && (o.x < ORC_STRONGHOLD_ZONE.bounds.x || o.aiMode === 'SORTIE'))
+                  : [])
+              ];
+
+              // 비전투(provoked === false) 및 생존 헌터·오크로부터 가장 먼 몬스터 우선 선택 (팝업 선택 몬스터 보호)
+              let candidateIdx = -1;
+              let bestScore = -Infinity;
+              for (let i = hg.monsters.length - 1; i >= 0; i--) {
+                const cand = hg.monsters[i];
+                if (!cand || cand.hp <= 0) continue;
+                if (gameState.selectedMonsterRef === cand) continue;
+
+                const isEngaged = Boolean(
+                  cand.provoked ||
+                  hunters.some(h => h && h.currentTargetMonster === cand) ||
+                  (typeof ORC_STRONGHOLD_ZONE !== 'undefined' && ORC_STRONGHOLD_ZONE.orcs.some(o => o && o.currentTarget === cand))
+                );
+
+                let minDistToCombatant = 9999;
+                for (let c = 0; c < activeCombatants.length; c++) {
+                  const unit = activeCombatants[c];
+                  const d = Math.hypot(cand.x - unit.x, cand.y - unit.y);
+                  if (d < minDistToCombatant) minDistToCombatant = d;
+                }
+
+                // 비전투 개체(+10000 가중치) 및 멀리 떨어진 개체 우선 디스폰 (중간 보스는 일반 몬스터보다 후순위)
+                const score = (isEngaged ? 0 : 10000) + minDistToCombatant - (cand.isFieldMiniBoss ? 5000 : 0);
+                if (score > bestScore) {
+                  bestScore = score;
+                  candidateIdx = i;
+                }
+              }
+
+              if (candidateIdx !== -1) {
+                const [removedMon] = hg.monsters.splice(candidateIdx, 1);
+                if (removedMon) {
+                  hunters.forEach(h => {
+                    if (h && h.currentTargetMonster === removedMon) h.currentTargetMonster = null;
+                  });
+                  if (typeof ORC_STRONGHOLD_ZONE !== 'undefined' && Array.isArray(ORC_STRONGHOLD_ZONE.orcs)) {
+                    ORC_STRONGHOLD_ZONE.orcs.forEach(o => {
+                      if (o && o.currentTarget === removedMon) o.currentTarget = null;
+                    });
+                  }
+                }
+              }
+            }
           }
+        } else if (hg.id === 'top_field_70_99') {
+          hg.despawnTimer = 0;
         }
 
         hg.monsters.forEach((m, mIdx) => {
-          if (m.hp <= 0 && m.respawn > 0) {
+          if (m.hp <= 0) {
+            if ((m.respawn || 0) <= 0) {
+              m.respawn = scaling.respawnDelay;
+            }
             m.respawn -= dt;
             if (m.respawn <= 0) {
               // 리젠 시 일반 몬스터로 복귀하며 0.1% 확률로 중간 보스 등장 판정
@@ -16504,8 +18205,26 @@
                   nearestHunter = h;
                 }
               }
-              if (nearestHunter) {
+              let nearestOrc = null;
+              if (hg.id === 'top_field_70_99' && typeof ORC_STRONGHOLD_ZONE !== 'undefined') {
+                for (let i = 0; i < ORC_STRONGHOLD_ZONE.orcs.length; i++) {
+                  const o = ORC_STRONGHOLD_ZONE.orcs[i];
+                  if (!o || o.isDead || o.hp <= 0 || o.aiMode !== 'SORTIE') continue;
+                  const d = Math.hypot(o.x - m.x, o.y - m.y);
+                  if (d <= nearestDist) {
+                    nearestDist = d;
+                    nearestOrc = o;
+                    nearestHunter = null;
+                  }
+                }
+              }
+              if (nearestOrc) {
                 m.provoked = true;
+                m.aggroTargetId = null;
+                m.aggroOrcId = nearestOrc.id;
+              } else if (nearestHunter) {
+                m.provoked = true;
+                m.aggroOrcId = null;
                 m.aggroTargetId = nearestHunter.id;
                 if (!nearestHunter.currentTargetMonster || nearestHunter.currentTargetMonster.hp <= 0) {
                   nearestHunter.currentTargetMonster = m;
@@ -16513,12 +18232,16 @@
               }
             }
 
-            // 살아있는 몬스터 이동 및 공격 로직: 선공/피격 어그로 대상 추적·공격, 그 외에는 배회
+            // 살아있는 몬스터 이동 및 공격 로직: 선공/피격 어그로 대상(헌터 또는 출정 오크) 추적·공격, 그 외에는 배회
             const aggroTarget = m.provoked
               ? hunters.find(h => h.id === m.aggroTargetId && h.state === 'HUNTING_FIELD' && h.hp > 0)
               : null;
+            const aggroOrc = (!aggroTarget && m.provoked && m.aggroOrcId && hg.id === 'top_field_70_99')
+              ? ORC_STRONGHOLD_ZONE.orcs.find(o => o && o.id === m.aggroOrcId && !o.isDead && o.hp > 0 && o.aiMode === 'SORTIE')
+              : null;
 
             if (aggroTarget) {
+              const prevMonX = m.x;
               const dx = aggroTarget.x - m.x;
               const dy = aggroTarget.y - m.y;
               const dist = Math.hypot(dx, dy);
@@ -16528,6 +18251,7 @@
                 m.x += (dx / dist) * 38 * dt;
                 m.y += (dy / dist) * 38 * dt;
                 m.walkCycle = (m.walkCycle || 0) + dt * 10;
+                if (hg.id === 'top_field_70_99') enforceOrcPassageMovement(m, prevMonX, 12);
               } else if (m.isRanged) {
                 // 원거리 몬스터(숲 고블린궁수 / 마력 오크사수): 사거리 내 헌터에게 투사체 발사
                 m.attackCooldown = (m.attackCooldown || 0) - dt;
@@ -16555,9 +18279,54 @@
                   combatEffects.spawnDamagePopup(aggroTarget.x, aggroTarget.y, takenDmg, false, '#fca5a5');
                 }
               }
+            } else if (aggroOrc) {
+              const prevMonX = m.x;
+              const dx = aggroOrc.x - m.x;
+              const dy = aggroOrc.y - m.y;
+              const dist = Math.hypot(dx, dy);
+              if (Math.abs(dx) > 0.5) m.facing = dx >= 0 ? 1 : -1;
+              const stopDist = m.isRanged ? (m.range || 168) : 28;
+              if (dist > stopDist) {
+                m.x += (dx / dist) * 38 * dt;
+                m.y += (dy / dist) * 38 * dt;
+                m.walkCycle = (m.walkCycle || 0) + dt * 10;
+                if (hg.id === 'top_field_70_99') enforceOrcPassageMovement(m, prevMonX, 12);
+              } else if (m.isRanged) {
+                m.attackCooldown = (m.attackCooldown || 0) - dt;
+                if (m.attackCooldown <= 0) {
+                  m.attackCooldown = 1.25;
+                  combatEffects.spawnProjectile({
+                    isMonsterProj: true,
+                    isOrcTarget: true,
+                    target: aggroOrc,
+                    x: m.x,
+                    y: m.y - 4,
+                    speed: 310,
+                    projType: 'MAGIC_ORB',
+                    color: '#d8b4fe',
+                    dmg: m.atk || 480
+                  });
+                }
+              } else {
+                m.attackCooldown = (m.attackCooldown || 0) - dt;
+                if (m.attackCooldown <= 0) {
+                  m.attackCooldown = 1.15;
+                  const oStats = getOrcCombatStats(aggroOrc);
+                  const takenDmg = Math.max(12, Math.round((m.atk || 440) * 0.85 - oStats.def * 0.22));
+                  aggroOrc.hp = Math.max(0, aggroOrc.hp - takenDmg);
+                  combatEffects.spawnDamagePopup(aggroOrc.x, aggroOrc.y - 10, takenDmg, false, '#fca5a5');
+                  if (aggroOrc.hp <= 0) {
+                    killOrcUnit(aggroOrc);
+                    m.provoked = false;
+                    m.aggroOrcId = null;
+                  }
+                }
+              }
             } else {
+              const prevMonX = m.x;
               m.provoked = false;
               m.aggroTargetId = null;
+              m.aggroOrcId = null;
               m.wanderTimer = (m.wanderTimer || 0) - dt;
               const dx = (m.wanderX ?? m.x) - m.x;
               const dy = (m.wanderY ?? m.y) - m.y;
@@ -16567,6 +18336,7 @@
                 m.x += (dx / dist) * 20 * dt;
                 m.y += (dy / dist) * 20 * dt;
                 m.walkCycle = (m.walkCycle || 0) + dt * 7;
+                if (hg.id === 'top_field_70_99') enforceOrcPassageMovement(m, prevMonX, 12);
               } else if (m.wanderTimer <= 0) {
                 m.wanderTimer = 1.6 + Math.random() * 2.8;
                 const pad = 55;
@@ -16580,6 +18350,7 @@
       });
 
       hunters.forEach(h => h.update(dt));
+      updateOrcStrongholdUnits(dt);
       SUPREME_TOWN_GUARD.update(dt);
       ARCANE_TOWN_GUARD.update(dt);
 
@@ -16977,6 +18748,7 @@
         } : null,
         plots: Array.isArray(raw.plots) ? raw.plots : [],
         hunters: Array.isArray(raw.hunters) ? raw.hunters : [],
+        orcUnits: Array.isArray(raw.orcUnits) ? raw.orcUnits : [],
         relationsJson: typeof raw.relationsJson === 'string'
           ? raw.relationsJson
           : JSON.stringify(Array.isArray(raw.relations) ? raw.relations : [])
@@ -17078,6 +18850,26 @@
           y: h.y,
           skillsJson: JSON.stringify(h.skills)
         })),
+        orcUnits: ORC_STRONGHOLD_ZONE.orcs.map((o, idx) => {
+          ensureOrcUnitFields(o, idx);
+          return {
+            id: o.id,
+            name: o.name,
+            role: o.role,
+            isGreatWarrior: Boolean(o.isGreatWarrior),
+            level: o.level || 1,
+            killCount: o.killCount || 0,
+            monsterKillCount: o.monsterKillCount || 0,
+            totalKillCount: o.totalKillCount || ((o.killCount || 0) + (o.monsterKillCount || 0)),
+            hp: Math.round(o.hp ?? o.maxHp ?? 10000),
+            isDead: Boolean(o.isDead),
+            respawnRemainingMs: Math.max(0, Math.round(o.respawnRemainingMs || 0)),
+            x: Math.round(o.x ?? o.homeX ?? 2615),
+            y: Math.round(o.y ?? o.homeY ?? 0),
+            homeX: Math.round(o.homeX ?? o.x ?? 2615),
+            homeY: Math.round(o.homeY ?? o.y ?? 0)
+          };
+        }),
         relationsJson: JSON.stringify(Array.from(interactionManager.relations.entries()))
       };
     }
@@ -17120,6 +18912,59 @@
       ARCANE_TOWN_GUARD.level = data.guardLevels?.arcane || 1;
       getTownGuardsList().forEach(syncTownGuardStats);
       resetBossSanctumMonster();
+      syncOrcStrongholdPopulation();
+
+      if (Array.isArray(data.orcUnits) && data.orcUnits.length > 0) {
+        const ob = ORC_STRONGHOLD_ZONE.bounds;
+        data.orcUnits.forEach((savedOrc, idx) => {
+          if (!savedOrc || typeof savedOrc !== 'object') return;
+          const isSavedLord = savedOrc.role === '군락지 지배자' || savedOrc.name === '오크 대장' || savedOrc.name === '오크 철혈대족장' || savedOrc.name === '오크 로드';
+          const targetOrc = ORC_STRONGHOLD_ZONE.orcs.find(
+            o => (savedOrc.id && o.id === savedOrc.id) ||
+                 (Boolean(savedOrc.isGreatWarrior) && Boolean(o.isGreatWarrior)) ||
+                 (isSavedLord && o.role === '군락지 지배자')
+          ) || ORC_STRONGHOLD_ZONE.orcs[idx];
+
+          if (targetOrc) {
+            if (isSavedLord || targetOrc.role === '군락지 지배자') {
+              targetOrc.name = '오크 로드';
+            }
+            targetOrc.level = Math.max(1, Math.min(ORC_MAX_LEVEL, Math.floor(Number(savedOrc.level) || 1)));
+            targetOrc.killCount = Math.max(0, Math.floor(Number(savedOrc.killCount) || 0));
+            targetOrc.monsterKillCount = Math.max(0, Math.floor(Number(savedOrc.monsterKillCount) || 0));
+            targetOrc.totalKillCount = Math.max(
+              Math.floor(Number(savedOrc.totalKillCount) || 0),
+              targetOrc.killCount + targetOrc.monsterKillCount
+            );
+            targetOrc.isDead = Boolean(savedOrc.isDead);
+            targetOrc.respawnRemainingMs = targetOrc.isDead
+              ? Math.max(0, Math.min(ORC_RESPAWN_DURATION_MS, Math.floor(Number(savedOrc.respawnRemainingMs) || ORC_RESPAWN_DURATION_MS)))
+              : 0;
+            if (typeof savedOrc.homeX === 'number' && savedOrc.homeX >= ob.x + 20 && savedOrc.homeX <= ob.x + ob.w - 20) {
+              targetOrc.homeX = savedOrc.homeX;
+            }
+            if (typeof savedOrc.homeY === 'number' && savedOrc.homeY >= ob.y + 20 && savedOrc.homeY <= ob.y + ob.h - 20) {
+              targetOrc.homeY = savedOrc.homeY;
+            }
+            if (typeof savedOrc.x === 'number' && savedOrc.x >= ob.x - 800 && savedOrc.x <= ob.x + ob.w - 14) {
+              targetOrc.x = savedOrc.x;
+            } else {
+              targetOrc.x = targetOrc.homeX;
+            }
+            if (typeof savedOrc.y === 'number' && savedOrc.y >= ob.y + 14 && savedOrc.y <= ob.y + ob.h - 14) {
+              targetOrc.y = savedOrc.y;
+            } else {
+              targetOrc.y = targetOrc.homeY;
+            }
+            ensureOrcUnitFields(targetOrc, idx);
+            if (!targetOrc.isDead && typeof savedOrc.hp === 'number' && savedOrc.hp > 0) {
+              targetOrc.hp = targetOrc.name === '오크 로드'
+                ? targetOrc.maxHp
+                : Math.min(targetOrc.maxHp, savedOrc.hp);
+            }
+          }
+        });
+      }
 
       // 1) 부지 및 건물 비파괴 복원 + 패치로 새로 추가된 기본 부지 자동 병합
       const maxAllowedUnlock = BOSS_SANCTUM.allStagesCleared ? MAX_BUILDING_LEVEL : BOSS_SANCTUM.bossStage;
@@ -17270,9 +19115,8 @@
             }
           }
           if (typeof hData.earnedGold === 'number') restored.earnedGold = hData.earnedGold;
-          if (typeof hData.bestDungeonFloor === 'number') restored.bestDungeonFloor = hData.bestDungeonFloor;
-          if (hData.equippedInsigniaId && ITEM_CATALOG[hData.equippedInsigniaId]) {
-            restored.equippedInsigniaId = hData.equippedInsigniaId;
+          if (typeof hData.equippedWingId === 'number') {
+            restored.equippedWingId = null;
           }
           if (hData.equippedWingId && ITEM_CATALOG[hData.equippedWingId]) {
             restored.equippedWingId = hData.equippedWingId;
@@ -17280,6 +19124,7 @@
           if (typeof hData.wingEnhance === 'number') {
             restored.wingEnhance = Math.max(0, Math.min(15, Math.floor(hData.wingEnhance)));
           }
+          restored.syncAutoEquipWing();
 
           restored.pickNextDestination();
           hunters.push(restored);
@@ -17569,6 +19414,19 @@
         pl: compactPlots,
         hu: compactHunters
       };
+      if (Array.isArray(src.orcUnits) && src.orcUnits.length > 0) {
+        out.oc = src.orcUnits.map((o, idx) => [
+          o.id || (o.isGreatWarrior ? 'orc_great_warrior' : `orc_unit_${idx}`),
+          o.level || 1,
+          o.totalKillCount || ((o.killCount || 0) + (o.monsterKillCount || 0)),
+          o.killCount || 0,
+          o.monsterKillCount || 0,
+          o.isDead ? 1 : 0,
+          o.respawnRemainingMs || 0,
+          Math.round(o.hp ?? 0),
+          o.isGreatWarrior ? 1 : 0
+        ]);
+      }
       if (compactRel.length > 0) out.rl = compactRel;
       if (src.camera) {
         out.cm = [src.camera.x, src.camera.y, src.camera.userZoom];
@@ -17675,6 +19533,29 @@
         : [];
 
       const camArr = Array.isArray(c.cm) ? c.cm : null;
+      const orcUnits = Array.isArray(c.oc)
+        ? c.oc.map((row, idx) => {
+            if (!Array.isArray(row)) return null;
+            const [id, level, totalKillsOrLegacyExp, killCount, monsterKillCount, isDeadFlag, respawnMs, hp, isGwFlag] = row;
+            const parsedHunterKills = killCount || 0;
+            const parsedMonsterKills = monsterKillCount || 0;
+            const parsedTotalKills = Math.max(
+              totalKillsOrLegacyExp || 0,
+              parsedHunterKills + parsedMonsterKills
+            );
+            return {
+              id: id || (isGwFlag ? 'orc_great_warrior' : `orc_unit_${idx}`),
+              level: level || 1,
+              totalKillCount: parsedTotalKills,
+              killCount: parsedHunterKills,
+              monsterKillCount: parsedMonsterKills,
+              isDead: Boolean(isDeadFlag),
+              respawnRemainingMs: respawnMs || 0,
+              hp: typeof hp === 'number' ? hp : undefined,
+              isGreatWarrior: Boolean(isGwFlag)
+            };
+          }).filter(Boolean)
+        : [];
 
       return normalizeAndMigrateSaveData({
         schemaVersion: SAVE_SCHEMA_VERSION,
@@ -17686,6 +19567,7 @@
         camera: camArr ? { x: camArr[0] ?? 120, y: camArr[1] ?? 0, userZoom: camArr[2] ?? 0.92 } : null,
         plots,
         hunters,
+        orcUnits,
         relationsJson: JSON.stringify(relationsEntries)
       });
     }
@@ -18036,6 +19918,39 @@
         ARCANE_TOWN_GUARD.level = 1;
         getTownGuardsList().forEach(syncTownGuardStats);
         resetBossSanctumMonster();
+        const defaultOrcHomeSlots = [
+          { x: 2615, y: -20 },
+          { x: 2370, y: -120 },
+          { x: 2390, y: 135 },
+          { x: 2780, y: -150 },
+          { x: 2810, y: 145 }
+        ];
+        ORC_STRONGHOLD_ZONE.orcs.forEach((o, i) => {
+          const slot = defaultOrcHomeSlots[i] || {
+            x: 2615 + ((i % 3) - 1) * 140,
+            y: (i % 2 === 0 ? -110 : 120)
+          };
+          if (o.role === '군락지 지배자' || o.name === '오크 대장' || o.name === '오크 철혈대족장') {
+            o.name = '오크 로드';
+          }
+          o.level = 1;
+          o.killCount = 0;
+          o.monsterKillCount = 0;
+          o.totalKillCount = 0;
+          o.isDead = false;
+          o.respawnRemainingMs = 0;
+          o.aiMode = 'GUARD';
+          o.fullHealReadyTimer = 0;
+          o.sortieTimer = 3 + (i % 7) * 2.4;
+          o.homeX = slot.x;
+          o.homeY = slot.y;
+          o.x = slot.x;
+          o.y = slot.y;
+          o.facing = -1;
+          ensureOrcUnitFields(o, i);
+          o.hp = o.maxHp;
+        });
+        syncOrcStrongholdPopulation();
         resetRebirthAltarBoss(true);
 
         if (typeof COLOSSEUM_STATE !== 'undefined') {
