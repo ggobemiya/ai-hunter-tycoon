@@ -124,6 +124,20 @@
 
     // 강화비를 낼 여유가 있는지: 승급 비용 + 물약값(100G)을 남기고도 낼 수 있거나,
     // 승급용으로 모으는 중이라도 강화비가 가진 골드의 5% 이하이면 (승급 저축에 거의 영향 없음) 강화한다.
+    // 물약 · 도시락 보충이 필요한가? (물약 상점에서 물약과 도시락을 같이 판다 · 08-hunter-class.js applyFacilityService)
+    //   하나라도 최대치보다 적고, 모자란 것 중 1개라도 살 골드가 있으면 true
+    function hunterNeedsSupplies(hunter, potionShop) {
+      if (!potionShop) return false;
+      const lv = potionShop.level || 1;
+      const potionPrice = Math.max(15, 32 - lv * 2);
+      const bentoPrice = 45;
+      const gold = hunter.personalGold || 0;
+      const lackPotion = (hunter.potions.hp || 0) < getMaxHpPotionCapacity(hunter.level, hunter.rebirthCount)
+        || (hunter.potions.mp || 0) < getMaxMpPotionCapacity(hunter.level, hunter.rebirthCount);
+      const lackBento = (hunter.bento || 0) < getMaxBentoCapacity(hunter.level, hunter.rebirthCount);
+      return (lackPotion && gold >= potionPrice) || (lackBento && gold >= bentoPrice);
+    }
+
     function canHunterAffordEnhance(hunter, cost, upgradeCandidate) {
       const gold = hunter.personalGold || 0;
       if (gold < cost + 100) return false;
@@ -210,7 +224,7 @@
             return;
           }
         }
-        if ((this.potions.hp < getMaxHpPotionCapacity(this.level, this.rebirthCount) || this.potions.mp < getMaxMpPotionCapacity(this.level, this.rebirthCount)) && this.personalGold >= 35) {
+        if (hunterNeedsSupplies(this, blds.find(b => b.type === "potion"))) { // 물약 · 도시락 보충
           const potBld = blds.find(b => b.type === 'potion');
           if (potBld) {
             this.setDestinationWithGatePath(potBld.x, potBld.y + potBld.h / 2 + 16);
@@ -298,7 +312,7 @@
             return;
           }
         }
-        if ((this.potions.hp < getMaxHpPotionCapacity(this.level, this.rebirthCount) || this.potions.mp < getMaxMpPotionCapacity(this.level, this.rebirthCount)) && this.personalGold >= 35) {
+        if (hunterNeedsSupplies(this, blds.find(b => b.type === "potion"))) { // 물약 · 도시락 보충
           const potBld = blds.find(b => b.type === 'potion');
           if (potBld) {
             this.setDestinationWithGatePath(potBld.x, potBld.y + potBld.h / 2 + 16);
@@ -385,13 +399,9 @@
             const food = buildings.find(b => b.type === 'tavern' && !visited.tavern);
             if (food) { goPrep(food, '🍖 제단 출정 전 든든히 식사!'); return; }
           }
-          if (
-            (this.potions.hp < getMaxHpPotionCapacity(this.level, this.rebirthCount) ||
-             this.potions.mp < getMaxMpPotionCapacity(this.level, this.rebirthCount)) &&
-            this.personalGold >= 35
-          ) {
-            const potBld = buildings.find(b => b.type === 'potion' && !visited.potion);
-            if (potBld) { goPrep(potBld, '🧪 제단 출정 전 물약 보충!'); return; }
+          if (hunterNeedsSupplies(this, buildings.find(b => b.type === "potion"))) {
+            const potBld = buildings.find(b => b.type === "potion" && !visited.potion);
+            if (potBld) { goPrep(potBld, "🧪 제단 출정 전 물약 · 도시락 보충!"); return; }
           }
   
           // 정비 완료 → 초월 환생의 제단으로 출발
@@ -473,20 +483,16 @@
       }
     }
 
-    // 4. 물약 (거의 바닥이면 보충, 마을에 있으면 넉넉히 미리 보충해 사냥터 왕복을 줄임)
+    // 4. 물약 · 도시락
+    //    - 마을 안: 물약이나 도시락이 최대치보다 하나라도 모자라면(살 골드가 있으면) 사냥 나가기 전에 가득 채운다
+    //    - 마을 밖: 물약이 거의 바닥일 때만 돌아와 보충
     const maxHpPotCap = getMaxHpPotionCapacity(this.level, this.rebirthCount);
     const maxMpPotCap = getMaxMpPotionCapacity(this.level, this.rebirthCount);
     const potionsEmpty = this.potions.hp < Math.min(2, maxHpPotCap) || this.potions.mp < Math.min(1, maxMpPotCap);
-    const potionsLowInTown = inTown && (
-      this.potions.hp < Math.floor(maxHpPotCap * cfg.townPotionTopUpRatio) ||
-      this.potions.mp < Math.floor(maxMpPotCap * cfg.townPotionTopUpRatio)
-    );
-    if ((potionsEmpty || potionsLowInTown) && this.personalGold >= 50) {
-      const potionShop = find('potion');
-      if (potionShop) {
-        sendHunterToBuilding(this, potionShop);
-        return;
-      }
+    const potionShop = find('potion');
+    if (potionShop && ((potionsEmpty && this.personalGold >= 50) || (inTown && hunterNeedsSupplies(this, potionShop)))) {
+      sendHunterToBuilding(this, potionShop, (this.bento || 0) < getMaxBentoCapacity(this.level, this.rebirthCount) ? '🍱 물약 · 도시락 챙기러!' : '');
+      return;
     }
 
     // 5. 판매 (승급 재료는 남기고)

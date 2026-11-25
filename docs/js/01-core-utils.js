@@ -85,7 +85,7 @@
     //   종족마다 따로 조절해야 할 때만 EXP_RATE_BY_RACE를 바꾼다 (보통은 모두 1).
     //   (마을 경비병은 골드로 레벨을 올리므로 경험치가 없다)
     // ============================================================================
-    const EXP_RATE = 1;
+    const EXP_RATE = 2;
     const EXP_RATE_BY_RACE = { hunter: 1, kingdom: 1, orc: 1 };
     function getExpRate(race) {
       const r = Number(EXP_RATE_BY_RACE[race]);
@@ -195,12 +195,96 @@
     // ============================================================================
     function setTextIfChanged(el, text) {
       if (!el) return;
-      const s = String(text);
+      const s = fixWingEmojiText(String(text)); // 🪽 대체 글자로 비교해야 같은 글을 계속 다시 쓰지 않는다
       if (el.textContent !== s) el.textContent = s;
+    }
+    // HTML 조각: 마지막으로 넣은 글을 기억해 두고 같으면 건너뛴다
+    function setHtmlIfChanged(el, html) {
+      if (!el) return;
+      const s = String(html);
+      if (el._lastHtml === s) return;
+      el._lastHtml = s;
+      el.innerHTML = s;
     }
     function setTitleIfChanged(el, text) {
       if (el && el.title !== text) el.title = text;
     }
     function setDisabledIfChanged(el, disabled) {
       if (el && el.disabled !== !!disabled) el.disabled = !!disabled;
+    }
+
+    // ============================================================================
+    // 🪽 날개 이모지 대체: 🪽(2022년 추가)를 못 그리는 기기(글꼴)에서는 X 박스가 보인다.
+    //   그런 기기에서만 화면 글자(헌터 정보 · 목록 · 말풍선 · 알림 · 캔버스 글씨)의 🪽를 🪶 또는 🕊️로 바꿔 보여 준다.
+    //   (천공 대장간 간판은 13-render-village-buildings.js에서 날개 그림을 직접 그린다)
+    // ============================================================================
+    const WING_EMOJI = '🪽';
+    const WING_EMOJI_FALLBACK = (function pickWingEmoji() {
+      // 컬러 이모지로 그려지면 색이 있는 점이 많이 나온다. 못 그리면(X 박스) 색이 없다.
+      const colorPixels = (ch) => {
+        try {
+          const c = document.createElement('canvas');
+          c.width = c.height = 40;
+          const x = c.getContext('2d', { willReadFrequently: true });
+          x.font = '32px sans-serif';
+          x.textAlign = 'center';
+          x.textBaseline = 'middle';
+          x.fillStyle = '#000';
+          x.fillText(ch, 20, 20);
+          const d = x.getImageData(0, 0, 40, 40).data;
+          let n = 0;
+          for (let i = 0; i < d.length; i += 4) {
+            if (d[i + 3] > 0 && (Math.abs(d[i] - d[i + 1]) > 20 || Math.abs(d[i + 1] - d[i + 2]) > 20)) n++;
+          }
+          return n;
+        } catch (_) { return 999; } // 잴 수 없으면 바꾸지 않는다
+      };
+      let forced = false; // 시험용: localStorage aiht_force_wing_fallback = 1 이면 못 그리는 기기처럼 동작
+      try { forced = localStorage.getItem("aiht_force_wing_fallback") === "1"; } catch (_) {}
+      if (!forced && colorPixels(WING_EMOJI) > 20) return null;   // 잘 보임 → 그대로
+      if (colorPixels('🪶') > 20) return '🪶';
+      return '🕊️';
+    })();
+
+    function fixWingEmojiText(s) {
+      return (WING_EMOJI_FALLBACK && typeof s === 'string' && s.indexOf(WING_EMOJI) !== -1)
+        ? s.split(WING_EMOJI).join(WING_EMOJI_FALLBACK)
+        : s;
+    }
+
+    if (WING_EMOJI_FALLBACK) {
+      // 캔버스 글씨
+      ['fillText', 'strokeText', 'measureText'].forEach((fn) => {
+        const orig = CanvasRenderingContext2D.prototype[fn];
+        CanvasRenderingContext2D.prototype[fn] = function (text, ...rest) {
+          return orig.call(this, fixWingEmojiText(text), ...rest);
+        };
+      });
+      // 화면 글자 (새로 들어오거나 바뀐 글자만 확인)
+      const fixNode = (node) => {
+        if (node.nodeType === 3) {
+          if (node.data.indexOf(WING_EMOJI) !== -1) node.data = fixWingEmojiText(node.data);
+          return;
+        }
+        if (node.nodeType !== 1) return;
+        if (node.title && node.title.indexOf(WING_EMOJI) !== -1) node.title = fixWingEmojiText(node.title);
+        if (node.textContent.indexOf(WING_EMOJI) === -1) return;
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        let t;
+        while ((t = walker.nextNode())) {
+          if (t.data.indexOf(WING_EMOJI) !== -1) t.data = fixWingEmojiText(t.data);
+        }
+      };
+      const startWingObserver = () => {
+        fixNode(document.body);
+        new MutationObserver((list) => {
+          for (const m of list) {
+            if (m.type === 'characterData') fixNode(m.target);
+            else if (m.type === 'attributes') fixNode(m.target);
+            else m.addedNodes.forEach(fixNode);
+          }
+        }).observe(document.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['title'] });
+      };
+      if (document.body) startWingObserver();
+      else document.addEventListener('DOMContentLoaded', startWingObserver);
     }

@@ -1855,7 +1855,7 @@
         if (!card) return;
         card.classList.toggle('selected', h.id === gameState.selectedHunterId);
         const donateBtn = card.querySelector('.btn-roster-donate');
-        if (donateBtn) donateBtn.disabled = gameState.gold < 500;
+        setDisabledIfChanged(donateBtn, gameState.gold < 500);
         const stats = h.getComputedStats();
         const jIcon = jobIcons[h.job] || '⚔️';
         const eq = h.equipment || {};
@@ -1866,50 +1866,50 @@
         const avgTier = ((wTier + aTier + hTier + accTier) / 4).toFixed(1);
 
         const jobLvEl = card.querySelector('[data-role="job-lv"]');
-        if (jobLvEl) jobLvEl.textContent = `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`;
+        setTextIfChanged(jobLvEl, `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`);
 
         const rebirthEl = card.querySelector('[data-role="rebirth"]');
-        if (rebirthEl) rebirthEl.innerHTML = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h);
+        setHtmlIfChanged(rebirthEl, renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h));
 
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignEl = card.querySelector('[data-role="alignment"]');
         if (alignEl) {
-          alignEl.className = alignInfo.badgeClass;
-          alignEl.textContent = `⚖️ ${alignInfo.label}`;
+          if (alignEl.className !== alignInfo.badgeClass) alignEl.className = alignInfo.badgeClass;
+          setTextIfChanged(alignEl, `⚖️ ${alignInfo.label}`);
         }
 
         const hpText = card.querySelector('[data-role="hp-text"]');
         const hpBar = card.querySelector('[data-role="hp-bar"]');
-        if (hpText) hpText.textContent = `❤️ HP ${Math.round(h.hp)}/${h.maxHp}`;
-        if (hpBar) hpBar.style.width = `${Math.max(0, Math.min(100, (h.hp / h.maxHp) * 100))}%`;
+        setTextIfChanged(hpText, `❤️ HP ${Math.round(h.hp)}/${h.maxHp}`);
+        if (hpBar) { const w = `${Math.max(0, Math.min(100, (h.hp / h.maxHp) * 100))}%`; if (hpBar.style.width !== w) hpBar.style.width = w; }
 
         const mpText = card.querySelector('[data-role="mp-text"]');
         const mpBar = card.querySelector('[data-role="mp-bar"]');
-        if (mpText) mpText.textContent = `💧 MP ${Math.round(h.mp)}/${h.maxMp}`;
-        if (mpBar) mpBar.style.width = `${Math.max(0, Math.min(100, (h.mp / h.maxMp) * 100))}%`;
+        setTextIfChanged(mpText, `💧 MP ${Math.round(h.mp)}/${h.maxMp}`);
+        if (mpBar) { const w = `${Math.max(0, Math.min(100, (h.mp / h.maxMp) * 100))}%`; if (mpBar.style.width !== w) mpBar.style.width = w; }
 
         const statsEl = card.querySelector('[data-role="stats"]');
-        if (statsEl) statsEl.textContent = `⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%`;
+        setTextIfChanged(statsEl, `⚔️ ${stats.atk} · 🛡️ ${stats.def} · ⚡ ${stats.crit}%`);
 
         const goldEl = card.querySelector('[data-role="gold"]');
-        if (goldEl) goldEl.textContent = `💰 ${formatGold(h.personalGold)} G`;
+        setTextIfChanged(goldEl, `💰 ${formatGold(h.personalGold)} G`);
 
         const weaponEl = card.querySelector('[data-role="weapon"]');
-        if (weaponEl) weaponEl.textContent = `무기 T${h.equipment.weapon.tier} +${h.equipment.weapon.enhance}`;
+        setTextIfChanged(weaponEl, `무기 T${h.equipment.weapon.tier} +${h.equipment.weapon.enhance}`);
 
         const equipTiersEl = card.querySelector('[data-role="equip-tiers"]');
-        if (equipTiersEl) equipTiersEl.textContent = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`;
+        setTextIfChanged(equipTiersEl, `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`);
 
         const colPtsEl = card.querySelector('[data-role="colosseum-pts"]');
         const colSubEl = card.querySelector('[data-role="colosseum-sub"]');
         if (colPtsEl || colSubEl) {
           const colRec = getColosseumRecord(h.id);
-          if (colPtsEl) colPtsEl.innerHTML = formatColosseumRosterHtml(colRec);
-          if (colSubEl) colSubEl.textContent = `출전 ${colRec.participations}회`;
+          setHtmlIfChanged(colPtsEl, formatColosseumRosterHtml(colRec));
+          setTextIfChanged(colSubEl, `출전 ${colRec.participations}회`);
         }
 
         const statusEl = card.querySelector('[data-role="status"]');
-        if (statusEl) statusEl.textContent = h.getStatusDescription();
+        setTextIfChanged(statusEl, h.getStatusDescription());
       });
     }
 

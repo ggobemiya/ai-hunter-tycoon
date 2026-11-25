@@ -1643,12 +1643,81 @@
       ctx.lineWidth = 3;
       ctx.stroke();
 
-      ctx.font = '54px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(bld.icon, bld.x, badgeY + 2);
+      if (bld.type === 'sky_smithy') {
+        // 🪽 날개 이모지는 기기(글꼴)에 따라 X 박스로 보여서, 천공 대장간 간판은 날개 그림을 직접 그린다
+        const wingIcon = getSkySmithyWingIcon();
+        ctx.drawImage(wingIcon, bld.x - 30, badgeY + 2 - 30, 60, 60);
+      } else {
+        ctx.font = '54px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(bld.icon, bld.x, badgeY + 2);
+      }
 
       drawBuildingLabel(ctx, bld, top);
+    }
+
+    // 천공 대장간 간판용 날개 그림 (한 번 그려 두고 계속 씀 · 글꼴과 상관없이 모든 기기에서 같은 모양)
+    let skySmithyWingIconCanvas = null;
+    function getSkySmithyWingIcon() {
+      if (skySmithyWingIconCanvas) return skySmithyWingIconCanvas;
+      const S = 128;
+      const c = document.createElement('canvas');
+      c.width = c.height = S;
+      const g = c.getContext('2d');
+      g.scale(S / 100, S / 100);
+      g.lineJoin = 'round';
+      // 깃털 5장 (아래쪽 긴 깃털부터 부채꼴로)
+      const feathers = [
+        { deg: -14, len: 50 }, { deg: -31, len: 58 }, { deg: -48, len: 64 },
+        { deg: -65, len: 66 }
+      ];
+      feathers.forEach((f, i) => {
+        g.save();
+        g.translate(24, 78);
+        g.rotate(f.deg * Math.PI / 180);
+        const grad = g.createLinearGradient(0, 0, f.len, 0);
+        grad.addColorStop(0, '#e0f2fe');
+        grad.addColorStop(1, '#ffffff');
+        g.fillStyle = grad;
+        g.strokeStyle = '#38bdf8';
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(0, -8);
+        g.quadraticCurveTo(f.len * 0.5, -15, f.len, -3);
+        g.quadraticCurveTo(f.len * 1.02, 4, f.len * 0.82, 8);
+        g.quadraticCurveTo(f.len * 0.4, 13, 0, 9);
+        g.closePath();
+        g.fill();
+        g.stroke();
+        // 깃대
+        g.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        g.lineWidth = 1.4;
+        g.beginPath();
+        g.moveTo(4, 0);
+        g.lineTo(f.len * 0.85, -2);
+        g.stroke();
+        g.restore();
+      });
+      // 날개 위쪽 덮깃 (둥근 어깨)
+      g.save();
+      g.translate(28, 66);
+      g.rotate(-50 * Math.PI / 180);
+      g.fillStyle = "#ffffff";
+      g.strokeStyle = "#38bdf8";
+      g.lineWidth = 3;
+      g.beginPath();
+      g.ellipse(16, 0, 26, 16, 0, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+      g.restore();
+      // 반짝임
+      g.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      g.beginPath();
+      g.arc(78, 18, 3.2, 0, Math.PI * 2);
+      g.fill();
+      skySmithyWingIconCanvas = c;
+      return c;
     }
 
     // 건물별 고유 건축 디테일 레지스트리 (신규 건물 추가 시 여기에 등록 가능, 미등록 시 default 폴백)
