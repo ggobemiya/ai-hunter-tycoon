@@ -3029,3 +3029,27 @@ body.compact-ui .roster-mini-bar { font-size: 11px; font-weight: 700; }
 .kingdom-place-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .kingdom-place-bar button:disabled { opacity: 0.45; cursor: not-allowed; }
 .kingdom-place-bar button.ghost { background: rgba(51, 65, 85, 0.9); }
+
+    /* ===== 🎖️ 헌터 태생 등급 (js/37-hunter-grade.js) ===== */
+    .hunter-grade { display: inline-block; font-weight: 900; letter-spacing: 0.5px; margin-right: 2px; }
+    .hunter-grade.grade-gray { color: #9ca3af; }
+    .hunter-grade.grade-green { color: #4ade80; text-shadow: 0 0 5px rgba(74, 222, 128, 0.45); }
+    .hunter-grade.grade-sky { color: #38bdf8; text-shadow: 0 0 5px rgba(56, 189, 248, 0.5); }
+    .hunter-grade.grade-gold { color: #facc15; text-shadow: 0 0 6px rgba(250, 204, 21, 0.6); }
+    .hunter-grade.grade-red { color: #ef4444; text-shadow: 0 0 6px rgba(239, 68, 68, 0.7); }
+    .hunter-grade.grade-rainbow {
+      background: linear-gradient(90deg, #ef4444, #f59e0b, #facc15, #4ade80, #38bdf8, #818cf8, #e879f9);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.35));
+    }
+    .hunter-portrait-grade {
+      position: absolute; top: 4px; left: 4px; z-index: 2;
+      font-size: 11px; line-height: 1; padding: 3px 5px; border-radius: 7px;
+      background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.5);
+    }
+    .hunter-portrait-grade.grade-rainbow { background-color: rgba(15, 23, 42, 0.85); }
+    .hunter-portrait-grade[hidden] { display: none; }
+    @media (max-width: 640px) {
+      .hunter-portrait-grade { top: 3px; left: 3px; font-size: 9px; padding: 2px 3px; border-radius: 5px; letter-spacing: 0; }
+      .hunter-portrait-wing-badge { top: 3px; right: 3px; font-size: 9px; padding: 2px 3px; border-radius: 5px; }
+    }

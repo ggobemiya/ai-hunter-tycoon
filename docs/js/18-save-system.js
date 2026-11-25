@@ -320,6 +320,7 @@
           potions: JSON.stringify(h.potions || { hp: 2, mp: 2 }),
           advancementTier: h.advancementTier || 0,
           transcendCount: h.transcendCount || 0,
+          birthGrade: h.birthGrade || '', // 태생 등급 (js/37-hunter-grade.js)
           rebirthCount: h.rebirthCount || 0,
           level: h.level || 1,
           exp: h.exp || 0,
@@ -674,6 +675,7 @@
           mergeHunterSkillsNonDestructive(restored, hData.skillsJson || hData.skills);
 
           restored.transcendCount = Math.max(0, Math.min(5, restored.rebirthCount || 0, Math.floor(Number(hData.transcendCount) || 0)));
+          if (typeof hData.birthGrade === 'string' && hData.birthGrade) restored.birthGrade = hData.birthGrade; // 태생 등급
           restored.recalculateVitals(false);
           restored.exp = typeof hData.exp === 'number' ? hData.exp : 0;
           if (typeof hData.hp === 'number') restored.hp = Math.min(restored.maxHp, Math.max(1, hData.hp));

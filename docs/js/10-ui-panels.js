@@ -1674,12 +1674,13 @@
           : `우승 ${rec.wins} · 준우승 ${rec.runnerUps}`;
         return `🏟️ 결투장: <b style="color:#4ade80;">${rec.points.toLocaleString()}점</b> (${duelText})`;
       };
-      const renderRosterRebirthStars = (rebirthCount, transcendCount = 0) => {
+      const renderRosterRebirthStars = (rebirthCount, transcendCount = 0, hunter = null) => {
         const count = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Math.floor(Number(rebirthCount) || 0)));
         if (count <= 0) return '';
         const red = Math.max(0, Math.min(count, Math.floor(Number(transcendCount) || 0)));
         const redStars = red > 0 ? `<span style="color:#ef4444;text-shadow:0 0 6px rgba(239,68,68,0.6);">${'★'.repeat(red)}</span>` : '';
-        return `<span style="color:#facc15;font-weight:800;letter-spacing:1px;text-shadow:0 0 6px rgba(250,204,21,0.45);">${red > 0 ? '초월' : '환생'} ${redStars}${'★'.repeat(count - red)}</span>`;
+        const gradeHtml = (hunter && typeof getHunterGradeHtml === "function") ? getHunterGradeHtml(hunter) + " " : "";
+        return `${gradeHtml}<span style="color:#facc15;font-weight:800;letter-spacing:1px;text-shadow:0 0 6px rgba(250,204,21,0.45);">${red > 0 ? "초월" : "환생"} ${redStars}${'★'.repeat(count - red)}</span>`;
       };
       const canTranscendHere = (h) => typeof canUseTranscendTicketOn === 'function' && canUseTranscendTicketOn(h);
       const rosterList = getSortedRosterHunters();
@@ -1703,7 +1704,7 @@
           const equipTierSummary = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`;
           const canAltar = canCommandRebirthAltarHunt(h);
           const canDonate = gameState.gold >= 500;
-          const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0);
+          const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h);
           const colRec = getColosseumRecord(h.id);
           return `
             <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}" data-roster-id="${h.id}">
@@ -1777,7 +1778,7 @@
         if (jobLvEl) jobLvEl.textContent = `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`;
 
         const rebirthEl = card.querySelector('[data-role="rebirth"]');
-        if (rebirthEl) rebirthEl.innerHTML = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0);
+        if (rebirthEl) rebirthEl.innerHTML = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h);
 
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignEl = card.querySelector('[data-role="alignment"]');

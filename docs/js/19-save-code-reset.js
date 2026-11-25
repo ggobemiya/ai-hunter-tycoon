@@ -66,6 +66,7 @@
           eq: eqArr.length > 0 ? eqArr : undefined,
           rb: h.rebirthCount || 0,
           tc: h.transcendCount || undefined,
+          bg: h.birthGrade || undefined, // 태생 등급
           lv: h.level || 1,
           xp: h.exp || 0,
           hp: Math.round(h.hp ?? 100),
@@ -250,6 +251,7 @@
           potions: JSON.stringify({ hp: poArr[0] ?? 2, mp: poArr[1] ?? 2 }),
           rebirthCount: h.rb || 0,
           transcendCount: h.tc || 0,
+          birthGrade: typeof h.bg === 'string' ? h.bg : '',
           level: h.lv || 1,
           exp: h.xp || 0,
           hp: h.hp,
