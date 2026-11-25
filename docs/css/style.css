@@ -3172,3 +3172,13 @@ body.compact-ui .roster-mini-bar { font-size: 11px; font-weight: 700; }
 }
 .ab-btn.danger { background: rgba(220, 38, 38, 0.22); border-color: rgba(248, 113, 113, 0.5); color: #fca5a5; }
 .ab-btn:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(1); }
+/* 슬롯 칸이 길어지면 칸 안에서 위아래로 밀어서 본다 (헌터 목록 자리도 남겨 둠) */
+.auto-banish-panel {
+  flex-shrink: 0;
+  max-height: 42vh;
+  max-height: 42dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
