@@ -927,7 +927,7 @@
       ctx.restore();
     }
 
-    // 환생 제단 최상급 중간보스 렌더러 (👑 초월 윤회의 집행자)
+    // 환생 제단 최상급 중간보스 렌더러 (예전 그림 · 이미지가 없을 때만 씀 · 지금은 js/40-altar-lich-king.js 리치 킹 이미지)
     function drawRebirthSupremeBoss(ctx, boss) {
       if (!boss || boss.hp <= 0) return;
       const t = performance.now() * 0.004;

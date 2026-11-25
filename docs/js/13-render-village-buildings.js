@@ -475,13 +475,15 @@
 
         ctx.fillStyle = '#fde68a';
         ctx.font = '11px sans-serif';
-        const regularOrcCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior).length;
+        const regularOrcCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior && !o.isReinforcement).length;
+        const reinforceCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && o.isReinforcement).length; // 👹 Lv.99 증원 (js/39-orc-reinforce.js)
+        const reinforceNote = reinforceCount > 0 ? ` · 🔺 증원 ${reinforceCount}마리` : "";
         const hasGreatWarrior = ORC_STRONGHOLD_ZONE.orcs.some(o => o && o.isGreatWarrior);
         const passageStatusNote = passageOpen ? '🛤️ 연결 길 개방됨 (통로 전용 출입)' : '🔒 5티어 보스 처치 시 연결 길 개방';
         ctx.fillText(
           hasGreatWarrior
-            ? `${passageStatusNote} · 주둔 ${regularOrcCount}/${ORC_STRONGHOLD_ZONE.maxCount}마리 + 👑 오크 대전사 강림!`
-            : `${passageStatusNote} · 주둔 병력 ${regularOrcCount} / ${ORC_STRONGHOLD_ZONE.maxCount}마리 (티어 보스 클리어당 +2마리)`,
+            ? `${passageStatusNote} · 주둔 ${regularOrcCount}/${ORC_STRONGHOLD_ZONE.maxCount}마리 + 👑 오크 대전사 강림!${reinforceNote}`
+            : `${passageStatusNote} · 주둔 병력 ${regularOrcCount} / ${ORC_STRONGHOLD_ZONE.maxCount}마리 (티어 보스 클리어당 +2마리)${reinforceNote}`,
           ob.x + 30,
           ob.y + 47
         );

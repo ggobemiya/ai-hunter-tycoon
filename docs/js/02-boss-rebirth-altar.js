@@ -63,7 +63,7 @@
       boss: {
         isRebirthSupremeBoss: true,
         kind: 'rebirth_supreme_miniboss',
-        name: '👑 초월 윤회의 집행자 [1환생↑]',
+        name: '💀 리치 킹 [1환생↑]',
         hp: 63000,
         maxHp: 63000,
         atk: 265,

@@ -209,6 +209,7 @@
         userCode: typeof raw.userCode === 'string' ? raw.userCode : '',
         userCodeCreatedAt: Math.max(0, Number(raw.userCodeCreatedAt) || 0),
         kingdom: raw.kingdom && typeof raw.kingdom === 'object' ? raw.kingdom : null,
+        orcReinforce: raw.orcReinforce && typeof raw.orcReinforce === "object" ? raw.orcReinforce : null,
         oneTimeT3SummonUsed: Boolean(raw.oneTimeT3SummonUsed),
         bossStage: typeof raw.bossStage === 'number' ? raw.bossStage : 1,
         allStagesCleared: Boolean(raw.allStagesCleared),
@@ -277,6 +278,7 @@
         userCode: typeof getUserCode === 'function' ? getUserCode() : (gameState.userCode || ''),
         userCodeCreatedAt: Number(gameState.userCodeCreatedAt) || 0,
         kingdom: gameState.kingdom ? JSON.parse(JSON.stringify(gameState.kingdom)) : null, // 👑 왕국 병력 · 부지 (js/34-kingdom.js)
+        orcReinforce: gameState.orcReinforce ? JSON.parse(JSON.stringify(gameState.orcReinforce)) : null, // 👹 Lv.99 오크 증원 (js/39-orc-reinforce.js)
         oneTimeT3SummonUsed: Boolean(gameState.oneTimeT3SummonUsed),
         bossStage: BOSS_SANCTUM.bossStage,
         allStagesCleared: BOSS_SANCTUM.allStagesCleared,
@@ -484,6 +486,10 @@
       gameState.kingdom = data.kingdom && typeof data.kingdom === 'object'
         ? JSON.parse(JSON.stringify(data.kingdom))
         : { units: [], sites: {} };
+      // 👹 Lv.99 오크 증원 (js/39-orc-reinforce.js): 쌓인 시간 · 증원 오크 목록
+      gameState.orcReinforce = data.orcReinforce && typeof data.orcReinforce === "object"
+        ? JSON.parse(JSON.stringify(data.orcReinforce))
+        : null;
       // 유저 고유 코드 (js/33-user-code.js): 저장에 코드가 있으면 그 코드를 쓴다
       if (typeof data.userCode === 'string' && /^[A-Z0-9]{8}$/.test(data.userCode)) {
         gameState.userCode = data.userCode;

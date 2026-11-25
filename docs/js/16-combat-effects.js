@@ -473,7 +473,7 @@
           const insToastSuffix = (hunter.inventory && hunter.inventory.getCount('insignia_rebirth_supreme') === 1)
             ? ' · ✨초월 윤회의 인장(+150% 피해) 보유'
             : '';
-          showToast(`✨ '${hunter.name}' [초월 윤회의 집행자] 토벌! +${formatGold(hunterGoldGain)}G · 💠별결정 ${astralGain}개${insToastSuffix}!`);
+          showToast(`✨ '${hunter.name}' [리치 킹] 토벌! +${formatGold(hunterGoldGain)}G · 💠별결정 ${astralGain}개${insToastSuffix}!`);
         }
       },
 
