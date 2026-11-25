@@ -1524,6 +1524,13 @@
           return;
         }
 
+        const foldBtn = targetEl.closest(".btn-roster-fold");
+        if (foldBtn) {
+          const id = foldBtn.getAttribute("data-fold-id");
+          if (id) setRosterCardFolded(id, !isRosterCardFolded(id));
+          return;
+        }
+
         const lockBtn = targetEl.closest(".btn-roster-lock");
         if (lockBtn) {
           const id = lockBtn.getAttribute("data-lock-id");
@@ -1597,11 +1604,14 @@
       });
     }
 
-    // 헌터 목록 정렬: 영입순 · 직업(1차 직업별, 환생·레벨 높은 순) · 환생 · 레벨 (기기에 기억)
+    // 헌터 목록 정렬: 영입순 · 직업(1차 직업별, 환생·레벨 높은 순) · 환생 · 등급 (기기에 기억)
     const ROSTER_SORT_KEY = 'aiht_roster_sort_v1';
     const ROSTER_JOB_ORDER = ['버서커', '레인저', '팔라딘', '소서러'];
     function getRosterSortMode() {
-      try { return localStorage.getItem(ROSTER_SORT_KEY) || 'recruit'; } catch (_) { return 'recruit'; }
+      try {
+        const m = localStorage.getItem(ROSTER_SORT_KEY) || 'recruit';
+        return m === 'level' ? 'grade' : m; // 예전 '레벨' 정렬은 '등급' 정렬로 바뀜
+      } catch (_) { return 'recruit'; }
     }
     function setRosterSortMode(mode) {
       try { localStorage.setItem(ROSTER_SORT_KEY, mode); } catch (_) {}
@@ -1610,6 +1620,65 @@
       });
       renderHunterRosterModal(true);
     }
+    // 헌터 카드 접기 / 펼치기 (접힌 헌터 id를 이 기기에 기억)
+    //   접으면 환생 표시 아랫줄부터 현재 위치(상태)까지 숨기고, 이름 · 환생 줄과 버튼만 남긴다.
+    const ROSTER_FOLD_KEY = "aiht_roster_fold_v1";
+    let rosterFoldedIds = null;
+    function getRosterFoldedSet() {
+      if (!rosterFoldedIds) {
+        try { rosterFoldedIds = new Set(JSON.parse(localStorage.getItem(ROSTER_FOLD_KEY) || "[]")); } catch (_) { rosterFoldedIds = new Set(); }
+      }
+      return rosterFoldedIds;
+    }
+    function saveRosterFoldedSet() {
+      const alive = new Set(hunters.map(h => h.id));
+      const list = [...getRosterFoldedSet()].filter(id => alive.has(id)); // 떠난 헌터 기록은 정리
+      rosterFoldedIds = new Set(list);
+      try { localStorage.setItem(ROSTER_FOLD_KEY, JSON.stringify(list)); } catch (_) {}
+    }
+    function isRosterCardFolded(id) {
+      return getRosterFoldedSet().has(id);
+    }
+    // 카드 모양만 바꾼다 (목록을 다시 만들지 않음)
+    function applyRosterCardFold(id) {
+      const card = document.querySelector(`#hunterRosterBody .roster-card[data-roster-id="${id}"]`);
+      if (!card) return;
+      const folded = isRosterCardFolded(id);
+      card.classList.toggle("folded", folded);
+      const btn = card.querySelector(".btn-roster-fold");
+      if (btn) {
+        btn.textContent = folded ? "▼" : "▲";
+        btn.title = folded ? "펼치기" : "접기";
+        btn.setAttribute("aria-label", btn.title);
+      }
+    }
+    function setRosterCardFolded(id, folded) {
+      const set = getRosterFoldedSet();
+      if (folded) set.add(id); else set.delete(id);
+      saveRosterFoldedSet();
+      applyRosterCardFold(id);
+      updateRosterFoldToggleButton();
+    }
+    function areAllRosterCardsFolded() {
+      return hunters.length > 0 && hunters.every(h => isRosterCardFolded(h.id));
+    }
+    // 전체 버튼 글자: 모두 접혀 있으면 [▼ 전체 펼치기], 아니면 [▲ 전체 접기]
+    function updateRosterFoldToggleButton() {
+      const btn = document.getElementById("btnRosterFoldToggle");
+      if (!btn) return;
+      const allFolded = areAllRosterCardsFolded();
+      const label = allFolded ? "▼ 전체 펼치기" : "▲ 전체 접기";
+      if (btn.textContent !== label) btn.textContent = label;
+      btn.title = allFolded ? "모든 헌터 카드를 펼칩니다" : "모든 헌터 카드를 접습니다";
+    }
+    function setAllRosterCardsFolded(folded) {
+      const set = getRosterFoldedSet();
+      hunters.forEach((h) => { if (folded) set.add(h.id); else set.delete(h.id); });
+      saveRosterFoldedSet();
+      hunters.forEach(h => applyRosterCardFold(h.id));
+      updateRosterFoldToggleButton();
+    }
+
     function getSortedRosterHunters() {
       const mode = getRosterSortMode();
       const list = hunters.slice();
@@ -1622,8 +1691,15 @@
         list.sort((a, b) => (jobIdx(a) - jobIdx(b)) || byGrowth(a, b));
       } else if (mode === 'rebirth') {
         list.sort(byGrowth);
-      } else if (mode === 'level') {
-        list.sort((a, b) => (b.level - a.level) || ((b.rebirthCount || 0) - (a.rebirthCount || 0)));
+      } else if (mode === 'grade') {
+        // 등급이 보이는 헌터(5환생↑)를 높은 등급(EX+)부터, 등급이 아직 안 보이는 헌터는 그 뒤에 환생·레벨 순
+        // (안 보이는 등급이 순서로 드러나지 않게 한다 · 등급표 js/37-hunter-grade.js)
+        const gradeRank = (h) => {
+          if (typeof isHunterGradeVisible !== 'function' || !isHunterGradeVisible(h)) return 999;
+          const i = HUNTER_GRADES.findIndex(g => g.id === getHunterGrade(h).id);
+          return i < 0 ? 998 : i;
+        };
+        list.sort((a, b) => (gradeRank(a) - gradeRank(b)) || byGrowth(a, b));
       }
       return list;
     }
@@ -1633,6 +1709,8 @@
       bar.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-roster-sort]');
         if (btn) setRosterSortMode(btn.getAttribute('data-roster-sort'));
+        // 전체 접기 · 펼치기 버튼 하나: 펼쳐진 카드가 하나라도 있으면 모두 접고, 모두 접혀 있으면 모두 펼친다
+        if (e.target.closest("#btnRosterFoldToggle")) setAllRosterCardsFolded(!areAllRosterCardsFolded());
       });
       const mode = getRosterSortMode();
       bar.querySelectorAll('[data-roster-sort]').forEach((b) => {
@@ -1649,6 +1727,7 @@
 
     function renderHunterRosterModal(forceRebuild = false) {
       bindHunterRosterEvents();
+      updateRosterFoldToggleButton(); // 전체 접기 · 펼치기 버튼 글자
       const body = document.getElementById('hunterRosterBody');
       const badge = document.getElementById('rosterCountBadge');
       if (badge) badge.textContent = `${hunters.length} / ${getMaxHunterCapacity()}명`;
@@ -1715,7 +1794,7 @@
           const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h);
           const colRec = getColosseumRecord(h.id);
           return `
-            <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}" data-roster-id="${h.id}">
+            <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}${isRosterCardFolded(h.id) ? " folded" : ""}" data-roster-id="${h.id}">
               <div class="roster-card-top">
                 <div class="roster-name-group">
                   <span class="roster-hunter-name">${h.name}</span>
@@ -1727,7 +1806,10 @@
               </div>
               <div class="roster-sub-row">
                 <span data-role="rebirth">${rebirthStarsHtml}</span>
-                <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${effP.effectText}</span>
+                <span class="roster-sub-right">
+                  <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${effP.effectText}</span>
+                  <button type="button" class="btn-roster-fold" data-fold-id="${h.id}" title="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}" aria-label="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}">${isRosterCardFolded(h.id) ? "▼" : "▲"}</button>
+                </span>
               </div>
               <div class="roster-card-meta" style="color:#fef08a;font-weight:700;">
                 <span data-role="colosseum-pts">${formatColosseumRosterHtml(colRec)}</span>

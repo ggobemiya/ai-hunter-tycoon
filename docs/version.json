@@ -1,9 +1,9 @@
 {
-  "version": 43,
+  "version": 44,
   "source": "https://stormflowerm.github.io/AI-Web-Hunter/",
-  "sha256": "1d22abbee034e758cebb82c16f806bd6e2e8b201ce85b0fabf629b99d5fb0735",
-  "snapshot_sha256": "e2faf6071be6b776eabc1688bbe4cf1312f8480600589f0cfba45bb289ec5728",
-  "archive": "releases/upstream-20261125T060123Z-e2faf6071b/",
-  "published_at": "2026-11-25T06:01:23.330295+00:00",
+  "sha256": "d30050fbcb5e910e313ee0bae0aeed14be3958042cf81bc172cc7e12a791e176",
+  "snapshot_sha256": "886041ed75922095056f20a3d4dcedab8b07bd226de00a5545682c40f1449a3e",
+  "archive": "releases/upstream-20261125T062745Z-886041ed75/",
+  "published_at": "2026-11-25T06:27:45.124495+00:00",
   "files": 65
 }

@@ -3082,3 +3082,26 @@ body.compact-ui .roster-mini-bar { font-size: 11px; font-weight: 700; }
       background: rgba(71, 85, 105, 0.35);
       color: #64748b;
     }
+
+/* ===== 📋 헌터 목록 카드 접기 / 펼치기 (js/10-ui-panels.js) ===== */
+.roster-sub-right { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.btn-roster-fold {
+  flex-shrink: 0;
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  border-radius: 7px;
+  background: rgba(30, 41, 59, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  color: #e2e8f0;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+}
+.btn-roster-fold:hover { background: rgba(51, 65, 85, 0.95); color: #fff; }
+.roster-card.folded .roster-card-meta,
+.roster-card.folded .roster-mini-bars,
+.roster-card.folded .roster-status-text { display: none; }
+.roster-card.folded .roster-card-footer { justify-content: flex-end; }
+.roster-sort-bar .roster-fold-all { display: inline-flex; gap: 5px; margin-left: auto; }
+.roster-sort-bar .roster-fold-all button { font-size: 11px; padding: 4px 8px; }

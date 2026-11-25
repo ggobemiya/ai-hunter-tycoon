@@ -13,7 +13,8 @@
       const GROUPS = {
         bar: ['btnRecruitHunter', 'btnExpandPlot', 'btnOpenUserInventory', 'btnOpenMailbox', 'btnBossRaidControl', 'btnOrcSubjugationRaid', 'btnAbandonBossRaid'],
         map: ['btnZoomIn', 'btnReset', 'btnZoomOut'],
-        menu: ['btnSaveCloud', 'btnCloudAccount', 'btnTogglePowerSaving', 'btnOpenHelpModal', 'btnToggleFullscreen', 'btnResetProgress']
+        // 초기화는 맨 앞(왼쪽 위)에 둔다: 오른쪽 아래 칸은 ☰ 메뉴 버튼과 같은 자리라 메뉴를 다시 누르다 잘못 누르기 쉽다
+        menu: ['btnResetProgress', 'btnCloudAccount', 'btnTogglePowerSaving', 'btnOpenHelpModal', 'btnToggleFullscreen', 'btnSaveCloud']
       };
       const containers = {
         bar: document.getElementById('mobileActionBar'),
