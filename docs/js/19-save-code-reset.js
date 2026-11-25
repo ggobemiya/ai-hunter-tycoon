@@ -124,12 +124,12 @@
         out.cm = [src.camera.x, src.camera.y, src.camera.userZoom];
       }
       // 토벌 포인트 · 경비병 레벨 · 결투장 기록 (예전 저장 코드에는 빠져 있던 항목)
-      // 자리 비운 동안 보상용 초당 수입 [금고 골드, 측정 시간, [[헌터id, 경험치, 개인골드], ...]]
+      // 자리 비운 동안 보상용 초당 수입 [금고 골드, 측정 시간, [[헌터id, 경험치, 개인골드, 장비조각], ...]]
       if (src.offlineRates) {
         out.or = [
           src.offlineRates.goldPerSec || 0,
           src.offlineRates.measuredSec || 0,
-          (src.offlineRates.hunters || []).map(hr => [hr.id, hr.expPerSec || 0, hr.goldPerSec || 0]),
+          (src.offlineRates.hunters || []).map(hr => [hr.id, hr.expPerSec || 0, hr.goldPerSec || 0, hr.fragPerSec || 0]), // 4번째: 장비조각/초
           (src.offlineRates.orcs || []).map(orr => [orr.id, orr.killsPerSec || 0])
         ];
       }
@@ -358,7 +358,7 @@
         offlineRates: Array.isArray(c.or) ? {
           goldPerSec: Number(c.or[0]) || 0,
           measuredSec: Number(c.or[1]) || 0,
-          hunters: (Array.isArray(c.or[2]) ? c.or[2] : []).filter(Array.isArray).map(r => ({ id: r[0], expPerSec: Number(r[1]) || 0, goldPerSec: Number(r[2]) || 0 })),
+          hunters: (Array.isArray(c.or[2]) ? c.or[2] : []).filter(Array.isArray).map(r => ({ id: r[0], expPerSec: Number(r[1]) || 0, goldPerSec: Number(r[2]) || 0, fragPerSec: Number(r[3]) || 0 })),
           orcs: (Array.isArray(c.or[3]) ? c.or[3] : []).filter(Array.isArray).map(r => ({ id: r[0], killsPerSec: Number(r[1]) || 0 }))
         } : null,
         oneTimeT3SummonUsed: Boolean(c.s3),

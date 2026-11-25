@@ -310,3 +310,17 @@
       try { runTicketResetPatchIfDue(bootSavedAt); } catch (_) {}
       try { refreshMailboxViews(); } catch (_) {}
     }, 2600);
+
+    // 우편으로 받은 골드는 '버는 돈'이 아니므로 자리 비운 동안 보상의 수입 측정에서 뺀다 (24-offline-rewards.js)
+    (function excludeMailGoldFromOfflineIncome() {
+      if (typeof OfflineIncome === 'undefined' || typeof claimMail !== 'function') return;
+      const origClaimMail = claimMail;
+      claimMail = function (...args) {
+        OfflineIncome.suppressGold += 1;
+        try {
+          return origClaimMail.apply(this, args);
+        } finally {
+          OfflineIncome.suppressGold -= 1;
+        }
+      };
+    })();
