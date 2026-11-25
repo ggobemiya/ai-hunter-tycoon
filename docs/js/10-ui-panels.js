@@ -36,42 +36,42 @@
       const oneTimeT3Btn = document.getElementById('btnSummonOneTimeT3Hunter');
 
       if (goldEl) {
-        goldEl.textContent = formatGold(gameState.gold);
-        const chipEl = goldEl.closest('.stat-chip');
-        if (chipEl) chipEl.title = `마을 금고 보유 골드: ${Math.floor(gameState.gold).toLocaleString()} G`;
+        setTextIfChanged(goldEl, formatGold(gameState.gold));
+        const chipEl = goldEl.closest(".stat-chip");
+        setTitleIfChanged(chipEl, `마을 금고 보유 골드: ${Math.floor(gameState.gold).toLocaleString()} G`);
       }
       if (subjEl) {
         const subjPts = Math.max(0, Math.floor(Number(gameState.subjugationPoints) || 0));
-        subjEl.textContent = subjPts.toLocaleString();
-        const subjChip = subjEl.closest('.stat-chip');
-        if (subjChip) subjChip.title = `보유 토벌 포인트: ${subjPts.toLocaleString()} P`;
+        setTextIfChanged(subjEl, subjPts.toLocaleString());
+        const subjChip = subjEl.closest(".stat-chip");
+        setTitleIfChanged(subjChip, `보유 토벌 포인트: ${subjPts.toLocaleString()} P`);
       }
-      if (prospEl) prospEl.textContent = gameState.prosperity.toLocaleString();
-      if (capEl) capEl.textContent = `${hunters.length} / ${maxCap}`;
+      setTextIfChanged(prospEl, gameState.prosperity.toLocaleString());
+      setTextIfChanged(capEl, `${hunters.length} / ${maxCap}`);
 
       if (rosterRecruitBtn) {
         const isFull = hunters.length >= maxCap;
-        rosterRecruitBtn.disabled = isFull || gameState.gold < 200;
-        rosterRecruitBtn.textContent = isFull ? `정원 가득 (${hunters.length}/${maxCap})` : '⚔️ 영입 (200G)';
+        setDisabledIfChanged(rosterRecruitBtn, isFull || gameState.gold < 200);
+        setTextIfChanged(rosterRecruitBtn, isFull ? `정원 가득 (${hunters.length}/${maxCap})` : '⚔️ 영입 (200G)');
       }
 
       if (oneTimeT3Btn) {
         const isFull = hunters.length >= maxCap;
         if (gameState.oneTimeT3SummonUsed) {
           oneTimeT3Btn.style.display = 'none';
-          oneTimeT3Btn.disabled = true;
-          oneTimeT3Btn.textContent = '✨ 3T·Lv.1 소환 완료';
+          setDisabledIfChanged(oneTimeT3Btn, true);
+          setTextIfChanged(oneTimeT3Btn, '✨ 3T·Lv.1 소환 완료');
         } else {
           oneTimeT3Btn.style.display = '';
-          oneTimeT3Btn.disabled = isFull;
-          oneTimeT3Btn.textContent = isFull ? `정원 가득 (${hunters.length}/${maxCap})` : '✨ 1회 한정 3T·Lv.1 소환';
+          setDisabledIfChanged(oneTimeT3Btn, isFull);
+          setTextIfChanged(oneTimeT3Btn, isFull ? `정원 가득 (${hunters.length}/${maxCap})` : '✨ 1회 한정 3T·Lv.1 소환');
         }
       }
 
       if (expandBtn) {
         const rem = village.getRemainingExpandableCount();
-        expandBtn.textContent = rem > 0 ? `+ 부지 (300G · ${rem})` : '부지 최대';
-        expandBtn.disabled = rem <= 0;
+        setTextIfChanged(expandBtn, rem > 0 ? `+ 부지 (300G · ${rem})` : '부지 최대');
+        setDisabledIfChanged(expandBtn, rem <= 0);
       }
 
       if (document.getElementById('guardRosterBackdrop')?.classList.contains('open')) {

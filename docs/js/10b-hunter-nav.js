@@ -22,12 +22,9 @@
       const el = document.getElementById('hunterNavCount');
       if (!el) return;
       const idx = getSelectedHunterIndex();
-      el.textContent = `${idx >= 0 ? idx + 1 : '-'} / ${hunters.length}`;
+      setTextIfChanged(el, `${idx >= 0 ? idx + 1 : '-'} / ${hunters.length}`);
       const single = hunters.length <= 1;
-      ['btnPrevHunter', 'btnNextHunter'].forEach((id) => {
-        const b = document.getElementById(id);
-        if (b) b.disabled = single;
-      });
+      ["btnPrevHunter", "btnNextHunter"].forEach((id) => setDisabledIfChanged(document.getElementById(id), single));
     }
 
     (function bindHunterNav() {

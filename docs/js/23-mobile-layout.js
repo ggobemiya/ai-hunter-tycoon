@@ -98,7 +98,8 @@
         if (r.height <= 0) return;
         const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
         const gap = Math.max(0, Math.round(vh - r.top));
-        document.documentElement.style.setProperty('--bottom-ui-gap', `${gap}px`);
+        const gapPx = `${gap}px`;
+        if (document.documentElement.style.getPropertyValue("--bottom-ui-gap") !== gapPx) document.documentElement.style.setProperty("--bottom-ui-gap", gapPx); // 바뀔 때만 (전체 화면 다시 계산 방지)
       };
       window.addEventListener('resize', measure);
       window.addEventListener('orientationchange', () => setTimeout(measure, 300));

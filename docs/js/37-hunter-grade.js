@@ -87,12 +87,13 @@
         box.appendChild(badge);
       }
       if (!isHunterGradeVisible(hunter)) {
-        badge.hidden = true;
+        if (!badge.hidden) badge.hidden = true;
         return;
       }
       const g = getHunterGrade(hunter);
-      badge.hidden = false;
-      badge.className = `hunter-grade hunter-portrait-grade ${g.cls}`;
+      if (badge.hidden) badge.hidden = false;
+      const cls = `hunter-grade hunter-portrait-grade ${g.cls}`;
+      if (badge.className !== cls) badge.className = cls;
       if (badge.textContent !== g.id) badge.textContent = g.id;
     }
     (function hookHunterPanelGrade() {

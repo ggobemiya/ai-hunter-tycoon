@@ -589,7 +589,29 @@
       window.finishGameLoading?.('마을에 입장합니다...');
     }, 2500);
 
+    // 📱 휴대폰 절약: 화면을 5초 동안 만지지 않으면 1초에 30번만 그린다 (평소 60번).
+    //    만지거나 끌면 바로 60번으로 돌아온다. 게임 진행 속도는 그대로 (그 사이 시간만큼 한 번에 진행).
+    //    계속 60번 그리면 휴대폰이 뜨거워져 스스로 느려지는(발열 제한) 일이 생긴다.
+    const IDLE_FRAME_CAP = { idleAfterMs: 5000, idleFrameMs: 1000 / 30 };
+    let lastUserInputAt = performance.now();
+    let lastDrawnAt = 0;
+    ['pointerdown', 'pointermove', 'wheel', 'touchstart', 'touchmove', 'keydown'].forEach((type) => {
+      window.addEventListener(type, () => { lastUserInputAt = performance.now(); }, { passive: true, capture: true });
+    });
+    // 손가락으로 조작하는 기기(휴대폰 · 태블릿)만 해당. 마우스를 쓰는 PC는 항상 60번.
+    const coarsePointerQuery = window.matchMedia ? window.matchMedia('(pointer: coarse)') : null;
+    function isCompactScreenForFrameCap() {
+      return !!(coarsePointerQuery && coarsePointerQuery.matches);
+    }
+
     function renderLoop(now = performance.now()) {
+      if (isCompactScreenForFrameCap()
+        && now - lastUserInputAt > IDLE_FRAME_CAP.idleAfterMs
+        && now - lastDrawnAt < IDLE_FRAME_CAP.idleFrameMs - 2) {
+        requestAnimationFrame(renderLoop);
+        return;
+      }
+      lastDrawnAt = now;
       try {
         const dt = Math.min(0.05, Math.max(0, (now - lastTimestamp) / 1000));
         lastTimestamp = now;
@@ -671,10 +693,15 @@
         }
 
         if (debugText) {
-          debugText.innerHTML = `
+          // 내용이 바뀔 때만 다시 쓴다 (예전에는 1초에 60번씩 새로 써서 휴대폰이 느려졌다)
+          const debugHtml = `
             뷰포트: ${Math.round(camera.viewportWidth)} × ${Math.round(camera.viewportHeight)} | 배율: <b>${camera.effectiveZoom.toFixed(2)}x</b><br/>
             +10강(청색 마력) 및 +15강(황금 화염) 무기를 착용한 헌터들이 마을을 순찰합니다.
           `;
+          if (debugText._lastHtml !== debugHtml) {
+            debugText._lastHtml = debugHtml;
+            debugText.innerHTML = debugHtml;
+          }
         }
       } catch (err) {
         console.error('Render loop error:', err);

@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>AI 헌터 타이쿤</title>
+  <link rel="stylesheet" href="css/style.css?v=20261125s" />
+  <!-- 앱 설치(PWA) · APK 변환용 -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="헌터 타이쿤" />
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" href="assets/icons/icon-192.png" />
+</head>
+<body>
+
+  <!-- 초기 데이터 로딩 화면 -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-emblem">🏰</div>
+    <div class="loading-title">AI 헌터 타이쿤</div>
+    <div class="loading-bar-wrap">
+      <div class="loading-bar-fill" id="loadingBarFill"></div>
+    </div>
+    <div class="loading-status" id="loadingStatusText">마을 지형 및 헌터 초기화 중...</div>
+  </div>
+
+  <div class="hud" id="hudInfo">
+    <h3>🎥 2D 카메라 & 마을 뷰</h3>
+    <div id="debugText">초기화 중...</div>
+  </div>
+
+  <!-- 상단 통합 슬림 네비게이션 바 -->
+  <header class="top-navbar">
+    <div class="nav-cluster">
+      <div class="stat-chip" title="마을 금고 보유 골드">💰 <span id="goldDisplay">2,500</span> G</div>
+      <button class="stat-chip clickable" id="btnOpenSubjugationShop" title="보유 토벌 포인트 · 눌러서 토벌 포인트 상점 열기">🎖️ <span id="subjugationPointsDisplay">0</span> P</button>
+      <div class="stat-chip" title="마을 번영도">🏘️ <span id="prosperityDisplay">120</span></div>
+      <button class="stat-chip clickable" id="btnOpenHunterRoster" title="전체 헌터 목록 열기">
+        ⚔️ <span id="capacityDisplay">0 / 4</span>
+      </button>
+      <button class="stat-chip clickable" id="btnOpenGuardRoster" title="마을 경비병 목록 및 골드 강화 열기">
+        🛡️ <span><span class="chip-label">경비병 </span>2명</span>
+      </button>
+    </div>
+
+    <div class="nav-cluster" id="navActionCluster">
+      <button class="nav-action-btn boss-btn" id="btnBossRaidControl">🔥 보스 필드 오픈</button>
+      <button class="nav-action-btn boss-btn" id="btnOrcSubjugationRaid">👹 오크 토벌</button>
+      <button class="nav-action-btn abandon-boss-btn" id="btnAbandonBossRaid" style="display: none;" title="진행 중인 보스 레이드를 포기하고 헌터들을 철수시킵니다">🏳️ 포기</button>
+      <div class="nav-divider"></div>
+      <button class="nav-action-btn" id="btnSaveCloud" title="진행 상황 저장">💾 저장</button>
+      <button class="nav-action-btn" id="btnCloudAccount" title="구글 로그인 · 클라우드 저장">☁️ 로그인</button>
+      <button class="nav-action-btn reset-btn" id="btnResetProgress" title="저장 데이터 삭제 및 새 게임 시작">🔄 초기화</button>
+      <button class="nav-action-btn" id="btnTogglePowerSaving" title="화면 보호 및 저전력 절전 모드 전환">🌙 절전</button>
+      <button class="nav-action-btn" id="btnOpenHelpModal" title="도움말 & 가이드">📖 가이드</button>
+      <button class="nav-action-btn" id="btnToggleFullscreen" title="전체화면 전환">⛶</button>
+    </div>
+  </header>
+
+  <!-- 절전 모드 화면 보호 오버레이 -->
+  <div class="power-saving-overlay" id="powerSavingOverlay" role="dialog" aria-label="절전 모드">
+    <div class="power-saving-badge">🔋 절전 모드 활성 · 시뮬레이션 백그라운드 계속 진행 중</div>
+    <div class="power-saving-title">🌙 화면 보호 절전 모드</div>
+    <div class="power-saving-stats">
+      <div class="power-saving-stat">💰 금고: <span id="psGoldVal">0 G</span></div>
+      <div class="power-saving-stat">⚔️ 헌터: <span id="psHuntersVal">0명</span></div>
+      <div class="power-saving-stat">🔥 보스: <span id="psBossVal">1단계</span></div>
+    </div>
+    <button type="button" class="power-saving-wake-btn" id="btnWakeFromPowerSaving">☀️ 화면 켜기 (절전 해제)</button>
+    <div class="power-saving-hint">화면을 터치하거나 클릭하면 즉시 일반 화면으로 돌아옵니다.</div>
+  </div>
+
+  <!-- 게임 데이터 초기화 확인 모달 -->
+  <div class="tier-modal-backdrop" id="resetConfirmBackdrop">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 12px;">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>🔄</span>
+          <span>마을 데이터 초기화</span>
+        </div>
+        <button class="btn-close" id="btnCancelResetModal">✕</button>
+      </div>
+      <div style="font-size: 12.5px; line-height: 1.55; color: #cbd5e1;">
+        저장된 골드, 부지/건물 레벨, 헌터 성장·장비·관계도 및 보스 진행 단계가 모두 지워지고 <b style="color:#fde047;">초기 마을 상태(무작위 헌터 2명)</b>로 되돌아갑니다. 정말 초기화하시겠습니까?
+      </div>
+      <div class="panel-actions" style="margin-top: 4px;">
+        <button class="btn-demolish" id="btnCancelResetAction" style="flex: 1; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button class="btn-upgrade" id="btnConfirmResetAction" style="flex: 1.2; background: linear-gradient(135deg, #dc2626, #991b1b); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">🔄 완전 초기화</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 헌터 추방 확인 모달 -->
+  <div class="tier-modal-backdrop" id="banishConfirmBackdrop" style="z-index: 45;">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 12px;">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>🚪</span>
+          <span>헌터 마을 추방</span>
+        </div>
+        <button class="btn-close" id="btnCancelBanishModal">✕</button>
+      </div>
+      <div id="banishConfirmDesc" style="font-size: 12.5px; line-height: 1.55; color: #cbd5e1;">
+        선택한 헌터를 마을에서 추방하시겠습니까?
+      </div>
+      <div class="panel-actions" style="margin-top: 4px;">
+        <button class="btn-demolish" id="btnCancelBanishAction" style="flex: 1; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button class="btn-upgrade" id="btnConfirmBanishAction" style="flex: 1.2; background: linear-gradient(135deg, #dc2626, #991b1b); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">🚪 추방 확정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 헌터 이름 변경 모달 -->
+  <div class="tier-modal-backdrop" id="renameHunterBackdrop" style="z-index: 46;">
+    <div class="tier-modal" style="width: min(92vw, 380px); max-height: none; gap: 12px;">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>✏️</span>
+          <span>헌터 이름 변경</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseRenameHunterModal">✕</button>
+      </div>
+      <div style="font-size: 12px; color: #cbd5e1; line-height: 1.5;">
+        현재 이름: <b id="renameCurrentHunterName" style="color: #fde047;">모험가</b><br/>
+        <span style="font-size: 11px; color: #94a3b8;">1~8자 이내로 입력해 주세요.</span>
+      </div>
+      <input
+        type="text"
+        id="renameHunterInput"
+        maxlength="8"
+        placeholder="새 헌터 이름 입력 (1~8자)"
+        style="width: 100%; background: rgba(2, 6, 23, 0.92); border: 1px solid rgba(56, 189, 248, 0.45); border-radius: 10px; padding: 10px 12px; color: #f8fafc; font-size: 13px; font-weight: 700; user-select: text; -webkit-user-select: text;"
+      />
+      <div class="panel-actions" style="margin-top: 2px;">
+        <button type="button" class="btn-demolish" id="btnCancelRenameHunterAction" style="flex: 1; padding: 10px; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button type="button" class="btn-upgrade" id="btnConfirmRenameHunterAction" style="flex: 1.3; padding: 10px; background: linear-gradient(135deg, #0284c7, #0369a1); box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">✅ 이름 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 건물 철거 확인 모달 -->
+  <div class="tier-modal-backdrop" id="demolishConfirmBackdrop" style="z-index: 46;">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 12px; border-color: rgba(248, 113, 113, 0.55);">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>🏚️</span>
+          <span>마을 건물 철거</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseDemolishConfirmModal">✕</button>
+      </div>
+      <div id="demolishConfirmDesc" style="font-size: 12.5px; line-height: 1.55; color: #cbd5e1;">
+        선택한 건물을 철거하시겠습니까?
+      </div>
+      <div class="panel-actions" style="margin-top: 4px;">
+        <button type="button" class="btn-demolish" id="btnCancelDemolishAction" style="flex: 1; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button type="button" class="btn-upgrade" id="btnConfirmDemolishAction" style="flex: 1.25; background: linear-gradient(135deg, #dc2626, #991b1b); box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);">🏚️ 철거 확정</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 마을 전체 헌터 목록 기부 금액 터치 입력 모달 -->
+  <div class="tier-modal-backdrop" id="rosterDonateBackdrop" style="z-index: 46;">
+    <div class="tier-modal" style="width: min(94vw, 360px); max-height: none; gap: 10px;">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>🎁</span>
+          <span id="rosterDonateTitle">헌터 골드 기부</span>
+        </div>
+        <button class="btn-close" id="btnCloseRosterDonateModal">✕</button>
+      </div>
+      <div id="rosterDonateSub" style="font-size: 11.5px; color: #cbd5e1; display: flex; justify-content: space-between; align-items: center;">
+        <span>마을 금고: <b id="rosterDonateTreasuryVal" style="color:#fde047;">0 G</b></span>
+        <span>헌터 소지: <b id="rosterDonateHunterGoldVal" style="color:#86efac;">0 G</b></span>
+      </div>
+      <div id="rosterDonateAmountScreen" style="background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(250, 204, 21, 0.45); border-radius: 11px; padding: 10px 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 11px; color: #94a3b8; font-weight: 700;">기부 금액</span>
+        <span id="rosterDonateInputDisplay" style="font-size: 18px; font-weight: 800; color: #fde047;">0 G</span>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px;">
+        <button type="button" class="btn-donate-gold" data-donate-add="1000" style="padding: 6px 4px;">+1,000</button>
+        <button type="button" class="btn-donate-gold" data-donate-add="10000" style="padding: 6px 4px;">+1만</button>
+        <button type="button" class="btn-donate-gold" data-donate-add="100000" style="padding: 6px 4px;">+10만</button>
+        <button type="button" class="btn-donate-gold" id="btnDonateMaxTreasury" style="padding: 6px 4px;">전액</button>
+      </div>
+      <div id="rosterDonateKeypad" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+        <button type="button" class="dock-btn" data-keypad-digit="1" style="padding: 10px 0; font-size: 14px;">1</button>
+        <button type="button" class="dock-btn" data-keypad-digit="2" style="padding: 10px 0; font-size: 14px;">2</button>
+        <button type="button" class="dock-btn" data-keypad-digit="3" style="padding: 10px 0; font-size: 14px;">3</button>
+        <button type="button" class="dock-btn" data-keypad-digit="4" style="padding: 10px 0; font-size: 14px;">4</button>
+        <button type="button" class="dock-btn" data-keypad-digit="5" style="padding: 10px 0; font-size: 14px;">5</button>
+        <button type="button" class="dock-btn" data-keypad-digit="6" style="padding: 10px 0; font-size: 14px;">6</button>
+        <button type="button" class="dock-btn" data-keypad-digit="7" style="padding: 10px 0; font-size: 14px;">7</button>
+        <button type="button" class="dock-btn" data-keypad-digit="8" style="padding: 10px 0; font-size: 14px;">8</button>
+        <button type="button" class="dock-btn" data-keypad-digit="9" style="padding: 10px 0; font-size: 14px;">9</button>
+        <button type="button" class="dock-btn" id="btnKeypadClear" style="padding: 10px 0; font-size: 12px; color: #fca5a5;">지움</button>
+        <button type="button" class="dock-btn" data-keypad-digit="0" style="padding: 10px 0; font-size: 14px;">0</button>
+        <button type="button" class="dock-btn" id="btnKeypadBackspace" style="padding: 10px 0; font-size: 13px;">⌫</button>
+      </div>
+      <div class="panel-actions" style="margin-top: 2px;">
+        <button type="button" class="btn-demolish" id="btnCancelRosterDonateAction" style="flex: 1; padding: 10px; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button type="button" class="btn-upgrade" id="btnConfirmRosterDonateAction" style="flex: 1.4; padding: 10px;">🎁 기부하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 진행 데이터 코드화 저장 및 불러오기 모달 -->
+  <div class="tier-modal-backdrop" id="saveCodeModalBackdrop" style="z-index: 47;">
+    <div class="tier-modal" style="width: min(94vw, 460px); max-height: 90vh; gap: 10px;">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>💾</span>
+          <span>진행 데이터 코드 저장 / 불러오기</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseSaveCodeModal">✕</button>
+      </div>
+      <div style="font-size: 11.5px; color: #cbd5e1; line-height: 1.45;">
+        현재 진행 중인 마을·헌터·장비·관계도 데이터를 <b>저장 코드</b>로 내보내거나, 다른 PC/모바일에서 복사한 <b>저장 코드 또는 저장 파일</b>을 불러와 이어서 플레이할 수 있습니다.
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+          <label for="saveCodeTextarea" style="font-size: 11.5px; font-weight: 800; color: #fde047;">🔑 저장 코드 (복사하거나 붙여넣기)</label>
+          <span id="saveCodeMetaBadge" style="font-size: 10.5px; color: #94a3b8;">준비 중...</span>
+        </div>
+        <textarea
+          id="saveCodeTextarea"
+          rows="5"
+          spellcheck="false"
+          placeholder="여기에 AVSAVE1:... 저장 코드를 붙여넣거나, 아래 [새 코드 생성] 버튼을 누르세요."
+          style="width: 100%; resize: vertical; min-height: 96px; max-height: 200px; background: rgba(2, 6, 23, 0.92); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 10px; padding: 9px 10px; color: #e2e8f0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 11px; line-height: 1.4; user-select: text; -webkit-user-select: text;"
+        ></textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+        <button type="button" class="dock-btn" id="btnGenerateSaveCode" style="padding: 8px 6px; font-size: 11.5px;">⚡ 코드 생성</button>
+        <button type="button" class="dock-btn primary" id="btnCopySaveCode" style="padding: 8px 6px; font-size: 11.5px;">📋 코드 복사</button>
+        <button type="button" class="dock-btn" id="btnDownloadSaveFile" style="padding: 8px 6px; font-size: 11.5px;">⬇️ 파일 저장</button>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: rgba(30, 41, 59, 0.72); border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 10px; padding: 8px 10px;">
+        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.35;">
+          <b style="color: #7dd3fc;">📁 파일 불러오기</b><br/>
+          <span>저장된 .json / .txt 파일 선택</span>
+        </div>
+        <label class="dock-btn" style="padding: 7px 10px; font-size: 11.5px; cursor: pointer; margin: 0;">
+          📂 파일 선택
+          <input type="file" id="saveCodeFileInput" accept=".json,.txt,application/json,text/plain" style="display: none;" />
+        </label>
+      </div>
+      <div id="saveCodeFeedbackMsg" style="font-size: 11px; font-weight: 700; color: #86efac; min-height: 16px;"></div>
+      <div class="panel-actions" style="margin-top: 2px;">
+        <button type="button" class="btn-demolish" id="btnCancelSaveCodeAction" style="flex: 1; padding: 10px; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">닫기</button>
+        <button type="button" class="btn-upgrade" id="btnLoadSaveCodeAction" style="flex: 1.4; padding: 10px; background: linear-gradient(135deg, #059669, #047857); box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);">📥 코드로 불러오기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 자리 비운 동안 보상 모달 (js/24-offline-rewards.js) -->
+  <div class="tier-modal-backdrop" id="offlineRewardBackdrop" style="z-index: 50;">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 10px; border-color: rgba(250, 204, 21, 0.55);">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>🌙</span>
+          <span>자리 비운 동안 보상</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseOfflineReward">✕</button>
+      </div>
+      <div id="offlineRewardBody" style="display: flex; flex-direction: column; gap: 9px;"></div>
+      <button type="button" class="btn-upgrade" id="btnConfirmOfflineReward" style="width: 100%;">확인</button>
+    </div>
+  </div>
+
+  <!-- 구글 로그인 · 클라우드 저장 모달 -->
+  <div class="tier-modal-backdrop" id="cloudSaveBackdrop" style="z-index: 49;">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 10px; border-color: rgba(56, 189, 248, 0.55);">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>☁️</span>
+          <span>구글 계정 · 클라우드 저장</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseCloudSave">✕</button>
+      </div>
+      <div id="userCodeBox"></div>
+      <div id="cloudSaveBody" style="display: flex; flex-direction: column; gap: 9px;"></div>
+    </div>
+  </div>
+
+  <!-- 저장 코드 불러오기 덮어쓰기 경고 확인 모달 -->
+  <div class="tier-modal-backdrop" id="loadCodeConfirmBackdrop" style="z-index: 48;">
+    <div class="tier-modal" style="width: min(92vw, 400px); max-height: none; gap: 12px; border-color: rgba(251, 191, 36, 0.55);">
+      <div class="panel-header" style="margin-bottom: 0;">
+        <div class="panel-title">
+          <span>⚠️</span>
+          <span>저장 코드 불러오기 경고</span>
+        </div>
+        <button type="button" class="btn-close" id="btnCloseLoadCodeConfirmModal">✕</button>
+      </div>
+      <div id="loadCodeConfirmDesc" style="font-size: 12.5px; line-height: 1.55; color: #cbd5e1;">
+        저장 코드를 불러오면 <b style="color:#fca5a5;">현재 진행 중인 마을·골드·헌터·장비 데이터가 모두 사라지고</b> 입력한 코드의 데이터로 덮어씌워집니다.<br/>
+        <span style="font-size: 11.5px; color: #fde047;">계속해서 저장 코드를 불러오시겠습니까?</span>
+      </div>
+      <div class="panel-actions" style="margin-top: 4px;">
+        <button type="button" class="btn-demolish" id="btnCancelLoadCodeConfirm" style="flex: 1; background: rgba(51, 65, 85, 0.75); border-color: rgba(148, 163, 184, 0.35); color: #e2e8f0;">취소</button>
+        <button type="button" class="btn-upgrade" id="btnConfirmLoadCodeAction" style="flex: 1.3; background: linear-gradient(135deg, #d97706, #b45309); box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);">⚠️ 덮어쓰고 불러오기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전체 헌터 선택창 모달 -->
+  <div class="tier-modal-backdrop" id="hunterRosterBackdrop">
+    <div class="tier-modal">
+      <div class="panel-header roster-modal-header">
+        <div class="panel-title">
+          <span>⚔️</span>
+          <span>마을 전체 헌터 목록</span>
+          <span class="badge-lv" id="rosterCountBadge">0 / 4명</span>
+        </div>
+        <div class="roster-modal-actions">
+          <button type="button" class="dock-btn" id="btnSummonOneTimeT3Hunter" style="padding:5px 9px;font-size:11px;border-radius:8px;background:rgba(168,85,247,0.28);border-color:rgba(216,180,254,0.55);color:#f3e8ff;" title="1회 한정으로 전 부위 T3 장비를 착용한 Lv.1 헌터를 소환합니다">✨ 1회 한정 3T·Lv.1 소환</button>
+          <button type="button" class="dock-btn primary" id="btnRosterRecruitHunter" style="padding:5px 10px;font-size:11.5px;border-radius:8px;">⚔️ 영입 (200G)</button>
+          <button class="btn-close" id="btnCloseHunterRoster">✕</button>
+        </div>
+      </div>
+      <div class="panel-desc" style="margin-bottom: 10px;">
+        헌터 카드를 선택하면 해당 헌터의 <b>세부 능력치·장비·스킬 창</b>이 열리며, <b>1환생 이상 헌터</b>에게는 <b>✨ 제단출정</b> 지시를 내리거나 <b>📍 위치 보기</b>로 카메라를 이동할 수 있습니다.
+      </div>
+      <div class="roster-sort-bar" id="rosterSortBar">
+        <span class="roster-sort-label">정렬</span>
+        <button type="button" data-roster-sort="recruit">영입순</button>
+        <button type="button" data-roster-sort="job">직업</button>
+        <button type="button" data-roster-sort="rebirth">환생</button>
+        <button type="button" data-roster-sort="grade">등급</button>
+        <span class="roster-fold-all">
+          <button type="button" id="btnAutoBanishToggle" title="5환생 Lv.99가 된 헌터를 자동으로 추방하고 새 헌터를 영입합니다">🤖 자동 추방</button>
+          <button type="button" id="btnRosterFoldToggle" title="모든 헌터 카드를 접습니다">▲ 전체 접기</button>
+        </span>
+      </div>
+      <div class="auto-banish-panel" id="autoBanishPanel" hidden></div>
+      <div class="tier-modal-body" id="hunterRosterBody"></div>
+    </div>
+  </div>
+
+  <!-- 마을 경비병 목록 및 골드 강화 모달 -->
+  <div class="tier-modal-backdrop" id="guardRosterBackdrop">
+    <div class="tier-modal" style="width: min(94vw, 640px);">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🛡️</span>
+          <span>마을 순찰 경비병 목록 & 강화</span>
+          <span class="badge-lv">총 2명 배치</span>
+        </div>
+        <button class="btn-close" id="btnCloseGuardRoster">✕</button>
+      </div>
+      <div class="panel-desc" style="margin-bottom: 10px;">
+        마을 내부만 순찰하며 카오스 성향(<b>-50 이하</b>) 헌터를 제압하는 최강 경비병입니다. <b>마을 골드</b>로 강화하면 공격력과 이동 속도가 상승합니다.
+      </div>
+      <div class="tier-modal-body" id="guardRosterBody"></div>
+    </div>
+  </div>
+
+  <!-- 왕국 결투장 토너먼트 & 준결승·결승 관람 모달 -->
+  <div class="tier-modal-backdrop" id="colosseumModalBackdrop" style="z-index: 44;">
+    <div class="tier-modal" style="width: min(96vw, 920px); max-height: 92vh;">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>🏟️</span>
+          <span id="colosseumModalTitle">왕국 결투장 · 제 1회 1:1 토너먼트</span>
+          <span class="badge-lv" id="colosseumScheduleBadge">다음 개막 --:--</span>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;">
+          <button type="button" class="btn-close" id="btnCloseColosseumModal">✕</button>
+        </div>
+      </div>
+      <div class="panel-desc" style="margin-bottom: 8px;">
+        • <b>선발 기준:</b> 환생 횟수 → 레벨 상위 순 최대 50명 자동 출전 · <b>공정 장비:</b> 전원 <b>1T +15강 풀강화 장비 세트</b> 장착 보정<br/>
+        • <b>개막 시각:</b> 현실 시간 <b>매시 정각(1시간마다)</b> 자동 개막 · <b>상금/승점:</b> 우승 <b>5,000만G (+10점)</b> / 준우승 <b>2,000만G (+5점)</b> / 참가상 <b>500만G (+2점)</b> · <b>기록:</b> 최근 최대 5경기 보관
+      </div>
+      <div class="colosseum-tab-bar" id="colosseumTabBar">
+        <button type="button" class="help-tab-btn active" data-col-tab="participants">📋 출전 명단 (최대 50명 · 1T+15)</button>
+        <button type="button" class="help-tab-btn" data-col-tab="bracket">🏆 랜덤 1:1 대진표 & 텍스트 경기 기록</button>
+        <button type="button" class="help-tab-btn" data-col-tab="spectator">⚔️ 준결승 · 결승전 라이브 관람</button>
+        <button type="button" class="help-tab-btn" data-col-tab="history">🗂️ 최근 5경기 기록 & 승점 랭킹</button>
+      </div>
+      <div class="tier-modal-body" id="colosseumModalBody"></div>
+    </div>
+  </div>
+
+  <!-- 종합 도움말 & 헌터 장비 티어표 모달 -->
+  <div class="tier-modal-backdrop" id="helpModalBackdrop">
+    <div class="tier-modal">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span>📖</span>
+          <span>모험가 마을 가이드 & 도움말</span>
+        </div>
+        <button class="btn-close" id="btnCloseHelpModal">✕</button>
+      </div>
+      <div class="help-nav-tabs" id="helpNavTabs">
+        <button class="help-tab-btn active" data-help-tab="start">🔰 시작하기</button>
+        <button class="help-tab-btn" data-help-tab="town">🏘️ 마을 · 시설 · 번영도</button>
+        <button class="help-tab-btn" data-help-tab="hunter">⚔️ 헌터 육성</button>
+        <button class="help-tab-btn" data-help-tab="tier">🛠️ 장비 · 강화 · 날개</button>
+        <button class="help-tab-btn" data-help-tab="jobs">⚡ 직업 · 전직</button>
+        <button class="help-tab-btn" data-help-tab="personality">🎭 성격 도감</button>
+        <button class="help-tab-btn" data-help-tab="grounds">🗺️ 사냥터 · 던전</button>
+        <button class="help-tab-btn" data-help-tab="boss">🔥 보스 · 제단</button>
+        <button class="help-tab-btn" data-help-tab="orc">👹 오크 토벌</button>
+        <button class="help-tab-btn" data-help-tab="guards">🛡️ 경비병</button>
+        <button class="help-tab-btn" data-help-tab="colosseum">🏟️ 결투장</button>
+        <button class="help-tab-btn" data-help-tab="save">💾 저장 · 보상</button>
+        <button class="help-tab-btn" data-help-tab="patch">📜 패치노트</button>
+      </div>
+      <div class="tier-modal-body" id="helpModalBody"></div>
+    </div>
+  </div>
+
+  <!-- 토스트 메시지 -->
+  <div class="toast" id="toastMsg">메시지</div>
+
+  <!-- 건물 상세/업그레이드 및 건설 패널 -->
+  <div class="building-panel" id="buildingPanel">
+    <div class="panel-header">
+      <div class="panel-title">
+        <span id="panelIcon">🏛️</span>
+        <span id="panelName">마을 회관</span>
+        <span class="badge-lv" id="panelLevel">Lv.1</span>
+      </div>
+      <div class="panel-header-actions">
+        <button class="btn-help-toggle" id="btnToggleHelp">📖 도움말</button>
+        <button class="btn-close" id="btnClosePanel">✕</button>
+      </div>
+    </div>
+    <div class="panel-desc" id="panelDesc">마을의 중심 건물입니다.</div>
+    <div class="panel-hp-box" id="panelHpBox" style="display:none;margin:6px 0;"></div>
+    <div class="panel-help-box" id="panelHelpBox"></div>
+
+    <!-- 지하 던전 선택 시 현재 입장한 헌터 현황 표시 -->
+    <div class="dungeon-explorers-box" id="dungeonExplorersBox">
+      <div class="dungeon-explorers-title">
+        <span>⚔️ 던전 탐험 중인 헌터</span>
+        <span id="dungeonExplorerCount" style="color:#a78bfa;">0명</span>
+      </div>
+      <div id="dungeonExplorerList"></div>
+    </div>
+
+    <!-- 기존 건물 업그레이드 영역 -->
+    <div id="upgradeSection">
+      <div class="panel-stats">
+        <span id="panelStatCurrent">현재 효과: 정원 4명</span>
+        <span id="panelStatNext" style="color: #38bdf8; font-weight: 700;">다음: 정원 6명</span>
+      </div>
+      <div class="panel-actions">
+        <button class="btn-upgrade" id="btnUnlockBuildingStage" style="flex: 1; background: linear-gradient(135deg, #0284c7, #0369a1); display: none;">🔓 Lv.2 해금 (300 G)</button>
+        <button class="btn-upgrade" id="btnUpgradeBuilding" style="flex: 1;">업그레이드 (500 G)</button>
+        <button class="btn-demolish" id="btnDemolishBuilding">철거</button>
+      </div>
+    </div>
+
+    <!-- 빈 부지 클릭 시 신규 건설 카탈로그 영역 -->
+    <div id="buildSection" style="display: none;">
+      <div class="build-catalog-list" id="buildCatalogList"></div>
+    </div>
+  </div>
+
+  <!-- 헌터 클릭/터치 시 세부 정보 패널 (상단 고정 + 일정 높이로 탭 전환 시 흔들림 방지) -->
+  <div class="hunter-panel" id="hunterPanel">
+    <!-- 헌터 넘겨 보기 (js/10b-hunter-nav.js) -->
+    <div class="hunter-nav-row" id="hunterNavRow">
+      <button type="button" class="hunter-nav-btn" id="btnPrevHunter" title="이전 헌터">◀ 이전</button>
+      <span class="hunter-nav-count" id="hunterNavCount">1 / 1</span>
+      <button type="button" class="hunter-nav-btn" id="btnNextHunter" title="다음 헌터">다음 ▶</button>
+      <button type="button" class="hunter-nav-btn list" id="btnHunterNavList" title="전체 헌터 목록">📋 목록</button>
+    </div>
+    <div class="hunter-panel-header">
+      <div class="hunter-identity-col">
+        <div class="hunter-name-row">
+          <span id="hunterAvatarIcon">⚔️</span>
+          <span id="hunterNameDisplay">모험가</span>
+          <button type="button" class="btn-rename-inline" id="btnOpenRenameHunter" title="헌터 이름 변경">✏️ 이름변경</button>
+          <button type="button" class="btn-lock-inline" id="btnToggleHunterLock" title="잠그면 추방할 수 없습니다">🔓</button>
+        </div>
+        <div class="hunter-meta-row">
+          <span class="hunter-job-badge" id="hunterJobDisplay">버서커 · Lv.1</span>
+          <button class="btn-rebirth-now" id="btnTriggerRebirth" style="display:none;">✨ 환생하기</button>
+        </div>
+      </div>
+      <div class="panel-header-actions">
+        <button class="btn-altar-header" id="btnCommandRebirthAltar" style="display:none;" title="1환생 이상 헌터에게 초월 환생의 제단 출정을 지시합니다">✨ 제단 출정</button>
+        <button class="btn-help-toggle" id="btnFollowHunter">🎥 추적 OFF</button>
+        <button class="btn-banish-header" id="btnBanishHunter" title="이 헌터를 마을에서 추방">🚪 추방</button>
+        <button class="btn-close" id="btnCloseHunterPanel">✕</button>
+      </div>
+    </div>
+
+    <div class="hunter-panel-body">
+      <div class="hunter-overview-row">
+        <div class="hunter-portrait" id="hunterPortrait" title="헌터 모습">
+          <canvas class="hunter-portrait-wings" id="hunterPortraitWings" aria-hidden="true"></canvas>
+          <img id="hunterPortraitImg" alt="" draggable="false" />
+          <span class="hunter-portrait-fallback" id="hunterPortraitFallback">⚔️</span>
+          <span class="hunter-portrait-wing-badge" id="hunterPortraitWingBadge" hidden></span>
+          <span class="rebirth-orbs portrait-stars" id="hunterRebirthDisplay" title="환생 단계 (최대 5개 · 빨간 별은 초월)"></span>
+        </div>
+      <div class="hunter-bars">
+        <div class="bar-row">
+          <span class="bar-label">⭐ 경험치</span>
+          <div class="bar-track"><div class="bar-fill-mp" id="hunterExpBar" style="width: 0%; background: linear-gradient(90deg, #f59e0b, #fde047);"></div></div>
+          <span class="bar-val" id="hunterExpText">0 / 100</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">❤️ 체력</span>
+          <div class="bar-track"><div class="bar-fill-hp" id="hunterHpBar" style="width: 100%;"></div></div>
+          <span class="bar-val" id="hunterHpText">100 / 100</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">💧 MP</span>
+          <div class="bar-track"><div class="bar-fill-mp" id="hunterMpBar" style="width: 100%;"></div></div>
+          <span class="bar-val" id="hunterMpText">100 / 100</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">🍖 포만감</span>
+          <div class="bar-track"><div class="bar-fill-hunger" id="hunterHungerBar" style="width: 85%;"></div></div>
+          <span class="bar-val" id="hunterHungerText">85%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">💤 피로도</span>
+          <div class="bar-track"><div class="bar-fill-fatigue" id="hunterFatigueBar" style="width: 20%;"></div></div>
+          <span class="bar-val" id="hunterFatigueText">20%</span>
+        </div>
+      </div>
+      </div>
+      <!-- 정보 계층화 서브 탭 (능력치·장비 / 인벤토리 / 스킬 / 관계도) -->
+      <div class="hunter-subtabs" id="hunterSubtabs">
+        <button class="hunter-subtab-btn active" data-hunter-tab="overview">📊 상태·장비</button>
+        <button class="hunter-subtab-btn" data-hunter-tab="inventory">🎒 인벤토리</button>
+        <button class="hunter-subtab-btn" data-hunter-tab="skills">⚡ 스킬</button>
+        <button class="hunter-subtab-btn" data-hunter-tab="relations">💞 관계도</button>
+      </div>
+
+      <div id="hunterTabOverview">
+        <div class="hunter-stat-grid">
+          <div class="stat-cell">
+            <div class="stat-cell-label">⚔️ 공격력</div>
+            <div class="stat-cell-val" id="hunterAtkVal">120</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-cell-label">🛡️ 방어력</div>
+            <div class="stat-cell-val" id="hunterDefVal">65</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-cell-label">⚡ 치명타</div>
+            <div class="stat-cell-val" id="hunterCritVal">18%</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-cell-label">🕳️ 최고 층수</div>
+            <div class="stat-cell-val" id="hunterBestFloorVal" style="color: #c4b5fd;">미기록</div>
+          </div>
+        </div>
+
+        <div class="hunter-wallet-row">
+          <span>💰 <b id="hunterGoldVal">0 G</b></span>
+          <span>🧪 <b id="hunterPotionVal">❤️0/5 · 💧0/3</b></span>
+          <span>🎒 <b id="hunterMatVal">0개</b></span>
+        </div>
+
+        <div class="hunter-colosseum-badge-row" id="hunterColosseumSummaryRow">
+          <span>🏟️ 결투장: <b id="hunterColosseumPtsVal">0점</b> (<span id="hunterColosseumRecordVal">우승 0 · 준우승 0 · 출전 0</span>)</span>
+          <span>상금 <b id="hunterColosseumPrizeVal">0 G</b></span>
+        </div>
+
+        <div class="hunter-donate-row" id="hunterDonateRow">
+          <span class="hunter-donate-label">🎁 골드 기부</span>
+          <div class="hunter-donate-btns">
+            <button type="button" class="btn-donate-gold" data-donate-amount="1000">+1,000</button>
+            <button type="button" class="btn-donate-gold" data-donate-amount="10000">+1만</button>
+            <button type="button" class="btn-donate-gold" data-donate-amount="100000">+10만</button>
+          </div>
+        </div>
+
+        <div class="hunter-personality-box" id="hunterPersonalityBox"></div>
+        <div class="advancement-box" id="hunterAdvancementBox"></div>
+        <div class="hunter-equip-box" id="hunterEquipList"></div>
+      </div>
+
+      <div id="hunterTabInventory" style="display: none;">
+        <div id="hunterInventoryBox"></div>
+      </div>
+
+      <div id="hunterTabSkills" style="display: none;">
+        <div class="hunter-skills-box" id="hunterSkillsBox"></div>
+      </div>
+
+      <div id="hunterTabRelations" style="display: none;">
+        <div class="hunter-relations-box" id="hunterRelationsBox"></div>
+      </div>
+    </div>
+
+    <div class="hunter-status-line" id="hunterStatusText">상태: 마을 광장 순찰 중</div>
+  </div>
+
+  <!-- 사냥터 몬스터 클릭/터치 시 표시되는 소형 정보 팝업 -->
+  <div class="monster-info-popup" id="monsterInfoPopup">
+    <div class="monster-popup-header">
+      <div class="monster-popup-title">
+        <span>👾</span>
+        <span id="monsterPopupName">몬스터</span>
+      </div>
+      <button class="btn-close" id="btnCloseMonsterPopup" title="닫기">✕</button>
+    </div>
+    <div class="monster-popup-zone" id="monsterPopupZone">사냥터 · HP 0 / 0</div>
+    <div class="monster-popup-grid">
+      <div class="monster-stat-pill">
+        <div class="monster-stat-label">⚔️ 공격력</div>
+        <div class="monster-stat-val" id="monsterPopupAtk" style="color:#fca5a5;">0</div>
+      </div>
+      <div class="monster-stat-pill">
+        <div class="monster-stat-label">✨ 경험치</div>
+        <div class="monster-stat-val" id="monsterPopupExp" style="color:#86efac;">0</div>
+      </div>
+      <div class="monster-stat-pill">
+        <div class="monster-stat-label">💰 골드</div>
+        <div class="monster-stat-val" id="monsterPopupGold" style="color:#fde047;">0 G</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 중앙 플로팅 액션 독 -->
+  <nav class="bottom-dock">
+    <button class="dock-btn primary" id="btnRecruitHunter">⚔️ 영입 (200G)</button>
+    <button class="dock-btn" id="btnExpandPlot">+ 부지 (300G)</button>
+    <button class="dock-btn" id="btnOpenUserInventory" title="내 인벤토리 (초월권 등)">🎒 인벤토리</button>
+    <button class="dock-btn" id="btnOpenMailbox" title="우편함 (운영자 보상)">📮 우편</button>
+    <div class="nav-divider"></div>
+    <button class="dock-btn icon-only" id="btnZoomOut" title="화면 축소">－</button>
+    <button class="dock-btn icon-only" id="btnReset" title="마을 중앙으로">🎯</button>
+    <button class="dock-btn icon-only" id="btnZoomIn" title="화면 확대">＋</button>
+    <button class="dock-btn icon-only" id="btnDockFullscreen" title="전체화면 전환">⛶</button>
+  </nav>
+
+  <!-- 세로 휴대폰 · 폴드 전용 배치 (js/23-mobile-layout.js가 버튼을 옮겨 담음) -->
+  <nav class="mobile-action-bar" id="mobileActionBar" aria-label="주요 행동"></nav>
+  <div class="map-controls" id="mapControls" aria-label="지도 조작"></div>
+  <div class="mobile-menu-backdrop" id="mobileMenuBackdrop">
+    <div class="mobile-menu-sheet" role="dialog" aria-label="메뉴">
+      <div class="mobile-menu-handle"></div>
+      <div class="mobile-menu-title">메뉴</div>
+      <div class="mobile-menu-grid" id="mobileMenuGrid"></div>
+    </div>
+  </div>
+  <button type="button" class="nav-action-btn" id="btnMobileMenu" aria-label="메뉴 열기">☰<span class="menu-btn-label">메뉴</span></button>
+
+  <canvas id="gameCanvas"></canvas>
+
+  <script src="js/01-core-utils.js?v=20261125s"></script>
+  <script src="js/02-boss-rebirth-altar.js?v=20261125s"></script>
+  <script src="js/03-hunting-grounds.js?v=20261125s"></script>
+  <script src="js/04-orc-stronghold.js?v=20261125s"></script>
+  <script src="js/05-field-monsters.js?v=20261125s"></script>
+  <script src="js/06-skills-dungeon-jobs.js?v=20261125s"></script>
+  <script src="js/07-personality-items.js?v=20261125s"></script>
+  <script src="js/08-hunter-class.js?v=20261125s"></script>
+  <script src="js/08a-hunter-ai.js?v=20261125s"></script>
+  <script src="js/09-village-camera-state.js?v=20261125s"></script>
+  <script src="js/10-ui-panels.js?v=20261125s"></script>
+  <script src="js/10a-guide.js?v=20261125s"></script>
+  <script src="js/10b-hunter-nav.js?v=20261125s"></script>
+  <script src="js/11-ui-actions.js?v=20261125s"></script>
+  <script src="js/12-render-monsters-bosses.js?v=20261125s"></script>
+  <script src="js/13-render-village-buildings.js?v=20261125s"></script>
+  <script src="js/14-town-guards.js?v=20261125s"></script>
+  <script src="js/14a-raid-formation.js?v=20261125s"></script>
+  <script src="js/14b-raid-combat.js?v=20261125s"></script>
+  <script src="js/15a-hunter-looks.js?v=20261125s"></script>
+  <script src="js/15b-hunter-sprites.js?v=20261125s"></script>
+  <script src="js/15c-celestial-palace.js?v=20261125s"></script>
+  <script src="js/15d-boss-sprites.js?v=20261125s"></script>
+  <script src="js/15e-celestial-monsters.js?v=20261125s"></script>
+  <script src="js/15f-weapon-sprites.js?v=20261125s"></script>
+  <script src="js/15-render-hunter.js?v=20261125s"></script>
+  <script src="js/16-combat-effects.js?v=20261125s"></script>
+  <script src="js/17-game-loop.js?v=20261125s"></script>
+  <script src="js/18-save-system.js?v=20261125s"></script>
+  <script src="js/19-save-code-reset.js?v=20261125s"></script>
+  <script src="js/20-wake-lock.js?v=20261125s"></script>
+  <script src="js/21-colosseum.js?v=20261125s"></script>
+  <script src="js/22-cloud-save.js?v=20261125s"></script>
+  <script src="js/23-mobile-layout.js?v=20261125s"></script>
+  <script src="js/24-offline-rewards.js?v=20261125s"></script>
+  <script src="js/25-user-inventory.js?v=20261125s"></script>
+  <script src="js/26-transcend.js?v=20261125s"></script>
+  <script src="js/27-reroll-guard.js?v=20261125s"></script>
+  <script src="js/28-subjugation-shop.js?v=20261125s"></script>
+  <script src="js/29-orc-growth.js?v=20261125s"></script>
+  <script src="js/30-mailbox.js?v=20261125s"></script>
+  <script src="js/31-building-hp.js?v=20261125s"></script>
+  <script src="js/32-hero-arena.js?v=20261125s"></script>
+  <script src="js/33-user-code.js?v=20261125s"></script>
+  <script src="js/34-kingdom.js?v=20261125s"></script>
+  <script src="js/35-parade-ground.js?v=20261125s"></script>
+  <script src="js/36-render-cull.js?v=20261125s"></script>
+  <script src="js/37-hunter-grade.js?v=20261125s"></script>
+  <script src="js/38-hunter-lock.js?v=20261125s"></script>
+  <script src="js/39-orc-reinforce.js?v=20261125s"></script>
+  <script src="js/40-altar-lich-king.js?v=20261125s"></script>
+  <script src="js/41-auto-banish.js?v=20261125s"></script>
+  <script>
+    // 앱 설치 · 오프라인 실행용 서비스 워커 등록
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

@@ -189,3 +189,18 @@
       if (!v || (ctx && ctx !== v.ctx)) return true;
       return x + w >= v.x0 - pad && x <= v.x1 + pad && y + h >= v.y0 - pad && y <= v.y1 + pad;
     }
+
+    // ============================================================================
+    // 📱 화면 글자는 바뀐 경우에만 다시 쓴다 (같은 글자를 계속 다시 쓰면 휴대폰이 매번 화면 배치를 다시 계산해 느려지고 뜨거워진다)
+    // ============================================================================
+    function setTextIfChanged(el, text) {
+      if (!el) return;
+      const s = String(text);
+      if (el.textContent !== s) el.textContent = s;
+    }
+    function setTitleIfChanged(el, text) {
+      if (el && el.title !== text) el.title = text;
+    }
+    function setDisabledIfChanged(el, disabled) {
+      if (el && el.disabled !== !!disabled) el.disabled = !!disabled;
+    }

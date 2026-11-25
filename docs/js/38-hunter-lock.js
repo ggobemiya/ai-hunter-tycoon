@@ -27,7 +27,7 @@
         const icon = locked ? '🔒' : '🔓';
         if (lockBtn.textContent !== icon) lockBtn.textContent = icon;
         lockBtn.classList.toggle('locked', locked);
-        lockBtn.title = locked ? '잠금 해제' : '잠그면 추방할 수 없습니다';
+        setTitleIfChanged(lockBtn, locked ? '잠금 해제' : '잠그면 추방할 수 없습니다');
       }
       const banishBtn = document.getElementById('btnBanishHunter');
       if (banishBtn && banishBtn.disabled !== locked) {
