@@ -277,12 +277,14 @@
       const f = (lv - 1) / (KINGDOM_MAX_LEVEL - 1);
       const A = KINGDOM_STAT_ANCHORS;
       const grow = k => A.lv1[k] * Math.pow(A.lv99[k] / A.lv1[k], f);
+      // 🎖️ 등급 효과 (B +15% ~ EX+ +55% · js/37-hunter-grade.js)
+      const g = typeof getKingdomUnitGrade === "function" ? 1 + getKingdomUnitGrade(u).bonus : 1;
       return {
-        atk: Math.round(grow('atk') * r.mult),
-        def: Math.round(grow('def') * r.mult),
-        maxHp: Math.round(grow('hp') * r.mult),
+        atk: Math.round(grow("atk") * r.mult * g),
+        def: Math.round(grow("def") * r.mult * g),
+        maxHp: Math.round(grow("hp") * r.mult * g),
         crit: Math.round(A.lv1.crit + (A.lv99.crit - A.lv1.crit) * f),
-        power: Math.round(grow('power') * r.mult)
+        power: Math.round(grow("power") * r.mult * g)
       };
     }
 
@@ -339,6 +341,7 @@
         exp: 0,
         joinedAt: Date.now()
       };
+      if (typeof getKingdomUnitGrade === "function") getKingdomUnitGrade(unit); // 🎖️ 영입할 때 등급 결정 (B 이상)
       st.units.push(unit);
       const bridgeWasClosed = !st.bridgeOpen;
       st.bridgeOpen = true; // 첫 황실 근위병이 오면 끊긴 돌다리가 복구된다
@@ -1321,7 +1324,7 @@
       const rows = units.map((u) => {
         const s = getKingdomUnitStats(u);
         return `<div class="kingdom-unit-row">
-          <span>${u.rank === 'captain' ? '👑' : '🛡️'} <b>${u.name}</b> <span style="color:#94a3b8;">${(KINGDOM_RANKS[u.rank] || KINGDOM_RANKS.guard).name} · Lv.${u.level || 1}</span></span>
+          <span>${u.rank === 'captain' ? '👑' : '🛡️'} ${typeof getKingdomGradeHtml === "function" ? getKingdomGradeHtml(u) + " " : ""}<b>${u.name}</b> <span style="color:#94a3b8;">${(KINGDOM_RANKS[u.rank] || KINGDOM_RANKS.guard).name} · Lv.${u.level || 1}</span></span>
           <span style="color:#fde68a;font-weight:800;">⚡ 전투력 ${s.power.toLocaleString()}</span>
         </div>`;
       }).join('');
@@ -1646,7 +1649,7 @@
         <div class="kingdom-unit-card">
           ${r.img ? `<img src="assets/royal_guard/${r.img[u.gender] || r.img.m}.png" alt="" draggable="false">` : ''}
           <div style="flex:1;min-width:0;">
-            <div style="font-weight:800;color:#fde68a;">${r.name} · Lv.${lv}${maxed ? ' (MAX)' : ''}</div>
+            <div style="font-weight:800;color:#fde68a;">${typeof getKingdomGradeHtml === "function" ? getKingdomGradeHtml(u) + " " : ""}${r.name} · Lv.${lv}${maxed ? ' (MAX)' : ''}</div>
             <div style="margin-top:4px;color:#fde047;font-weight:800;">⚡ 전투력 ${s.power.toLocaleString()}</div>
             <div style="margin-top:4px;color:#cbd5e1;">❤️ 체력 ${s.maxHp.toLocaleString()} · ⚔️ 공격 ${s.atk.toLocaleString()} · 🛡️ 방어 ${s.def.toLocaleString()} · 💥 치명 ${s.crit}%</div>
             <div class="kingdom-exp-track"><div style="width:${pct.toFixed(1)}%"></div></div>

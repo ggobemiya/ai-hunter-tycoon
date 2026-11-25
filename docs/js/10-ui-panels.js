@@ -1524,8 +1524,16 @@
           return;
         }
 
+        const lockBtn = targetEl.closest(".btn-roster-lock");
+        if (lockBtn) {
+          const id = lockBtn.getAttribute("data-lock-id");
+          if (id && typeof toggleHunterLock === "function") toggleHunterLock(id);
+          return;
+        }
+
         const banishBtn = targetEl.closest('.btn-roster-banish');
         if (banishBtn) {
+          if (banishBtn.disabled) return;
           const id = banishBtn.getAttribute('data-banish-id');
           if (id) openBanishConfirmModal(id);
           return;
@@ -1684,7 +1692,7 @@
       };
       const canTranscendHere = (h) => typeof canUseTranscendTicketOn === 'function' && canUseTranscendTicketOn(h);
       const rosterList = getSortedRosterHunters();
-      const currentIds = `${getRosterSortMode()}|` + rosterList.map(h => `${h.id}:${canCommandRebirthAltarHunt(h) ? 1 : 0}:${canTranscendHere(h) ? 1 : 0}:${h.transcendCount || 0}`).join(',');
+      const currentIds = `${getRosterSortMode()}|` + rosterList.map(h => `${h.id}:${canCommandRebirthAltarHunt(h) ? 1 : 0}:${canTranscendHere(h) ? 1 : 0}:${h.transcendCount || 0}:${h.locked ? 1 : 0}`).join(',');
 
       // 헌터 목록 구성이 달라진 경우에만 DOM을 새로 생성 (터치 도중 DOM 파괴 방지)
       if (forceRebuild || body.dataset.renderedIds !== currentIds) {
@@ -1711,6 +1719,7 @@
               <div class="roster-card-top">
                 <div class="roster-name-group">
                   <span class="roster-hunter-name">${h.name}</span>
+                  <button type="button" class="btn-roster-lock${h.locked ? " locked" : ""}" data-lock-id="${h.id}" title="${h.locked ? "잠금 해제" : "잠그면 추방할 수 없습니다"}">${h.locked ? "🔒" : "🔓"}</button>
                   <span class="roster-job-badge" data-role="job-lv">${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}</span>
                   <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label}</span>
                 </div>
@@ -1749,7 +1758,7 @@
                   ${canAltar ? `<button type="button" class="btn-roster-altar" data-altar-id="${h.id}" title="초월 환생의 제단 출정 지시">✨ 제단출정</button>` : ''}
                   ${canTranscendHere(h) ? `<button type="button" class="btn-roster-transcend" data-transcend-id="${h.id}" title="초월권 1장을 써서 초월 (전체 능력 +20%)">🔴 초월</button>` : ''}
                   <button type="button" class="btn-roster-focus" data-focus-id="${h.id}">📍 위치 보기</button>
-                  <button type="button" class="btn-roster-banish" data-banish-id="${h.id}" title="마을에서 추방">🚪 추방</button>
+                  <button type="button" class="btn-roster-banish" data-banish-id="${h.id}" ${h.locked ? "disabled" : ""} title="${h.locked ? "잠긴 헌터는 추방할 수 없습니다" : "마을에서 추방"}">🚪 추방</button>
                 </div>
               </div>
             </div>

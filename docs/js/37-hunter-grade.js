@@ -107,3 +107,32 @@
         return result;
       };
     })();
+
+// ============================================================================
+// 👑 왕국 병력(황실 근위병 · 근위대장 · 앞으로 추가될 계급 모두) 등급
+//   - 헌터와 같은 등급표를 쓰되 B등급 이상만 나온다 (B 아래 확률은 빼고, 남은 확률을 같은 비율로 나눔).
+//   - 영입할 때 정해지고 바뀌지 않는다 (기존 병력도 처음 불러올 때 1번 정해짐).
+//   - 공격력 · 방어력 · 체력 · 전투력에 등급 효과가 붙는다 (34-kingdom.js getKingdomUnitStats).
+//   - 병력 정보창 · 왕국 병력 목록에 항상 표시 · 등급은 gameState.kingdom.units[].grade 로 함께 저장된다.
+// ============================================================================
+    const KINGDOM_MIN_GRADE = 'B';
+    const KINGDOM_GRADES = HUNTER_GRADES.slice(0, HUNTER_GRADES.findIndex(g => g.id === KINGDOM_MIN_GRADE) + 1);
+
+    function rollKingdomGrade() {
+      const total = KINGDOM_GRADES.reduce((s, g) => s + g.chance, 0);
+      let r = Math.random() * total;
+      for (const g of KINGDOM_GRADES) {
+        r -= g.chance;
+        if (r < 0) return g.id;
+      }
+      return KINGDOM_MIN_GRADE;
+    }
+    function getKingdomUnitGrade(u) {
+      if (!u) return HUNTER_GRADE_BY_ID[KINGDOM_MIN_GRADE];
+      if (!KINGDOM_GRADES.some(g => g.id === u.grade)) u.grade = rollKingdomGrade();
+      return HUNTER_GRADE_BY_ID[u.grade];
+    }
+    function getKingdomGradeHtml(u) {
+      const g = getKingdomUnitGrade(u);
+      return `<span class="hunter-grade ${g.cls}">${g.id}</span>`;
+    }

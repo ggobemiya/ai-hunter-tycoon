@@ -67,6 +67,7 @@
           rb: h.rebirthCount || 0,
           tc: h.transcendCount || undefined,
           bg: h.birthGrade || undefined, // 태생 등급
+          lk: h.locked ? 1 : undefined, // 🔒 잠금
           lv: h.level || 1,
           xp: h.exp || 0,
           hp: Math.round(h.hp ?? 100),
@@ -252,6 +253,7 @@
           rebirthCount: h.rb || 0,
           transcendCount: h.tc || 0,
           birthGrade: typeof h.bg === 'string' ? h.bg : '',
+          locked: !!h.lk,
           level: h.lv || 1,
           exp: h.xp || 0,
           hp: h.hp,
