@@ -146,6 +146,7 @@
       if (src.saveSeq) out.sq = src.saveSeq;
       if (src.userCode) { out.uc = src.userCode; out.ucT = src.userCodeCreatedAt || 0; }
       if (src.orcReinforce && ((src.orcReinforce.extras || []).length > 0 || (src.orcReinforce.timer || 0) > 0)) out.orf = src.orcReinforce; // 👹 Lv.99 오크 증원
+      if (src.autoBanish && (src.autoBanish.minGrade !== "S" || (src.autoBanish.slots || []).some(s => s && s.id))) out.ab = src.autoBanish; // 🤖 자동 추방 슬롯
       if (src.kingdom && ((src.kingdom.units || []).length > 0 || Object.keys(src.kingdom.sites || {}).length > 0 || (src.kingdom.cleared || []).length > 0 || (src.kingdom.clearQueue || []).length > 0 || src.kingdom.bridgeOpen)) out.kd = src.kingdom;
       if (src.guardLevels) out.gl = [src.guardLevels.supreme || 1, src.guardLevels.arcane || 1];
       if (src.colosseum) {
@@ -357,6 +358,7 @@
         saveSeq: Number(c.sq) || 0,
         userCode: typeof c.uc === 'string' ? c.uc : '',
         orcReinforce: c.orf && typeof c.orf === "object" ? c.orf : null,
+        autoBanish: c.ab && typeof c.ab === "object" ? c.ab : null,
         userCodeCreatedAt: Number(c.ucT) || 0,
         kingdom: c.kd && typeof c.kd === 'object' ? c.kd : null,
         guardLevels: Array.isArray(c.gl) ? { supreme: c.gl[0] || 1, arcane: c.gl[1] || 1 } : undefined,

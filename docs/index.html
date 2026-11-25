@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>AI 헌터 타이쿤</title>
-  <link rel="stylesheet" href="css/style.css?v=20261125n" />
+  <link rel="stylesheet" href="css/style.css?v=20261125o" />
   <!-- 앱 설치(PWA) · APK 변환용 -->
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0f172a" />
@@ -330,9 +330,11 @@
         <button type="button" data-roster-sort="rebirth">환생</button>
         <button type="button" data-roster-sort="grade">등급</button>
         <span class="roster-fold-all">
+          <button type="button" id="btnAutoBanishToggle" title="5환생 Lv.99가 된 헌터를 자동으로 추방하고 새 헌터를 영입합니다">🤖 자동 추방</button>
           <button type="button" id="btnRosterFoldToggle" title="모든 헌터 카드를 접습니다">▲ 전체 접기</button>
         </span>
       </div>
+      <div class="auto-banish-panel" id="autoBanishPanel" hidden></div>
       <div class="tier-modal-body" id="hunterRosterBody"></div>
     </div>
   </div>
@@ -648,57 +650,58 @@
 
   <canvas id="gameCanvas"></canvas>
 
-  <script src="js/01-core-utils.js?v=20261125n"></script>
-  <script src="js/02-boss-rebirth-altar.js?v=20261125n"></script>
-  <script src="js/03-hunting-grounds.js?v=20261125n"></script>
-  <script src="js/04-orc-stronghold.js?v=20261125n"></script>
-  <script src="js/05-field-monsters.js?v=20261125n"></script>
-  <script src="js/06-skills-dungeon-jobs.js?v=20261125n"></script>
-  <script src="js/07-personality-items.js?v=20261125n"></script>
-  <script src="js/08-hunter-class.js?v=20261125n"></script>
-  <script src="js/08a-hunter-ai.js?v=20261125n"></script>
-  <script src="js/09-village-camera-state.js?v=20261125n"></script>
-  <script src="js/10-ui-panels.js?v=20261125n"></script>
-  <script src="js/10a-guide.js?v=20261125n"></script>
-  <script src="js/10b-hunter-nav.js?v=20261125n"></script>
-  <script src="js/11-ui-actions.js?v=20261125n"></script>
-  <script src="js/12-render-monsters-bosses.js?v=20261125n"></script>
-  <script src="js/13-render-village-buildings.js?v=20261125n"></script>
-  <script src="js/14-town-guards.js?v=20261125n"></script>
-  <script src="js/14a-raid-formation.js?v=20261125n"></script>
-  <script src="js/14b-raid-combat.js?v=20261125n"></script>
-  <script src="js/15a-hunter-looks.js?v=20261125n"></script>
-  <script src="js/15b-hunter-sprites.js?v=20261125n"></script>
-  <script src="js/15c-celestial-palace.js?v=20261125n"></script>
-  <script src="js/15d-boss-sprites.js?v=20261125n"></script>
-  <script src="js/15e-celestial-monsters.js?v=20261125n"></script>
-  <script src="js/15f-weapon-sprites.js?v=20261125n"></script>
-  <script src="js/15-render-hunter.js?v=20261125n"></script>
-  <script src="js/16-combat-effects.js?v=20261125n"></script>
-  <script src="js/17-game-loop.js?v=20261125n"></script>
-  <script src="js/18-save-system.js?v=20261125n"></script>
-  <script src="js/19-save-code-reset.js?v=20261125n"></script>
-  <script src="js/20-wake-lock.js?v=20261125n"></script>
-  <script src="js/21-colosseum.js?v=20261125n"></script>
-  <script src="js/22-cloud-save.js?v=20261125n"></script>
-  <script src="js/23-mobile-layout.js?v=20261125n"></script>
-  <script src="js/24-offline-rewards.js?v=20261125n"></script>
-  <script src="js/25-user-inventory.js?v=20261125n"></script>
-  <script src="js/26-transcend.js?v=20261125n"></script>
-  <script src="js/27-reroll-guard.js?v=20261125n"></script>
-  <script src="js/28-subjugation-shop.js?v=20261125n"></script>
-  <script src="js/29-orc-growth.js?v=20261125n"></script>
-  <script src="js/30-mailbox.js?v=20261125n"></script>
-  <script src="js/31-building-hp.js?v=20261125n"></script>
-  <script src="js/32-hero-arena.js?v=20261125n"></script>
-  <script src="js/33-user-code.js?v=20261125n"></script>
-  <script src="js/34-kingdom.js?v=20261125n"></script>
-  <script src="js/35-parade-ground.js?v=20261125n"></script>
-  <script src="js/36-render-cull.js?v=20261125n"></script>
-  <script src="js/37-hunter-grade.js?v=20261125n"></script>
-  <script src="js/38-hunter-lock.js?v=20261125n"></script>
-  <script src="js/39-orc-reinforce.js?v=20261125n"></script>
-  <script src="js/40-altar-lich-king.js?v=20261125n"></script>
+  <script src="js/01-core-utils.js?v=20261125o"></script>
+  <script src="js/02-boss-rebirth-altar.js?v=20261125o"></script>
+  <script src="js/03-hunting-grounds.js?v=20261125o"></script>
+  <script src="js/04-orc-stronghold.js?v=20261125o"></script>
+  <script src="js/05-field-monsters.js?v=20261125o"></script>
+  <script src="js/06-skills-dungeon-jobs.js?v=20261125o"></script>
+  <script src="js/07-personality-items.js?v=20261125o"></script>
+  <script src="js/08-hunter-class.js?v=20261125o"></script>
+  <script src="js/08a-hunter-ai.js?v=20261125o"></script>
+  <script src="js/09-village-camera-state.js?v=20261125o"></script>
+  <script src="js/10-ui-panels.js?v=20261125o"></script>
+  <script src="js/10a-guide.js?v=20261125o"></script>
+  <script src="js/10b-hunter-nav.js?v=20261125o"></script>
+  <script src="js/11-ui-actions.js?v=20261125o"></script>
+  <script src="js/12-render-monsters-bosses.js?v=20261125o"></script>
+  <script src="js/13-render-village-buildings.js?v=20261125o"></script>
+  <script src="js/14-town-guards.js?v=20261125o"></script>
+  <script src="js/14a-raid-formation.js?v=20261125o"></script>
+  <script src="js/14b-raid-combat.js?v=20261125o"></script>
+  <script src="js/15a-hunter-looks.js?v=20261125o"></script>
+  <script src="js/15b-hunter-sprites.js?v=20261125o"></script>
+  <script src="js/15c-celestial-palace.js?v=20261125o"></script>
+  <script src="js/15d-boss-sprites.js?v=20261125o"></script>
+  <script src="js/15e-celestial-monsters.js?v=20261125o"></script>
+  <script src="js/15f-weapon-sprites.js?v=20261125o"></script>
+  <script src="js/15-render-hunter.js?v=20261125o"></script>
+  <script src="js/16-combat-effects.js?v=20261125o"></script>
+  <script src="js/17-game-loop.js?v=20261125o"></script>
+  <script src="js/18-save-system.js?v=20261125o"></script>
+  <script src="js/19-save-code-reset.js?v=20261125o"></script>
+  <script src="js/20-wake-lock.js?v=20261125o"></script>
+  <script src="js/21-colosseum.js?v=20261125o"></script>
+  <script src="js/22-cloud-save.js?v=20261125o"></script>
+  <script src="js/23-mobile-layout.js?v=20261125o"></script>
+  <script src="js/24-offline-rewards.js?v=20261125o"></script>
+  <script src="js/25-user-inventory.js?v=20261125o"></script>
+  <script src="js/26-transcend.js?v=20261125o"></script>
+  <script src="js/27-reroll-guard.js?v=20261125o"></script>
+  <script src="js/28-subjugation-shop.js?v=20261125o"></script>
+  <script src="js/29-orc-growth.js?v=20261125o"></script>
+  <script src="js/30-mailbox.js?v=20261125o"></script>
+  <script src="js/31-building-hp.js?v=20261125o"></script>
+  <script src="js/32-hero-arena.js?v=20261125o"></script>
+  <script src="js/33-user-code.js?v=20261125o"></script>
+  <script src="js/34-kingdom.js?v=20261125o"></script>
+  <script src="js/35-parade-ground.js?v=20261125o"></script>
+  <script src="js/36-render-cull.js?v=20261125o"></script>
+  <script src="js/37-hunter-grade.js?v=20261125o"></script>
+  <script src="js/38-hunter-lock.js?v=20261125o"></script>
+  <script src="js/39-orc-reinforce.js?v=20261125o"></script>
+  <script src="js/40-altar-lich-king.js?v=20261125o"></script>
+  <script src="js/41-auto-banish.js?v=20261125o"></script>
   <script>
     // 앱 설치 · 오프라인 실행용 서비스 워커 등록
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
