@@ -106,6 +106,7 @@
       }
       if (changed) {
         renderAutoBanishPanel(true);
+        applyAutoBanishCardMarks();
         if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
       }
     }
@@ -183,6 +184,7 @@
           <div class="ab-note">보호 등급 이상인 헌터는 등급이 보이면(5환생) 슬롯이 잠기고 추방하지 않습니다. 잠긴 슬롯은 직접 빼거나 추방하세요.</div>
         </div>
         <div class="ab-slots">${slotRows || '<div class="ab-note">헌터가 없습니다.</div>'}</div>`;
+      applyAutoBanishCardMarks(); // 슬롯이 바뀌면 헌터 목록 카드 테두리도 바로 맞춘다
     }
 
     function toggleAutoBanishPanel() {
@@ -239,12 +241,27 @@
       });
     })();
 
-    // 헌터 목록이 다시 그려질 때 슬롯 상태도 맞춘다
+    // 마을 전체 헌터 목록 카드 테두리: 자동 추방 슬롯 헌터 = 빨강, 보호 등급으로 잠긴 슬롯 헌터 = 초록
+    function applyAutoBanishCardMarks() {
+      const body = document.getElementById("hunterRosterBody");
+      if (!body) return;
+      const st = getAutoBanishState();
+      const marks = new Map();
+      st.slots.forEach((s) => { if (s.id) marks.set(s.id, s.locked ? "protect" : "banish"); });
+      body.querySelectorAll(".roster-card[data-roster-id]").forEach((card) => {
+        const m = marks.get(card.getAttribute("data-roster-id"));
+        card.classList.toggle("ab-mark-banish", m === "banish");
+        card.classList.toggle("ab-mark-protect", m === "protect");
+      });
+    }
+
+    // 헌터 목록이 다시 그려질 때 슬롯 상태 · 카드 테두리도 맞춘다
     if (typeof renderHunterRosterModal === 'function') {
       const origRenderRosterForAb = renderHunterRosterModal;
       renderHunterRosterModal = function (...args) {
         const r = origRenderRosterForAb.apply(this, args);
         try { renderAutoBanishPanel(false); } catch (_) {}
+        try { applyAutoBanishCardMarks(); } catch (_) {}
         return r;
       };
     }

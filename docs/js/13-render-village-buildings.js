@@ -458,10 +458,32 @@
           ctx.stroke();
         }
 
-        // 오크 군락지 상단 안내 표지판
+        // 오크 군락지 상단 안내 표지판 (3줄: 이름 · 주둔/증원 · 현재 총 병력)
+        const allOrcs = ORC_STRONGHOLD_ZONE.orcs.filter(Boolean);
+        const regularOrcCount = allOrcs.filter(o => !o.isGreatWarrior && !o.isReinforcement).length;
+        const reinforceCount = allOrcs.filter(o => o.isReinforcement).length; // 👹 Lv.99 증원 (js/39-orc-reinforce.js)
+        const reinforceNote = reinforceCount > 0 ? ` · 🔺 증원 ${reinforceCount}마리` : "";
+        const hasGreatWarrior = allOrcs.some(o => o.isGreatWarrior);
+        const passageStatusNote = passageOpen ? '🛤️ 연결 길 개방됨 (통로 전용 출입)' : '🔒 5티어 보스 처치 시 연결 길 개방';
+        const totalOrcCount = allOrcs.length;
+        const deadOrcCount = allOrcs.filter(o => o.isDead || o.hp <= 0).length;
+        const signTitle = '👹 오크 군락지 (붉은 철혈 분지) [헌터 진입 불가 구역]';
+        const signLine2 = hasGreatWarrior
+          ? `${passageStatusNote} · 주둔 ${regularOrcCount}/${ORC_STRONGHOLD_ZONE.maxCount}마리 + 👑 오크 대전사 강림!${reinforceNote}`
+          : `${passageStatusNote} · 주둔 병력 ${regularOrcCount} / ${ORC_STRONGHOLD_ZONE.maxCount}마리 (티어 보스 클리어당 +2마리)${reinforceNote}`;
+        const signLine3 = `⚔️ 현재 오크 병력 총 ${totalOrcCount}마리 (활동 ${totalOrcCount - deadOrcCount} · 부활 대기 ${deadOrcCount})`;
+
+        ctx.font = 'bold 13px sans-serif';
+        let signW = ctx.measureText(signTitle).width;
+        ctx.font = '11px sans-serif';
+        signW = Math.max(signW, ctx.measureText(signLine2).width);
+        ctx.font = 'bold 12px sans-serif';
+        signW = Math.max(signW, ctx.measureText(signLine3).width);
+        signW = Math.max(460, Math.ceil(signW) + 24);
+
         ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
         ctx.beginPath();
-        ctx.roundRect(ob.x + 18, ob.y + 16, 460, 44, 10);
+        ctx.roundRect(ob.x + 18, ob.y + 16, signW, 62, 10);
         ctx.fill();
         ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 1.6;
@@ -471,22 +493,15 @@
         ctx.font = 'bold 13px sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'middle';
-        ctx.fillText('👹 오크 군락지 (붉은 철혈 분지) [헌터 진입 불가 구역]', ob.x + 30, ob.y + 30);
+        ctx.fillText(signTitle, ob.x + 30, ob.y + 30);
 
         ctx.fillStyle = '#fde68a';
         ctx.font = '11px sans-serif';
-        const regularOrcCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && !o.isGreatWarrior && !o.isReinforcement).length;
-        const reinforceCount = ORC_STRONGHOLD_ZONE.orcs.filter(o => o && o.isReinforcement).length; // 👹 Lv.99 증원 (js/39-orc-reinforce.js)
-        const reinforceNote = reinforceCount > 0 ? ` · 🔺 증원 ${reinforceCount}마리` : "";
-        const hasGreatWarrior = ORC_STRONGHOLD_ZONE.orcs.some(o => o && o.isGreatWarrior);
-        const passageStatusNote = passageOpen ? '🛤️ 연결 길 개방됨 (통로 전용 출입)' : '🔒 5티어 보스 처치 시 연결 길 개방';
-        ctx.fillText(
-          hasGreatWarrior
-            ? `${passageStatusNote} · 주둔 ${regularOrcCount}/${ORC_STRONGHOLD_ZONE.maxCount}마리 + 👑 오크 대전사 강림!${reinforceNote}`
-            : `${passageStatusNote} · 주둔 병력 ${regularOrcCount} / ${ORC_STRONGHOLD_ZONE.maxCount}마리 (티어 보스 클리어당 +2마리)${reinforceNote}`,
-          ob.x + 30,
-          ob.y + 47
-        );
+        ctx.fillText(signLine2, ob.x + 30, ob.y + 47);
+
+        ctx.fillStyle = '#fca5a5';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(signLine3, ob.x + 30, ob.y + 64);
 
         // 군락지 내부 상주 오크 병력 렌더링 (근육질 체형 · 하악 엄니 · 강철 견갑 · 병종별 무기 · 10티어 오크 대전사)
         ORC_STRONGHOLD_ZONE.orcs.forEach((orc, idx) => {
