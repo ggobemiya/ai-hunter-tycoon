@@ -292,16 +292,19 @@
           r = r * (newMult / oldMult) / (OFFLINE_REBIRTH_CYCLE_SLOWDOWN[h.rebirthCount] || 1);
           continue;
         }
+        // r은 배율 적용 전 속도(측정값) · 실제로 쌓이는 양은 경험치 배율(⭐ EXP_RATE)을 곱한 값.
+        // gainExp가 배율을 곱하므로 넘길 때는 배율로 나눠서 넘긴다.
+        const k = getExpRate('hunter') || 1;
         const need = getExpToMaxLevel(h);
-        const can = r * left;
+        const can = r * k * left;
         if (can < need) {
-          h.gainExp(Math.floor(can));
+          h.gainExp(Math.floor(can) / k);
           gained += can;
           left = 0;
         } else {
-          h.gainExp(Math.ceil(need));
+          h.gainExp(Math.ceil(need) / k);
           gained += need;
-          left -= need / r;
+          left -= need / (r * k);
         }
       }
       return { exp: Math.floor(gained), rebirths, rateAfter: r };
@@ -371,7 +374,7 @@
           ensureOrcUnitFields(o);
           const lvBefore = o.level || 1;
           o.monsterKillCount = (o.monsterKillCount || 0) + kills;
-          o.totalKillCount = (o.killCount || 0) + o.monsterKillCount;
+          o.totalKillCount = Math.max((Number(o.totalKillCount) || 0) + applyExpRate(kills, 'orc'), (o.killCount || 0) + o.monsterKillCount); // ⭐ 경험치 배율
           o.level = computeOrcLevelFromTotalKills(o.totalKillCount);
           o.nextLevelKills = getOrcNextLevelKillTarget(o.level);
           o.maxHp = getOrcCombatStats(o).maxHp;

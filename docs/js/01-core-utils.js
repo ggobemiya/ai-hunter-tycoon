@@ -77,6 +77,24 @@
     //   → Lv.1부터 4환생 Lv.99까지 약 24시간 · 5환생 Lv.1→99도 약 24시간
     const REBIRTH_REQUIRED_EXP_MULT = [1, 5.5, 11, 22, 31, 169];
 
+    // ============================================================================
+    // ⭐ 경험치 배율 (모든 종족 공통) — 이벤트 등으로 경험치를 올릴 때는 아래 EXP_RATE 한 줄만 바꾸면 된다.
+    //   예) 1 = 평소 · 2 = 경험치 2배 · 1.5 = 1.5배
+    //   적용 대상: 헌터(사냥 · 던전 · 투기장 · 보스 · 자리 비운 동안 등 모든 경험치) · 왕실 병사(근위병 · 근위대장 …)
+    //             · 오크(처치할 때마다 쌓이는 성장 수치) · 앞으로 추가될 종족도 applyExpRate(양, '종족')으로 받으면 같이 적용
+    //   종족마다 따로 조절해야 할 때만 EXP_RATE_BY_RACE를 바꾼다 (보통은 모두 1).
+    //   (마을 경비병은 골드로 레벨을 올리므로 경험치가 없다)
+    // ============================================================================
+    const EXP_RATE = 1;
+    const EXP_RATE_BY_RACE = { hunter: 1, kingdom: 1, orc: 1 };
+    function getExpRate(race) {
+      const r = Number(EXP_RATE_BY_RACE[race]);
+      return Math.max(0, Number(EXP_RATE) || 0) * (Number.isFinite(r) ? r : 1);
+    }
+    function applyExpRate(amount, race) {
+      return (Number(amount) || 0) * getExpRate(race);
+    }
+
     const POTION_MAX_STACK = 5;
     const MP_POTION_MAX_STACK = 3;
     const REBORN_HP_POTION_MAX_STACK = 10;

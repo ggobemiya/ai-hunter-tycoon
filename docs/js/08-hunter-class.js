@@ -260,7 +260,7 @@
       }
 
       gainExp(amount) {
-        const gain = Math.max(0, Math.round(amount || 0));
+        const gain = Math.max(0, Math.round(applyExpRate(amount, 'hunter'))); // ⭐ 경험치 배율 (01-core-utils.js EXP_RATE)
         if (gain <= 0) return;
         if (this.level >= LEVEL_REBIRTH_CONFIG.maxLevel) {
           this.exp = this.getRequiredExp();

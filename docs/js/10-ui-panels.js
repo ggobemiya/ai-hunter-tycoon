@@ -1632,6 +1632,13 @@
       });
     })();
 
+    // 헌터 목록 장비 줄 옆: 착용한 날개 그림 + 날개 강화 수치 (예: " 🪽+5" · 날개가 없으면 빈칸)
+    function getRosterWingTag(h) {
+      const wing = typeof h.getEquippedWing === 'function' ? h.getEquippedWing() : null;
+      if (!wing) return '';
+      return ` ${wing.icon || '🪽'}+${Math.max(0, Math.floor(Number(h.wingEnhance) || 0))}`;
+    }
+
     function renderHunterRosterModal(forceRebuild = false) {
       bindHunterRosterEvents();
       const body = document.getElementById('hunterRosterBody');
@@ -1693,7 +1700,7 @@
           const hTier = eq.helmet?.tier || 1;
           const accTier = eq.accessory?.tier || 1;
           const avgTier = ((wTier + aTier + hTier + accTier) / 4).toFixed(1);
-          const equipTierSummary = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})`;
+          const equipTierSummary = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`;
           const canAltar = canCommandRebirthAltarHunt(h);
           const canDonate = gameState.gold >= 500;
           const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0);
@@ -1799,7 +1806,7 @@
         if (weaponEl) weaponEl.textContent = `무기 T${h.equipment.weapon.tier} +${h.equipment.weapon.enhance}`;
 
         const equipTiersEl = card.querySelector('[data-role="equip-tiers"]');
-        if (equipTiersEl) equipTiersEl.textContent = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})`;
+        if (equipTiersEl) equipTiersEl.textContent = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`;
 
         const colPtsEl = card.querySelector('[data-role="colosseum-pts"]');
         const colSubEl = card.querySelector('[data-role="colosseum-sub"]');

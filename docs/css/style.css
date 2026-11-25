@@ -2863,7 +2863,10 @@ body.compact-ui .hunter-panel {
 }
 
 /* ===== 휴대폰: 헌터 목록 카드에서 HP/MP 막대 숨김 ===== */
-body.compact-ui .roster-mini-bars { display: none; }
+/* 휴대폰: 움직이는 HP/MP 막대만 숨기고, 현재/최대 수치(❤️ HP 1,234/5,678)는 보여 준다 */
+body.compact-ui .roster-mini-track { display: none; }
+body.compact-ui .roster-mini-bars { gap: 4px 10px; }
+body.compact-ui .roster-mini-bar { font-size: 11px; font-weight: 700; }
 
 /* ===== 좁은 화면: 헌터 정보창 머리 줄이 서로 밀리지 않게 ===== */
 @media (max-width: 560px) {

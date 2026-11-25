@@ -585,7 +585,8 @@
       } else {
         orc.monsterKillCount += 1;
       }
-      orc.totalKillCount = orc.killCount + orc.monsterKillCount;
+      // 성장 수치(totalKillCount): 처치 1회마다 경험치 배율만큼 쌓인다 (⭐ 01-core-utils.js EXP_RATE · 평소엔 처치 수와 같음)
+      orc.totalKillCount = Math.max((Number(orc.totalKillCount) || 0) + applyExpRate(1, 'orc'), orc.killCount + orc.monsterKillCount);
       orc.level = computeOrcLevelFromTotalKills(orc.totalKillCount);
       orc.nextLevelKills = getOrcNextLevelKillTarget(orc.level);
 
@@ -597,7 +598,7 @@
         combatEffects.spawnDamagePopup(
           orc.x,
           orc.y - 24,
-          `⬆️ LV.${orc.level}! (${orc.totalKillCount} KILL)`,
+          `⬆️ LV.${orc.level}! (${orc.killCount + orc.monsterKillCount} KILL)`,
           true,
           '#fde047'
         );

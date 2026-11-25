@@ -302,7 +302,7 @@
     function gainKingdomUnitExp(u, amount) {
       if (!u || (u.level || 1) >= KINGDOM_MAX_LEVEL) return false;
       u.level = Math.max(1, u.level || 1);
-      u.exp = (u.exp || 0) + amount;
+      u.exp = (u.exp || 0) + applyExpRate(amount, 'kingdom'); // ⭐ 경험치 배율 (01-core-utils.js EXP_RATE)
       let leveled = false;
       while (u.level < KINGDOM_MAX_LEVEL && u.exp >= getKingdomRequiredExp(u.level)) {
         u.exp -= getKingdomRequiredExp(u.level);
@@ -1639,7 +1639,7 @@
       const maxed = lv >= KINGDOM_MAX_LEVEL;
       const req = getKingdomRequiredExp(lv);
       const pct = maxed ? 100 : Math.min(100, ((u.exp || 0) / req) * 100);
-      const secLeft = maxed ? 0 : Math.max(0, (req - (u.exp || 0)) / KINGDOM_EXP_PER_SEC);
+      const secLeft = maxed ? 0 : Math.max(0, (req - (u.exp || 0)) / Math.max(1e-9, KINGDOM_EXP_PER_SEC * getExpRate('kingdom')));
       const fmtLeft = secLeft >= 3600 ? `${Math.floor(secLeft / 3600)}시간 ${Math.floor((secLeft % 3600) / 60)}분` : `${Math.max(1, Math.ceil(secLeft / 60))}분`;
       document.getElementById('kingdomModalTitle').textContent = `${u.rank === 'captain' ? '👑' : '🛡️'} ${u.name}`;
       document.getElementById('kingdomBody').innerHTML = `
