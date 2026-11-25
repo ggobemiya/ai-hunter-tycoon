@@ -358,7 +358,10 @@
         saveSeq: Number(c.sq) || 0,
         userCode: typeof c.uc === 'string' ? c.uc : '',
         orcReinforce: c.orf && typeof c.orf === "object" ? c.orf : null,
-        autoBanish: c.ab && typeof c.ab === "object" ? c.ab : null,
+        autoBanish: c.ab && typeof c.ab === "object" ? {
+          minGrade: typeof c.ab.minGrade === "string" ? c.ab.minGrade : "S",
+          slots: Array.isArray(c.ab.slots) ? c.ab.slots.map(s => s && typeof s === "object" ? { id: typeof s.id === "string" ? s.id : null, locked: !!s.locked } : { id: null, locked: false }) : []
+        } : null,
         userCodeCreatedAt: Number(c.ucT) || 0,
         kingdom: c.kd && typeof c.kd === 'object' ? c.kd : null,
         guardLevels: Array.isArray(c.gl) ? { supreme: c.gl[0] || 1, arcane: c.gl[1] || 1 } : undefined,
@@ -708,6 +711,7 @@
         gameState.villageId = '';
         gameState.saveSeq = 0;
         gameState.kingdom = { units: [], sites: {} };
+        gameState.autoBanish = { minGrade: (typeof AUTO_BANISH_CFG !== 'undefined' ? AUTO_BANISH_CFG.defaultMinGrade : 'S'), slots: [] };
         gameState.selectedPlotId = null;
         gameState.selectedHunterId = null;
         gameState.selectedEquipSlot = null;
@@ -804,6 +808,9 @@
 
         hunters.length = 0;
         createInitialRandomHunters(2).forEach(h => hunters.push(h));
+        if (typeof normalizeAutoBanishSlots === 'function') normalizeAutoBanishSlots();
+        if (typeof renderAutoBanishPanel === 'function') renderAutoBanishPanel(true);
+        if (typeof applyAutoBanishCardMarks === 'function') applyAutoBanishCardMarks();
 
         closeBuildingPanel();
         closeHunterPanel();

@@ -324,7 +324,7 @@
           potions: JSON.stringify(h.potions || { hp: 2, mp: 2 }),
           advancementTier: h.advancementTier || 0,
           transcendCount: h.transcendCount || 0,
-          birthGrade: h.birthGrade || '', // 태생 등급 (js/37-hunter-grade.js)
+          birthGrade: (typeof getHunterGrade === 'function' ? getHunterGrade(h).id : (h.birthGrade || '')), // 태생 등급 (js/37-hunter-grade.js)
           locked: !!h.locked, // 🔒 잠금 (추방 방지 · js/38-hunter-lock.js)
           rebirthCount: h.rebirthCount || 0,
           level: h.level || 1,
@@ -688,7 +688,7 @@
           mergeHunterSkillsNonDestructive(restored, hData.skillsJson || hData.skills);
 
           restored.transcendCount = Math.max(0, Math.min(5, restored.rebirthCount || 0, Math.floor(Number(hData.transcendCount) || 0)));
-          if (typeof hData.birthGrade === 'string' && hData.birthGrade) restored.birthGrade = hData.birthGrade; // 태생 등급
+          if (typeof hData.birthGrade === 'string' && hData.birthGrade && (typeof HUNTER_GRADE_BY_ID === 'undefined' || HUNTER_GRADE_BY_ID[hData.birthGrade])) restored.birthGrade = hData.birthGrade; // 태생 등급
           restored.locked = !!hData.locked; // 🔒 잠금
           restored.recalculateVitals(false);
           restored.exp = typeof hData.exp === 'number' ? hData.exp : 0;
@@ -739,6 +739,9 @@
           restored.pickNextDestination();
           hunters.push(restored);
         });
+        if (typeof normalizeAutoBanishSlots === 'function') normalizeAutoBanishSlots();
+        if (typeof renderAutoBanishPanel === 'function') renderAutoBanishPanel(true);
+        if (typeof applyAutoBanishCardMarks === 'function') applyAutoBanishCardMarks();
       }
 
       // 3) 헌터 간 관계도 복원
