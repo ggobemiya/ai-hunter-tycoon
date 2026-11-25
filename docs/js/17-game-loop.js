@@ -617,6 +617,7 @@
         ctx.restore();
 
         camera.beginFrame();
+        updateWorldViewRect(camera); // 화면에 보이는 범위 (화면 밖 그리기 생략용 · 01-core-utils.js)
 
         // 1. 마을 지형 및 동적 지선 도로
         drawVillageGround(ctx);

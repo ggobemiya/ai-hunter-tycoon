@@ -67,14 +67,10 @@
         ctx.translate(0, 14);
         ctx.scale(1, 0.44);
 
-        const grad = ctx.createRadialGradient(0, 0, 3, 0, 0, auraRadius + 6);
-        grad.addColorStop(0, rPal.coreRgba);
-        grad.addColorStop(0.7, rPal.coreRgba);
-        grad.addColorStop(1, rPal.edgeRgba);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(0, 0, auraRadius + 6, 0, Math.PI * 2);
-        ctx.fill();
+        // (성능) 오라 원판은 환생 단계마다 한 번 그려 둔 이미지를 크기만 맞춰 붙인다 (예전: 매 화면 그라데이션)
+        const auraSpr = getRebirthAuraSprite(rebirthTier, rPal);
+        const auraR = auraRadius + 6;
+        ctx.drawImage(auraSpr, -auraR, -auraR, auraR * 2, auraR * 2);
 
         ctx.save();
         ctx.rotate(t * (1.1 + rebirthTier * 0.25));
@@ -602,37 +598,16 @@
         const starSpacing = 8.4;
         const starsCenterY = -52;
 
-        ctx.save();
+        // (성능) 별 모양은 미리 그려 둔 이미지(금색 · 빨간색)를 붙인다 — 예전처럼 매 화면 그라데이션을 만들지 않음
         const startX = -((starCount - 1) * starSpacing) / 2;
+        const gold = getRebirthStarSprite(false, outerR, innerR);
+        const red = getRebirthStarSprite(true, outerR, innerR);
         for (let i = 0; i < starCount; i++) {
           const sx = startX + i * starSpacing;
           const sy = starsCenterY + Math.sin(t * 3.2 + i * 0.7) * 0.5;
-          const starGrad = ctx.createRadialGradient(sx - 0.8, sy - 0.8, 0.3, sx, sy, outerR + 0.5);
-          if (i < (hunter.transcendCount || 0)) {
-            // 초월한 별은 빨간색 (js/26-transcend.js)
-            starGrad.addColorStop(0, '#fca5a5');
-            starGrad.addColorStop(0.55, '#dc2626');
-            starGrad.addColorStop(1, '#7f1d1d');
-          } else {
-            starGrad.addColorStop(0, '#fef9c3');
-            starGrad.addColorStop(0.65, '#facc15');
-            starGrad.addColorStop(1, '#eab308');
-          }
-
-          ctx.fillStyle = starGrad;
-          ctx.beginPath();
-          for (let p = 0; p < 10; p++) {
-            const rad = p % 2 === 0 ? outerR : innerR;
-            const ang = -Math.PI / 2 + (p * Math.PI) / 5;
-            const vx = sx + Math.cos(ang) * rad;
-            const vy = sy + Math.sin(ang) * rad;
-            if (p === 0) ctx.moveTo(vx, vy);
-            else ctx.lineTo(vx, vy);
-          }
-          ctx.closePath();
-          ctx.fill();
+          const spr = i < (hunter.transcendCount || 0) ? red : gold; // 초월한 별은 빨간색 (js/26-transcend.js)
+          ctx.drawImage(spr.canvas, sx - spr.half, sy - spr.half, spr.half * 2, spr.half * 2);
         }
-        ctx.restore();
       }
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
@@ -701,12 +676,48 @@
     //  - 강화 0~9: 흰색 → 하늘색 깃털
     //  - 강화 10~14: 깃털 끝이 금빛
     //  - 강화 15: 금빛 깃털 + 은은한 빛
+    // (성능) 날개는 모양(색 단계 3가지 × 펄럭임 13단계)마다 한 번만 그려 두고 이미지로 붙인다.
+    //   깃털마다 매 화면 그라데이션 · 빛번짐을 다시 그리던 것이 헌터 그리기 시간의 대부분이었다.
+    //   강화에 따른 크기(grow)는 붙일 때 늘려서 맞춘다. 보이는 모양은 예전과 같다.
     function drawHunterFeatherWings(ctx, hunter, t) {
-      const facing = hunter.facing || 1;
-      const back = -facing; // 날개는 몸 뒤쪽으로 펼쳐짐
+      const facing = (hunter.facing || 1) < 0 ? -1 : 1;
       const wEnh = Math.max(0, hunter.wingEnhance || 0);
-      const flap = Math.sin(t * 3.2 + (hunter.x || 0) * 0.04) * 0.1;
+      const flapRaw = Math.sin(t * 3.2 + (hunter.x || 0) * 0.04) * 0.1;
+      const step = Math.max(0, Math.min(WING_FLAP_STEPS, Math.round((flapRaw + 0.1) / 0.2 * WING_FLAP_STEPS)));
+      const spr = getFeatherWingSprite(wEnh, step);
       const grow = 1 + Math.min(0.22, wEnh * 0.015);
+      ctx.save();
+      ctx.scale(facing * grow, grow); // 그림은 오른쪽을 보는 모습 · 왼쪽을 보면 좌우 뒤집기
+      ctx.drawImage(spr.canvas, WING_SPRITE_BOX.x0, WING_SPRITE_BOX.y0, WING_SPRITE_BOX.w, WING_SPRITE_BOX.h);
+      ctx.restore();
+    }
+
+    const WING_FLAP_STEPS = 12;
+    const WING_SPRITE_SCALE = 3;                             // 확대해도 선명하게 3배로 그려 둠
+    const WING_SPRITE_BOX = { x0: -34, y0: -44, w: 48, h: 48 }; // 날개가 들어가는 범위 (헌터 기준 좌표 · 실측 x -28.5~7.5, y -37~-1 + 여유)
+    const WING_SPRITE_CACHE = new Map();
+    function getFeatherWingSprite(wEnh, step) {
+      const tier = wEnh >= 15 ? 2 : (wEnh >= 10 ? 1 : 0);
+      const key = tier * 100 + step;
+      let spr = WING_SPRITE_CACHE.get(key);
+      if (spr) return spr;
+      const S = WING_SPRITE_SCALE;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(WING_SPRITE_BOX.w * S);
+      canvas.height = Math.ceil(WING_SPRITE_BOX.h * S);
+      const c = canvas.getContext('2d');
+      c.scale(S, S);
+      c.translate(-WING_SPRITE_BOX.x0, -WING_SPRITE_BOX.y0);
+      const tierEnh = tier === 2 ? 15 : (tier === 1 ? 10 : 0);
+      drawFeatherWingsVector(c, 1, tierEnh, (step / WING_FLAP_STEPS) * 0.2 - 0.1, 1, S);
+      spr = { canvas };
+      WING_SPRITE_CACHE.set(key, spr);
+      return spr;
+    }
+
+    // 날개 원본 그림 (오른쪽을 보는 모습 · 이미지로 굽기 전용)
+    function drawFeatherWingsVector(ctx, facing, wEnh, flap, grow, blurScale = 1) {
+      const back = -facing; // 날개는 몸 뒤쪽으로 펼쳐짐
 
       const palette = wEnh >= 15
         ? { base: '#fffbeb', mid: '#fde68a', tip: '#f59e0b', line: '#b45309', glow: 'rgba(253, 224, 71, 0.75)' }
@@ -745,7 +756,7 @@
         ctx.lineJoin = 'round';
         if (palette.glow) {
           ctx.shadowColor = palette.glow;
-          ctx.shadowBlur = wEnh >= 15 ? 9 : 5;
+          ctx.shadowBlur = (wEnh >= 15 ? 9 : 5) * blurScale; // 확대해 굽는 만큼 빛번짐도 키움
         }
         // 긴 바깥 깃털 (5장, 위→아래로 부채꼴)
         const primaries = [
@@ -776,4 +787,64 @@
       wing(true);   // 뒤쪽 날개
       wing(false);  // 앞쪽 날개
       ctx.restore();
+    }
+
+    // (성능) 이름표 위 환생 별: 금색 · 빨간색(초월) 별을 한 번만 그려 두고 이미지로 붙인다
+    const REBIRTH_STAR_SPRITES = {};
+    function getRebirthStarSprite(isRed, outerR, innerR) {
+      const key = isRed ? 'red' : 'gold';
+      if (REBIRTH_STAR_SPRITES[key]) return REBIRTH_STAR_SPRITES[key];
+      const S = 6; // 확대해도 선명하게
+      const half = outerR + 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = Math.ceil(half * 2 * S);
+      const c = canvas.getContext('2d');
+      c.scale(S, S);
+      c.translate(half, half);
+      const g = c.createRadialGradient(-0.8, -0.8, 0.3, 0, 0, outerR + 0.5);
+      if (isRed) {
+        g.addColorStop(0, '#fca5a5');
+        g.addColorStop(0.55, '#dc2626');
+        g.addColorStop(1, '#7f1d1d');
+      } else {
+        g.addColorStop(0, '#fef9c3');
+        g.addColorStop(0.65, '#facc15');
+        g.addColorStop(1, '#eab308');
+      }
+      c.fillStyle = g;
+      c.beginPath();
+      for (let p = 0; p < 10; p++) {
+        const rad = p % 2 === 0 ? outerR : innerR;
+        const ang = -Math.PI / 2 + (p * Math.PI) / 5;
+        if (p === 0) c.moveTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+        else c.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+      }
+      c.closePath();
+      c.fill();
+      REBIRTH_STAR_SPRITES[key] = { canvas, half };
+      return REBIRTH_STAR_SPRITES[key];
+    }
+
+    // (성능) 환생 헌터 발밑 오라 원판: 환생 단계마다 한 장 그려 두고 크기만 바꿔 붙인다
+    const REBIRTH_AURA_SPRITES = {};
+    function getRebirthAuraSprite(tier, pal) {
+      const key = `${tier}|${pal.coreRgba}|${pal.edgeRgba}`;
+      if (REBIRTH_AURA_SPRITES[key]) return REBIRTH_AURA_SPRITES[key];
+      const R = 18 + tier * 2.4 + 6; // 기본 반지름 (펄럭임 없을 때)
+      const S = 3;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = Math.ceil(R * 2 * S);
+      const c = canvas.getContext('2d');
+      c.scale(S, S);
+      c.translate(R, R);
+      const g = c.createRadialGradient(0, 0, 3, 0, 0, R);
+      g.addColorStop(0, pal.coreRgba);
+      g.addColorStop(0.7, pal.coreRgba);
+      g.addColorStop(1, pal.edgeRgba);
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(0, 0, R, 0, Math.PI * 2);
+      c.fill();
+      REBIRTH_AURA_SPRITES[key] = canvas;
+      return canvas;
     }

@@ -140,3 +140,34 @@
       if (clampedLv === 1) return 4;
       return Math.min(30, clampedLv * 3);
     }
+
+    // ============================================================================
+    // 🖥️ 화면에 보이는 곳만 그리기 (성능)
+    //   - 매 화면(프레임) 시작 때 17-game-loop.js가 updateWorldViewRect(camera)로 지금 보이는 월드 범위를 기록한다.
+    //   - 그리는 함수들은 isWorldPointVisible / isWorldRectVisible로 화면 밖이면 그리기를 건너뛴다.
+    //   - 아직 기록이 없거나(시작 직후) 메인 캔버스가 아닌 곳에 그릴 때는 항상 '보임'으로 처리한다.
+    // ============================================================================
+    let WORLD_VIEW_RECT = null;
+    function updateWorldViewRect(cam) {
+      try {
+        const a = cam.screenToWorld(0, 0);
+        const b = cam.screenToWorld(cam.viewportWidth, cam.viewportHeight);
+        WORLD_VIEW_RECT = {
+          x0: Math.min(a.x, b.x), y0: Math.min(a.y, b.y),
+          x1: Math.max(a.x, b.x), y1: Math.max(a.y, b.y),
+          ctx: cam.ctx
+        };
+      } catch (_) {
+        WORLD_VIEW_RECT = null;
+      }
+    }
+    function isWorldPointVisible(x, y, pad = 120, ctx = null) {
+      const v = WORLD_VIEW_RECT;
+      if (!v || (ctx && ctx !== v.ctx)) return true;
+      return x >= v.x0 - pad && x <= v.x1 + pad && y >= v.y0 - pad && y <= v.y1 + pad;
+    }
+    function isWorldRectVisible(x, y, w, h, pad = 60, ctx = null) {
+      const v = WORLD_VIEW_RECT;
+      if (!v || (ctx && ctx !== v.ctx)) return true;
+      return x + w >= v.x0 - pad && x <= v.x1 + pad && y + h >= v.y0 - pad && y <= v.y1 + pad;
+    }

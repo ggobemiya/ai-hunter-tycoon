@@ -277,7 +277,9 @@
         const vv = window.visualViewport;
         const rawW = vv ? vv.width : (document.documentElement.clientWidth || window.innerWidth);
         const rawH = vv ? vv.height : (document.documentElement.clientHeight || window.innerHeight);
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        // 화면 선명도(픽셀 배율): PC는 최대 2배, 휴대폰 · 작은 화면은 최대 1.5배 (그릴 픽셀이 44% 줄어 화면 이동이 부드러움)
+        const maxDpr = Math.min(rawW, rawH) < 820 ? 1.5 : 2;
+        const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
         this.viewportWidth = Math.max(280, Math.round(rawW));
         this.viewportHeight = Math.max(240, Math.round(rawH));
         this.canvas.style.width = `${this.viewportWidth}px`;

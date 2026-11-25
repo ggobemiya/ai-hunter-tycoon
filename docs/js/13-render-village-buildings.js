@@ -16,6 +16,7 @@
       // [오픈된 사냥터 필드 렌더링]
       HUNTING_GROUNDS.forEach((hg) => {
         const b = hg.bounds;
+        if (!isWorldRectVisible(b.x, b.y, b.w, b.h, 80, ctx)) return; // 화면 밖 사냥터는 그리지 않음 (성능)
         const isMid = hg.id === 'mid_field_20_40';
         const isHigh = hg.id === 'high_field_40_70';
         const isTop = hg.id === 'top_field_70_99';
@@ -209,7 +210,7 @@
       });
 
       // [최상급 사냥터 오른쪽 옆: 👹 오크 군락지 렌더링 · 헌터 진입 불가]
-      if (typeof ORC_STRONGHOLD_ZONE !== 'undefined') {
+      if (typeof ORC_STRONGHOLD_ZONE !== 'undefined' && isWorldRectVisible(ORC_STRONGHOLD_ZONE.bounds.x - 200, ORC_STRONGHOLD_ZONE.bounds.y - 200, ORC_STRONGHOLD_ZONE.bounds.w + 400, ORC_STRONGHOLD_ZONE.bounds.h + 400, 60, ctx)) { // 화면 밖이면 생략
         const ob = ORC_STRONGHOLD_ZONE.bounds;
         const tOrc = performance.now() * 0.0035;
 
@@ -487,6 +488,7 @@
 
         // 군락지 내부 상주 오크 병력 렌더링 (근육질 체형 · 하악 엄니 · 강철 견갑 · 병종별 무기 · 10티어 오크 대전사)
         ORC_STRONGHOLD_ZONE.orcs.forEach((orc, idx) => {
+          if (!isWorldPointVisible(orc.x, orc.y, 140, ctx)) return; // 화면 밖 오크는 생략
           // 사망 후 군락지에서 1분(60초) 부활 대기 중인 오크 카운트다운 표시 (토벌전 중에는 Lv.1 초기화 대기 표시)
           if (orc.isDead) {
             const remSec = Math.max(1, Math.ceil((orc.respawnRemainingMs || 0) / 1000));
@@ -981,7 +983,7 @@
       }
 
       // [최상급 사냥터 위쪽 3환생 이상 전용 구역: ☁️ 천공의 섬 · 도보 이동 불가 · 포탈 전용]
-      {
+      if (isWorldRectVisible(SKY_ISLAND_GROUND.bounds.x - 120, SKY_ISLAND_GROUND.bounds.y - 120, SKY_ISLAND_GROUND.bounds.w + 240, SKY_ISLAND_GROUND.bounds.h + 240, 60, ctx)) { // 화면 밖이면 생략
         const sbSky = SKY_ISLAND_GROUND.bounds;
         const tCloud = performance.now() * 0.0012;
         const padX = 24;
