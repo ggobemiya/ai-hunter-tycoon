@@ -1,8 +1,8 @@
 {
   "source": "https://stormflowerm.github.io/AI-Web-Hunter/",
-  "sha256": "01d77658180b7fbcc4d49ab322fe3095815df677a95517561746e92747f75e37",
-  "synced_at": "2026-11-25T23:09:27.808785+00:00",
-  "archive": "releases/upstream-20261125T230927Z-01d7765818/",
+  "sha256": "8a62e803337c52d1e5a55ba1e3f578da557a937b77d190e0f4f06f9345d94aef",
+  "synced_at": "2026-11-25T23:14:51.569733+00:00",
+  "archive": "releases/upstream-20261125T231451Z-8a62e80333/",
   "files": {
     "assets/icons/apple-touch-icon.png": "1221198b8c079a7be0af24e138185ec3335691c8b47dc5d0c68ff93ace88cc69",
     "assets/icons/icon-192.png": "36abc6cec36110983e2887140db4e9f38a4ba77736d504e020d0bb30bce968fe",
@@ -15,7 +15,7 @@
     "assets/royal_guard/guard_m.png": "42b67fd20f83856c2d7e8d6f1f9f7044ad52615721513f6b37188adddcafe255",
     "assets/royal_guard/guard_weapon_spear.png": "a59684dd7c42e4d9170305ccd08412c133cab98001b1896b8298e5395627d6fb",
     "css/style.css": "6614494657c657cff489f57ed5e033e3706429fce47bc8d0cd74b71340db289b",
-    "index.html": "032f5d83ef7e8dc3de8ee7d2e202e01e487e7071a0b54c59bf6438992f1575e9",
+    "index.html": "95381e248e0a2cd043e05133bea596214594af5def097de542b664484a8c4953",
     "js/01-core-utils.js": "f5c1e4859118e347b030c2f60fe8968cd768a25517c095b47349bdb0c4a3c6be",
     "js/02-boss-rebirth-altar.js": "568025c4a3898165a54f6ead3638640b098ae2b201a5677d4d7fb0ba59095678",
     "js/03-hunting-grounds.js": "6eaf6a373a1ca24ed980ee622fb06fddc32dfed88c117be858e158f4cde00b99",
