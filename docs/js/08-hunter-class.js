@@ -58,14 +58,14 @@
         });
 
         const p = getEffectivePersonalityProfile(this.personality, this.rebirthCount);
-        const speedPassiveBonus = this.skills.passives.reduce((acc, sk) => acc + (sk.speedBonus || 0), 0) + (p.speedBonus || 0);
 
         this.x = x;
         this.y = y;
         this.targetX = x;
         this.targetY = y;
         this.waypoints = [];
-        this.baseSpeed = Math.max(36, 68 + speedPassiveBonus);
+        this.baseSpeed = Math.max(36, 68 + (p.speedBonus || 0));
+        this.activeBuffs = { berserkTimer: 0, berserkAtkPct: 0, guardTimer: 0, guardDmgReduce: 0 };
         this.facing = 1;
         this.walkCycle = Math.random() * Math.PI * 2;
 
@@ -143,10 +143,12 @@
       }
 
       get speed() {
+        const passives = this.skills?.passives || [];
+        const speedPassiveBonus = passives.reduce((acc, sk) => acc + (sk.speedBonus || 0) * this.getSkillLevelMultiplier(sk), 0);
         const wing = this.getEquippedWing();
         const enh = Math.max(0, this.wingEnhance || 0);
         const wingSpeed = wing ? ((wing.speedBonus || 0) + enh * (wing.enhanceSpeedBonus || 0)) : 0;
-        return (this.baseSpeed || 68) + wingSpeed;
+        return (this.baseSpeed || 68) + speedPassiveBonus + wingSpeed;
       }
 
       set speed(val) {
@@ -692,10 +694,11 @@
         const rebirthMult = 1 + this.rebirthCount * LEVEL_REBIRTH_CONFIG.rebirthStatBonusPerStack;
         const rebirthCrit = this.rebirthCount * LEVEL_REBIRTH_CONFIG.rebirthCritBonusPerStack;
 
+        const berserkAtkBonus = (this.activeBuffs?.berserkTimer || 0) > 0 ? (this.activeBuffs.berserkAtkPct || 0) : 0;
         const atkMult = passives.reduce(
           (sum, sk) => sum + (sk.atkMult || 0) * this.getSkillLevelMultiplier(sk),
           1
-        ) + (p.atkMult || 0);
+        ) + (p.atkMult || 0) + berserkAtkBonus;
         const defMult = passives.reduce(
           (sum, sk) => sum + (sk.defMult || 0) * this.getSkillLevelMultiplier(sk),
           1
@@ -874,8 +877,22 @@
         sk.cooldownRemaining = Math.max(2.0, Number((baseCd * (1 - ((sk.lv || 1) - 1) * 0.015)).toFixed(1)));
         this.recordSkillUse('actives', skIdx);
 
-        const skillMult = (sk.basePower / 100) * this.getSkillLevelMultiplier(sk);
-        return { skill: sk, dmgMult: Math.max(1.25, skillMult * 0.75) };
+        if (!this.activeBuffs) this.activeBuffs = { berserkTimer: 0, berserkAtkPct: 0, guardTimer: 0, guardDmgReduce: 0 };
+        const lvMult = this.getSkillLevelMultiplier(sk);
+        if (sk.id === 'bsk_act_2') {
+          this.activeBuffs.berserkTimer = 10;
+          this.activeBuffs.berserkAtkPct = ((sk.basePower || 30) / 100) * lvMult;
+          interactionManager.spawnBubble(this, `🔥 광전사의 포효! (10초 폭주)`, '#fb923c');
+          return { skill: sk, dmgMult: 1.0 };
+        }
+        if (sk.id === 'pld_act_2') {
+          this.activeBuffs.guardTimer = 8;
+          this.activeBuffs.guardDmgReduce = Math.min(0.7, ((sk.basePower || 45) / 100) * lvMult);
+          interactionManager.spawnBubble(this, `🛡️ 신성한 수호막! (8초 보호)`, '#fde047');
+          return { skill: sk, dmgMult: 1.0 };
+        }
+        const skillMult = (sk.basePower / 100) * lvMult;
+        return { skill: sk, dmgMult: Math.max(1.25, skillMult) };
       }
 
       // 스킬 피해량(기본 위력 + 스킬 레벨 성장 반영 위력)이 높을수록 MP 소모량이 가중 증가하도록 계산
@@ -925,6 +942,18 @@
         }
         if ((this.miniBossBuffTimer || 0) > 0) {
           this.miniBossBuffTimer = Math.max(0, this.miniBossBuffTimer - dt);
+        }
+        if (this.activeBuffs) {
+          if (this.activeBuffs.berserkTimer > 0) {
+            this.activeBuffs.berserkTimer = Math.max(0, this.activeBuffs.berserkTimer - dt);
+            if (this.attackCooldown > 0) this.attackCooldown = Math.max(0, this.attackCooldown - dt * 0.4);
+          }
+          if (this.activeBuffs.guardTimer > 0) {
+            this.activeBuffs.guardTimer = Math.max(0, this.activeBuffs.guardTimer - dt);
+            if (this.hp > 0 && this.hp < this.maxHp) {
+              this.hp = Math.min(this.maxHp, this.hp + this.maxHp * 0.025 * dt);
+            }
+          }
         }
         if ((this.enhanceCooldown || 0) > 0) {
           this.enhanceCooldown = Math.max(0, this.enhanceCooldown - dt);
@@ -1260,12 +1289,17 @@
         // [사냥터 야외 필드 전투 상태]
         if (this.state === 'HUNTING_FIELD') {
           const ground = ALL_FIELD_GROUNDS.find(g => g.id === this.activeGroundId);
+          const zoneRule = ZONE_RULES[ground?.zoneType] || ZONE_RULES.NORMAL_HUNT;
           const hasActivePvpDuel = Boolean(
+            zoneRule.allowPk &&
             this.currentTargetHunter &&
             this.currentTargetHunter.hp > 0 &&
             this.currentTargetHunter.state === 'HUNTING_FIELD' &&
             this.currentTargetHunter.activeGroundId === ground?.id
           );
+          if (!zoneRule.allowPk && this.currentTargetHunter) {
+            this.currentTargetHunter = null;
+          }
 
           // PvP 교전 중에는 한쪽 헌터가 사망할 때까지 이탈/휴식 조건을 보류해 끝까지 결판냄
           if (!ground || (!hasActivePvpDuel && (this.hp < this.maxHp * 0.35 || this.fatigue >= 85))) {
@@ -1309,7 +1343,9 @@
 
           // 본인이 21레벨에 도달해 초보 사냥터 경험치 90% 감소 패널티가 적용되면 스스로 사냥터 이탈 판단
           const pref = evaluateHuntingGroundPreference(this, ground);
-          if (!hasActivePvpDuel && !pref.matched) {
+          const isRebornInNormalGround = (this.rebirthCount || 0) >= 1 && !ground.minRebirth && ground.zoneType !== 'HERO_ARENA';
+          const isUnderRebirthGround = Boolean(ground.minRebirth && (this.rebirthCount || 0) < ground.minRebirth);
+          if (isRebornInNormalGround || isUnderRebirthGround || (!hasActivePvpDuel && !pref.matched)) {
             if (ground.id === SKY_ISLAND_GROUND.id) {
               teleportHunterFromSkyIslandToTown(this, '✨ 천공의 섬 이탈 · 마을 순간 이동!');
               return;
@@ -1343,9 +1379,8 @@
           }
 
           // [헌터 간 PvP 구역(LAWLESS_PK): 상급 사냥터 무법 교전 판정]
-          const zoneRule = ZONE_RULES[ground.zoneType] || ZONE_RULES.NORMAL_HUNT;
           const isSelfReborn = (this.rebirthCount || 0) > 0;
-          if (zoneRule.allowPk || hasActivePvpDuel) {
+          if (zoneRule.allowPk) {
             const isValidPvpTarget = (t) => (
               t &&
               t.id !== this.id &&
@@ -1698,7 +1733,9 @@
                   slashType: combat.slashType,
                   color: skillCast ? '#fde047' : combat.slashColor
                 });
-                const counterDmg = Math.max(12, Math.round((targetMonster.atk || 50) - stats.def * 0.24));
+                const rawCounter = Math.max(12, Math.round((targetMonster.atk || 50) - stats.def * 0.24));
+                const guardMult = (this.activeBuffs?.guardTimer || 0) > 0 ? (1 - (this.activeBuffs.guardDmgReduce || 0)) : 1;
+                const counterDmg = Math.max(6, Math.round(rawCounter * guardMult));
                 this.hp = Math.max(1, this.hp - counterDmg);
                 combatEffects.applyHitToMonster(this, targetMonster, ground, dmg, isCrit || !!skillCast);
               }
@@ -1711,7 +1748,9 @@
                 targetMonster.attackCooldown = 1.15;
                 const stats = this.getComputedStats();
                 const rawMonsterAtk = targetMonster.atk || 50;
-                const takenDmg = Math.max(10, Math.round(rawMonsterAtk * (combat.style === 'RANGED' ? 0.65 : 0.85) - stats.def * 0.22));
+                const rawTaken = Math.max(10, Math.round(rawMonsterAtk * (combat.style === 'RANGED' ? 0.65 : 0.85) - stats.def * 0.22));
+                const guardMult2 = (this.activeBuffs?.guardTimer || 0) > 0 ? (1 - (this.activeBuffs.guardDmgReduce || 0)) : 1;
+                const takenDmg = Math.max(6, Math.round(rawTaken * guardMult2));
                 this.hp = Math.max(1, this.hp - takenDmg);
               }
             }
@@ -1807,6 +1846,18 @@
               );
               if (enteredGround) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
+                const isRebornInNormalGround = (this.rebirthCount || 0) >= 1 && !ground.minRebirth && ground.zoneType !== 'HERO_ARENA';
+                const isUnderRebirthGround = Boolean(ground.minRebirth && (this.rebirthCount || 0) < ground.minRebirth);
+                if (isRebornInNormalGround || isUnderRebirthGround) {
+                  this.waypoints = [];
+                  this.state = 'IDLE';
+                  this.stateTimer = 0.25;
+                  this.activeGroundId = null;
+                  this.targetGroundId = null;
+                  this.currentTargetMonster = null;
+                  this.currentTargetHunter = null;
+                  return;
+                }
                 this.waypoints = [];
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
@@ -1885,6 +1936,17 @@
               const ground = HUNTING_GROUNDS.find(g => g.id === this.targetGroundId);
               if (ground) {
                 const pref = evaluateHuntingGroundPreference(this, ground);
+                const isRebornInNormalGround = (this.rebirthCount || 0) >= 1 && !ground.minRebirth && ground.zoneType !== 'HERO_ARENA';
+                const isUnderRebirthGround = Boolean(ground.minRebirth && (this.rebirthCount || 0) < ground.minRebirth);
+                if (isRebornInNormalGround || isUnderRebirthGround) {
+                  this.state = 'IDLE';
+                  this.stateTimer = 0.25;
+                  this.activeGroundId = null;
+                  this.targetGroundId = null;
+                  this.currentTargetMonster = null;
+                  this.currentTargetHunter = null;
+                  return;
+                }
                 this.state = 'HUNTING_FIELD';
                 this.activeGroundId = ground.id;
                 if (!this.currentTargetMonster || this.currentTargetMonster.hp <= 0) {

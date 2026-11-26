@@ -335,7 +335,7 @@
       centerX: 1895,
       centerY: -1405,
       monsterScale: 1.5,
-      baseExp: 4300,
+      baseExp: 17000,
       baseGold: 4700,
       goldDropRange: { min: 16000, max: 38000 },
       lootSpec: {
@@ -348,12 +348,12 @@
       },
       baseMonsterCount: 6,
       maxMonsterCount: 16,
-      // 몬스터 체력: 처음 값의 5배로 상향 (2026-11-24)
+      // 몬스터 체력: 처음 값의 1.3배 · 경험치 17,000 조정 (2026-11-26)
       monsterTemplates: [
-        { kind: 'irongolem',  name: '성운의 수호대천사',   color: '#7c3aed', stroke: '#fde047', hp: 1185000, atk: 1130, isRanged: false, range: 48 },
-        { kind: 'shadowwolf', name: '별빛 심판 세라핌',   color: '#a855f7', stroke: '#fef9c3', hp: 1065000, atk: 1220, isRanged: false, range: 46 },
-        { kind: 'manaorc',    name: '천궁의 성가 지휘자', color: '#4f46e5', stroke: '#fbcfe8', hp: 1125000, atk: 1290, isRanged: true,  range: 190 },
-        { kind: 'kingslime',  name: '성운왕좌의 수호신',   color: '#6d28d9', stroke: '#fde047', hp: 1470000, atk: 1390, isRanged: false, range: 52 }
+        { kind: 'irongolem',  name: '성운의 수호대천사',   color: '#7c3aed', stroke: '#fde047', hp: 308100, atk: 1130, isRanged: false, range: 48 },
+        { kind: 'shadowwolf', name: '별빛 심판 세라핌',   color: '#a855f7', stroke: '#fef9c3', hp: 276900, atk: 1220, isRanged: false, range: 46 },
+        { kind: 'manaorc',    name: '천궁의 성가 지휘자', color: '#4f46e5', stroke: '#fbcfe8', hp: 292500, atk: 1290, isRanged: true,  range: 190 },
+        { kind: 'kingslime',  name: '성운왕좌의 수호신',   color: '#6d28d9', stroke: '#fde047', hp: 382200, atk: 1390, isRanged: false, range: 52 }
       ],
       getExpMultiplier() {
         return 1.0;

@@ -56,8 +56,22 @@
       return minTier >= SKY_ISLAND_MIN_GEAR.minTier && avgEnh >= SKY_ISLAND_MIN_GEAR.minAvgEnhance;
     }
 
+    function isMaxRebirthWingFarmingHunter(hunter) {
+      return Boolean(
+        hunter &&
+        (hunter.rebirthCount || 0) >= LEVEL_REBIRTH_CONFIG.maxRebirths &&
+        (hunter.level || 1) >= LEVEL_REBIRTH_CONFIG.maxLevel &&
+        !(hunter.getEquippedWing && hunter.getEquippedWing())
+      );
+    }
+
     function canHunterEnterSkyIsland(hunter) {
-      return Boolean(isSkyIslandOpened() && hunter && (hunter.rebirthCount || 0) >= SKY_ISLAND_GROUND.minRebirth && meetsSkyIslandGear(hunter));
+      return Boolean(
+        isSkyIslandOpened() &&
+        hunter &&
+        (hunter.rebirthCount || 0) >= SKY_ISLAND_GROUND.minRebirth &&
+        (meetsSkyIslandGear(hunter) || isMaxRebirthWingFarmingHunter(hunter))
+      );
     }
 
     function teleportHunterToSkyIsland(hunter, gateBuilding) {
@@ -289,7 +303,7 @@
         if (!canHunterEnterCelestialPalace(hunter)) {
           return { score: 0, matched: false, label: '성운의 천궁 (날개를 착용해야 날아갈 수 있음)' };
         }
-        return { score: 190, matched: true, label: `성운의 천궁 비행 출정 (${rebirths}환생 · 4,300 EXP)` };
+        return { score: 190, matched: true, label: `성운의 천궁 비행 출정 (${rebirths}환생 · 17,000 EXP)` };
       }
       if (ground.id === 'top_field_70_99' && typeof isOrcStrongholdPassageOpen === 'function' && isOrcStrongholdPassageOpen()) {
         return { score: 0, matched: false, label: '토벌 전용 필드 (5티어 보스 처치 후 헌터 출입 불가)' };
@@ -301,6 +315,9 @@
         const skyGate = village.getAllBuildings().find(b => b.type === 'sky_island_gate');
         if (!skyGate) {
           return { score: 0, matched: false, label: '천공의 섬 게이트 건설 필요' };
+        }
+        if (isMaxRebirthWingFarmingHunter(hunter)) {
+          return { score: 230, matched: true, label: '천공의 섬 날개 파밍 출정 (5환생 Lv.99 · 날개 미보유)' };
         }
         return { score: 165, matched: true, label: `천공의 섬 포탈 출정 (${rebirths}환생 · 2,650 EXP)` };
       }

@@ -130,7 +130,7 @@
       const box = document.getElementById('autoBanishPanel');
       if (!box || box.hidden) return;
       const st = normalizeAutoBanishSlots();
-      const key = JSON.stringify([st.minGrade, st.slots, hunters.map(h => `${h.id}:${h.name}:${h.locked ? 1 : 0}`)]);
+      const key = JSON.stringify([st.minGrade, st.slots, hunters.map(h => `${h.id}:${h.name}:${h.rebirthCount || 0}:${h.level || 1}:${h.birthGrade || ''}:${h.locked ? 1 : 0}`)]);
 
       if (!force && key === autoBanishPanelKey) {
         // 구성은 그대로 → 상태 글자만 바꾼다 (펼쳐 둔 선택 상자가 닫히지 않게)
@@ -158,9 +158,14 @@
         } else {
           const opts = hunters
             .filter(x => x.id === slot.id || (!used.has(x.id) && !x.locked))
-            .map(x => `<option value="${x.id}" ${x.id === slot.id ? 'selected' : ''}>${x.name} · ${x.rebirthCount || 0}환생 Lv.${x.level}</option>`)
+            .map(x => {
+              const gTag = isHunterGradeVisible(x) ? `[${getHunterGrade(x).id}] ` : '';
+              return `<option value="${x.id}" ${x.id === slot.id ? 'selected' : ''}>${gTag}${x.name} · ${x.rebirthCount || 0}환생 Lv.${x.level}</option>`;
+            })
             .join('');
-          picker = `<select class="ab-slot-select" data-ab-slot="${i}"><option value="">— 헌터 선택 —</option>${opts}</select>`;
+          const gradeBadge = h ? getHunterGradeHtml(h) : '';
+          const selHtml = `<select class="ab-slot-select" style="flex:1;min-width:0;" data-ab-slot="${i}"><option value="">— 헌터 선택 —</option>${opts}</select>`;
+          picker = gradeBadge ? `<div style="display:flex;align-items:center;gap:5px;min-width:0;">${gradeBadge}${selHtml}</div>` : selHtml;
         }
         return `<div class="ab-slot${slot.locked ? ' locked' : ''}${h ? '' : ' empty'}">
           <span class="ab-slot-no">${i + 1}</span>

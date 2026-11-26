@@ -153,6 +153,11 @@
 
           const prevLv = hunter.level;
           hunter.gainExp(finalExp);
+          const thirstPas = hunter.skills?.passives?.find(sk => sk.id === 'bsk_pas_1');
+          if (thirstPas && hunter.hp > 0 && hunter.hp < hunter.maxHp) {
+            const healAmt = Math.max(10, Math.round(hunter.maxHp * 0.03 * hunter.getSkillLevelMultiplier(thirstPas)));
+            hunter.hp = Math.min(hunter.maxHp, hunter.hp + healAmt);
+          }
 
           // 몬스터 3마리 사냥 시 인성 +1 반영
           const alignKillRes = hunter.recordMonsterKillForAlignment();
@@ -176,6 +181,15 @@
 
       applyHitToHunterPvP(attacker, defender, dmg, isCrit) {
         if (!attacker || !defender || defender.hp <= 0) return;
+        const atkGround = typeof ALL_FIELD_GROUNDS !== 'undefined' ? ALL_FIELD_GROUNDS.find(g => g.id === attacker.activeGroundId) : null;
+        const defGround = typeof ALL_FIELD_GROUNDS !== 'undefined' ? ALL_FIELD_GROUNDS.find(g => g.id === defender.activeGroundId) : null;
+        const atkRule = (typeof ZONE_RULES !== 'undefined' && atkGround) ? (ZONE_RULES[atkGround.zoneType] || ZONE_RULES.NORMAL_HUNT) : null;
+        const defRule = (typeof ZONE_RULES !== 'undefined' && defGround) ? (ZONE_RULES[defGround.zoneType] || ZONE_RULES.NORMAL_HUNT) : null;
+        if (!atkGround || !defGround || atkGround.id !== defGround.id || !atkRule?.allowPk || !defRule?.allowPk || attacker.state !== 'HUNTING_FIELD' || defender.state !== 'HUNTING_FIELD') {
+          if (attacker.currentTargetHunter === defender) attacker.currentTargetHunter = null;
+          if (defender.currentTargetHunter === attacker) defender.currentTargetHunter = null;
+          return;
+        }
         if (((attacker.rebirthCount || 0) > 0) !== ((defender.rebirthCount || 0) > 0)) {
           if (attacker.currentTargetHunter === defender) attacker.currentTargetHunter = null;
           if (defender.currentTargetHunter === attacker) defender.currentTargetHunter = null;

@@ -289,7 +289,7 @@
       ctx.fillText('🌌 성운의 천궁 [4환생 이상 · 날개 착용 헌터 전용 · 비행 입장]', b.x + b.w / 2, signY + 14);
       ctx.fillStyle = '#fde68a';
       ctx.font = '11px sans-serif';
-      ctx.fillText('🪽 날개로만 오갈 수 있는 하늘 위 신전 · 4,300 EXP · 성운결정 드랍', b.x + b.w / 2, signY + 30);
+      ctx.fillText('🪽 날개로만 오갈 수 있는 하늘 위 신전 · 17,000 EXP · 성운결정 드랍', b.x + b.w / 2, signY + 30);
       ctx.restore();
 
       // 6) 몬스터 (성운 날개 천사 4종 · 1.5배 크기 · js/15e-celestial-monsters.js)
