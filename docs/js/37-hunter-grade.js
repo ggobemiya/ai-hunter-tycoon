@@ -6,15 +6,15 @@
 
     // 확률(%)의 합 = 100 · bonus = 능력치 증감 비율
     const HUNTER_GRADES = [
-      { id: 'EX+',  chance: 0.01, bonus: 0.55, cls: 'grade-rainbow' },
-      { id: 'EX',   chance: 0.49, bonus: 0.45, cls: 'grade-red' },
+      { id: 'EX+',  chance: 0.005, bonus: 0.55, cls: 'grade-rainbow' },
+      { id: 'EX',   chance: 0.01,  bonus: 0.45, cls: 'grade-red' },
       { id: 'SSS+', chance: 1,    bonus: 0.40, cls: 'grade-gold' },
       { id: 'SSS',  chance: 2.5,  bonus: 0.35, cls: 'grade-gold' },
       { id: 'SS',   chance: 4,    bonus: 0.30, cls: 'grade-gold' },
       { id: 'S',    chance: 7,    bonus: 0.25, cls: 'grade-gold' },
       { id: 'A',    chance: 10,   bonus: 0.20, cls: 'grade-sky' },
       { id: 'B',    chance: 14,   bonus: 0.15, cls: 'grade-sky' },
-      { id: 'C',    chance: 26,   bonus: 0,    cls: 'grade-green' },
+      { id: 'C',    chance: 26.485, bonus: 0,   cls: 'grade-green' },
       { id: 'D',    chance: 15,   bonus: -0.05, cls: 'grade-gray' },
       { id: 'E',    chance: 12,   bonus: -0.10, cls: 'grade-gray' },
       { id: 'F',    chance: 8,    bonus: -0.20, cls: 'grade-gray' }
@@ -136,4 +136,14 @@
     function getKingdomGradeHtml(u) {
       const g = getKingdomUnitGrade(u);
       return `<span class="hunter-grade ${g.cls}">${g.id}</span>`;
+    }
+
+    // 37 로드 이전에 생성된 초기 헌터도 즉시 태생 등급 확정 및 체력/마력 반영
+    if (typeof hunters !== 'undefined' && Array.isArray(hunters)) {
+      hunters.forEach((h) => {
+        if (h && !HUNTER_GRADE_BY_ID[h.birthGrade]) {
+          getHunterGrade(h);
+          if (typeof h.recalculateVitals === 'function') h.recalculateVitals(true);
+        }
+      });
     }

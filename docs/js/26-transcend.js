@@ -12,14 +12,24 @@
       maxTranscend: 5,
       statBonusPerStack: 0.20,
       maxBanishBonusSlots: 20,
-      ticketId: 'transcend_ticket'
+      ticketId: 'transcend_ticket',
+      // 1~5초월 성공 확률(%) — 실패 시 초월권만 소모(단계 유지), 5초월 풀초월 기대값 50장 (2.5 + 5 + 10 + 12.5 + 20 = 50)
+      successChances: [40, 20, 10, 8, 5]
     };
+
+    function getTranscendSuccessChance(nextTierOrHunter) {
+      const nextTier = typeof nextTierOrHunter === 'number'
+        ? nextTierOrHunter
+        : (Math.floor(Number(nextTierOrHunter?.transcendCount) || 0) + 1);
+      const idx = Math.max(0, Math.min(TRANSCEND_CFG.successChances.length - 1, nextTier - 1));
+      return TRANSCEND_CFG.successChances[idx];
+    }
 
     registerUserItem({
       id: TRANSCEND_CFG.ticketId,
       name: '초월권',
       icon: '🔴',
-      desc: '1환생 이상 헌터 1명을 초월시킵니다. 1초월마다 금색 별 1개가 빨간 별로 바뀌고 전체 능력(공격력 · 방어력 · 체력 · 마나)이 +20% 오릅니다. 환생 별 수만큼, 최대 5초월까지 가능합니다.',
+      desc: '1환생 이상 헌터 1명의 초월을 시도합니다 (성공 확률: 1초월 40% · 2초월 20% · 3초월 10% · 4초월 8% · 5초월 5%, 실패 시 초월권만 소모). 성공 시 금색 별 1개가 빨간 별로 바뀌고 전체 능력(공격력 · 방어력 · 체력 · 마나)이 +20% 오릅니다.',
       howToGet: '🎖️ 토벌 포인트 상점(주 3장) · 5단계 보스 최초 처치 시 2장(1회) · 5환생 Lv.99 헌터 추방 1장(+ 토벌 포인트 50 · 헌터 최대 인원 +1, 최대 +20)',
       onUse: () => openTranscendPicker(null)
     });
@@ -57,13 +67,24 @@
         showToast('⚠️ 초월권이 없습니다.');
         return false;
       }
-      h.transcendCount = (h.transcendCount || 0) + 1;
+      const nextTier = (h.transcendCount || 0) + 1;
+      const chance = getTranscendSuccessChance(nextTier);
+      if (Math.random() * 100 >= chance) {
+        if (typeof interactionManager !== 'undefined') {
+          interactionManager.spawnBubble(h, `💨 ${nextTier}초월 실패... (${chance}%)`, '#94a3b8');
+        }
+        showToast(`💨 '${h.name}' 헌터 ${nextTier}초월 실패 (${chance}%) · 초월권 1장 소모 (남은 초월권 ${getUserItemCount(TRANSCEND_CFG.ticketId)}장)`);
+        refreshUserInventoryViews();
+        if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
+        return true;
+      }
+      h.transcendCount = nextTier;
       h.recalculateVitals(false);
       const pct = Math.round((getTranscendStatMult(h) - 1) * 100);
       if (typeof interactionManager !== 'undefined') {
-        interactionManager.spawnBubble(h, `🔴 ${h.transcendCount}초월 달성! 전체 능력 +${pct}%`, '#f87171');
+        interactionManager.spawnBubble(h, `🔴 ${h.transcendCount}초월 성공! 전체 능력 +${pct}%`, '#f87171');
       }
-      showToast(`🔴 '${h.name}' 헌터 ${h.transcendCount}초월! 전체 능력 +${pct}% (남은 초월권 ${getUserItemCount(TRANSCEND_CFG.ticketId)}장)`);
+      showToast(`🔴 '${h.name}' 헌터 ${h.transcendCount}초월 성공! (${chance}%) 전체 능력 +${pct}% (남은 초월권 ${getUserItemCount(TRANSCEND_CFG.ticketId)}장)`);
       refreshUserInventoryViews();
       if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
       return true;
@@ -235,6 +256,8 @@
       const rows = list.map((h) => {
         const ok = canHunterTranscend(h);
         const nowPct = Math.round((getTranscendStatMult(h) - 1) * 100);
+        const nextTier = (h.transcendCount || 0) + 1;
+        const chance = getTranscendSuccessChance(nextTier);
         const reason = (h.rebirthCount || 0) < 1 ? '환생 필요' : (ok ? '' : '최대 초월');
         return `
           <div class="transcend-pick-row">
@@ -243,7 +266,7 @@
               <div style="font-size:11px;">${starsHtml(h)} <span style="color:#fca5a5;">${h.transcendCount || 0}초월 · 능력 +${nowPct}%</span></div>
             </div>
             ${ok
-              ? `<button type="button" class="btn-roster-transcend" data-do-transcend="${h.id}" ${tickets > 0 ? '' : 'disabled'}>🔴 초월 (+20%)</button>`
+              ? `<button type="button" class="btn-roster-transcend" data-do-transcend="${h.id}" ${tickets > 0 ? '' : 'disabled'}>🔴 ${nextTier}초월 (${chance}%)</button>`
               : `<span style="font-size:11px;color:#94a3b8;">${reason}</span>`}
           </div>
         `;
@@ -251,7 +274,7 @@
 
       body.innerHTML = `
         <div style="font-size:12px;color:#cbd5e1;">
-          보유 초월권 <b style="color:#fde047;">${tickets}장</b> · 1초월마다 금색 별 1개가 <b style="color:#ef4444;">빨간 별</b>로 바뀌고 전체 능력 <b>+20%</b> (환생 별 수만큼, 최대 5초월 · +100%)
+          보유 초월권 <b style="color:#fde047;">${tickets}장</b> · 성공 시 전체 능력 <b>+20%</b> (성공 확률: <b>40% → 20% → 10% → 8% → 5%</b> · 실패 시 초월권만 소모)
         </div>
         <div class="transcend-pick-list">
           ${rows || '<div style="color:#94a3b8;font-size:12px;margin-top:8px;">초월할 수 있는 헌터(1환생 이상)가 없습니다.</div>'}

@@ -126,7 +126,7 @@
     function getAlignmentInfo(rawAlignment = 0) {
       const val = Math.max(-100, Math.min(100, Math.round(Number(rawAlignment) || 0)));
       if (val >= 60) {
-        return { value: val, label: '성인(선인)', badgeClass: 'align-badge-saint', color: '#86efac' };
+        return { value: val, label: '성인', badgeClass: 'align-badge-saint', color: '#86efac' };
       }
       if (val >= 20) {
         return { value: val, label: '선인', badgeClass: 'align-badge-good', color: '#7dd3fc' };

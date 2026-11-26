@@ -135,6 +135,11 @@
       // 몬스터 3마리 사냥당 인성 +1 누적용 카운터
       this.monsterKillAlignmentProgress = Math.max(0, Math.min(2, Math.floor(Number(preset.monsterKillAlignmentProgress) || 0)));
 
+        if (preset.birthGrade && (typeof HUNTER_GRADE_BY_ID === 'undefined' || HUNTER_GRADE_BY_ID[preset.birthGrade])) {
+          this.birthGrade = preset.birthGrade;
+        } else if (typeof rollHunterGrade === 'function') {
+          this.birthGrade = rollHunterGrade();
+        }
         this.maxHp = 500;
         this.maxMp = 160;
         this.hp = 500;
@@ -857,14 +862,27 @@
 
       tryUseActiveSkill(stats) {
         if (!this.skills?.actives?.length) return null;
-        // 현재 쿨타임이 완료된(cooldownRemaining <= 0) 액티브 스킬만 후보로 선정
-        const readyIndices = [];
-        this.skills.actives.forEach((sk, idx) => {
-          if ((sk.cooldownRemaining || 0) <= 0) {
-            const weight = 1 + (sk.advTier || 0);
-            for (let w = 0; w < weight; w++) readyIndices.push(idx);
-          }
-        });
+        // 현재 쿨타임이 완료되고 MP가 충분한 액티브 스킬만 후보로 선정
+        const collectReady = () => {
+          const list = [];
+          this.skills.actives.forEach((sk, idx) => {
+            if ((sk.cooldownRemaining || 0) <= 0 && this.mp >= this.getSkillMpCost(sk)) {
+              const weight = 1 + (sk.advTier || 0);
+              for (let w = 0; w < weight; w++) list.push(idx);
+            }
+          });
+          return list;
+        };
+
+        let readyIndices = collectReady();
+        if (readyIndices.length === 0 && this.potions && this.potions.mp > 0 && this.skills.actives.some(sk => (sk.cooldownRemaining || 0) <= 0)) {
+          this.potions.mp -= 1;
+          const restore = Math.round(this.maxMp * 0.5);
+          this.mp = Math.min(this.maxMp, this.mp + restore);
+          combatEffects.spawnDamagePopup(this.x, this.y - 10, `+${restore} MP`, false, '#38bdf8');
+          interactionManager.spawnBubble(this, `💧 MP 물약 복용 (${this.potions.mp}/${getMaxMpPotionCapacity(this.level, this.rebirthCount)})`, '#7dd3fc');
+          readyIndices = collectReady();
+        }
         if (readyIndices.length === 0) return null;
 
         const skIdx = readyIndices[Math.floor(Math.random() * readyIndices.length)];
@@ -1048,7 +1066,7 @@
                 this.attackAnimTimer = 0.34;
                 const stats = this.getComputedStats();
                 const isCrit = Math.random() * 100 < stats.crit;
-                const skillCast = Math.random() < 0.48 ? this.tryUseActiveSkill(stats) : null;
+                const skillCast = this.tryUseActiveSkill(stats);
                 const mult = (isCrit ? 1.5 : 0.92) * (skillCast ? skillCast.dmgMult : 1);
                 const rawDmg = Math.max(15, Math.round(stats.atk * mult));
 
@@ -1148,8 +1166,9 @@
             const dy = altarBoss.y - this.y;
             const moveDist = Math.max(1, distToAltarBoss);
             this.facing = dx >= 0 ? 1 : -1;
-            this.x += (dx / moveDist) * this.speed * 1.15 * dt;
-            this.y += (dy / moveDist) * this.speed * 1.15 * dt;
+            const altarChaseMult = combat.style === 'MELEE' ? 1.4 : 1.15;
+            this.x += (dx / moveDist) * this.speed * altarChaseMult * dt;
+            this.y += (dy / moveDist) * this.speed * altarChaseMult * dt;
             enforceTownWallCollision(this, 12);
             this.walkCycle += dt * 12;
           } else {
@@ -1163,7 +1182,7 @@
               this.attackAnimTimer = 0.34;
               const stats = this.getComputedStats();
               const isCrit = Math.random() * 100 < stats.crit;
-              const skillCast = Math.random() < 0.5 ? this.tryUseActiveSkill(stats) : null;
+              const skillCast = this.tryUseActiveSkill(stats);
               const mult = (isCrit ? 1.55 : 0.96) * (skillCast ? skillCast.dmgMult : 1);
               const dmg = Math.max(20, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier()));
 
@@ -1240,8 +1259,9 @@
             const dy = boss.y - this.y;
             const moveDist = Math.max(1, distToBoss);
             this.facing = dx >= 0 ? 1 : -1;
-            this.x += (dx / moveDist) * this.speed * 1.12 * dt;
-            this.y += (dy / moveDist) * this.speed * 1.12 * dt;
+            const bossChaseMult = combat.style === 'MELEE' ? 1.4 : 1.12;
+            this.x += (dx / moveDist) * this.speed * bossChaseMult * dt;
+            this.y += (dy / moveDist) * this.speed * bossChaseMult * dt;
             enforceTownWallCollision(this, 12);
             this.walkCycle += dt * 12;
           } else {
@@ -1252,7 +1272,7 @@
               this.attackAnimTimer = 0.34;
               const stats = this.getComputedStats();
               const isCrit = Math.random() * 100 < stats.crit;
-              const skillCast = Math.random() < 0.48 ? this.tryUseActiveSkill(stats) : null;
+              const skillCast = this.tryUseActiveSkill(stats);
               const mult = (isCrit ? 1.5 : 0.92) * (skillCast ? skillCast.dmgMult : 1);
               const dmg = Math.max(15, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier(boss)));
 
@@ -1473,8 +1493,9 @@
                 const dx = rival.x - this.x;
                 const dy = rival.y - this.y;
                 this.facing = dx >= 0 ? 1 : -1;
-                this.x += (dx / rivalDist) * this.speed * 1.15 * dt;
-                this.y += (dy / rivalDist) * this.speed * 1.15 * dt;
+                const pvpChaseMult = combat.style === 'MELEE' ? 1.45 : 1.15;
+                this.x += (dx / rivalDist) * this.speed * pvpChaseMult * dt;
+                this.y += (dy / rivalDist) * this.speed * pvpChaseMult * dt;
                 enforceTownWallCollision(this, 12);
                 this.walkCycle += dt * 11;
               }
@@ -1490,7 +1511,7 @@
                   this.attackAnimTimer = 0.34;
                   const stats = this.getComputedStats();
                   const isCrit = Math.random() * 100 < stats.crit;
-                  const skillCast = Math.random() < 0.45 ? this.tryUseActiveSkill(stats) : null;
+                  const skillCast = this.tryUseActiveSkill(stats);
                   const mult = (isCrit ? 1.45 : 0.9) * (skillCast ? skillCast.dmgMult : 1);
                   const dmg = Math.max(14, Math.round(stats.atk * mult));
 
@@ -1631,8 +1652,9 @@
             const dx = targetMonster.x - this.x;
             const dy = targetMonster.y - this.y;
             this.facing = dx >= 0 ? 1 : -1;
-            this.x += (dx / targetDist) * this.speed * dt;
-            this.y += (dy / targetDist) * this.speed * dt;
+            const huntChaseMult = combat.style === 'MELEE' ? 1.45 : 1.0;
+            this.x += (dx / targetDist) * this.speed * huntChaseMult * dt;
+            this.y += (dy / targetDist) * this.speed * huntChaseMult * dt;
             enforceTownWallCollision(this, 12);
             this.walkCycle += dt * 11;
           }
@@ -1706,7 +1728,7 @@
 
               const stats = this.getComputedStats();
               const isCrit = Math.random() * 100 < stats.crit;
-              const skillCast = Math.random() < 0.45 ? this.tryUseActiveSkill(stats) : null;
+              const skillCast = this.tryUseActiveSkill(stats);
               const mult = (isCrit ? 1.5 : 0.9) * (skillCast ? skillCast.dmgMult : 1);
               const dmg = Math.max(12, Math.round(stats.atk * mult * this.getMonsterDamageMultiplier(targetMonster)));
 

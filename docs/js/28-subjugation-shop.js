@@ -61,7 +61,7 @@
       }
     ];
 
-    // ---------- 인벤토리 아이템: 환생5 헌터 소환권 ----------
+    // ---------- 인벤토리 아이템: 환생5 헌터 소환권 & EX 등급 5환생 소환권(우편 전용) ----------
     registerUserItem({
       id: 'rebirth5_summon_ticket',
       name: '환생5 헌터 소환권',
@@ -71,13 +71,24 @@
       onUse: () => summonRebirth5HunterWithTicket()
     });
 
-    function summonRebirth5HunterWithTicket() {
+    registerUserItem({
+      id: 'rebirth5_ex_summon_ticket',
+      name: 'EX 등급 5환생 소환권',
+      icon: '🌟',
+      desc: 'EX 등급(능력치 +45%)의 5환생 Lv.1 헌터 1명을 소환합니다. 직업 · 5차 전직 · 성격은 무작위이며, 전 부위 T4 +0 장비를 착용합니다. 헌터 최대 인원에 자리가 있어야 합니다.',
+      howToGet: '📮 운영자 우편 · 이벤트 보상 전용',
+      onUse: () => summonRebirth5HunterWithTicket({ itemId: 'rebirth5_ex_summon_ticket', birthGrade: 'EX' })
+    });
+
+    function summonRebirth5HunterWithTicket(opts = {}) {
+      const ticketId = opts?.itemId || 'rebirth5_summon_ticket';
+      const fixedGrade = opts?.birthGrade || null;
       const maxCap = getMaxHunterCapacity();
       if (hunters.length >= maxCap) {
         showToast(`⚠️ 헌터 최대 인원(${maxCap}명)이 가득 찼습니다!`);
         return false;
       }
-      if (!consumeUserItem('rebirth5_summon_ticket', 1)) return false;
+      if (!consumeUserItem(ticketId, 1)) return false;
 
       const archetype = JOB_ARCHETYPES[Math.floor(Math.random() * JOB_ARCHETYPES.length)];
       const advPath = [];
@@ -112,6 +123,7 @@
           advancementTier: advPath.length,
           level: 1,
           rebirthCount: rb,
+          ...(fixedGrade ? { birthGrade: fixedGrade } : {}),
           personalGold: 300,
           bento: getMaxBentoCapacity(1, rb),
           potions: { hp: getMaxHpPotionCapacity(1, rb), mp: getMaxMpPotionCapacity(1, rb) },
@@ -129,8 +141,10 @@
       hunters.push(h);
       updateResourceHUD();
       if (document.getElementById('hunterRosterBackdrop')?.classList.contains('open')) renderHunterRosterModal(true);
-      interactionManager.spawnBubble(h, `📜 5환생 ${h.currentJobName} 소환!`, '#fde047');
-      showToast(`📜 5환생 [${h.currentJobName}] '${h.name}' 헌터 소환! (${hunters.length} / ${getMaxHunterCapacity()}명)`);
+      if (fixedGrade && typeof h.recalculateVitals === 'function') h.recalculateVitals(true);
+      const gradeTag = fixedGrade ? `[${fixedGrade}] ` : '';
+      interactionManager.spawnBubble(h, `${fixedGrade ? '🌟' : '📜'} ${gradeTag}5환생 ${h.currentJobName} 소환!`, '#fde047');
+      showToast(`${fixedGrade ? '🌟' : '📜'} ${gradeTag}5환생 [${h.currentJobName}] '${h.name}' 헌터 소환! (${hunters.length} / ${getMaxHunterCapacity()}명)`);
       if (typeof flushSyncBackup === 'function') flushSyncBackup();
       if (typeof scheduleAutoSave === 'function') scheduleAutoSave(300);
       return true;

@@ -1761,13 +1761,15 @@
           : `우승 ${rec.wins} · 준우승 ${rec.runnerUps}`;
         return `🏟️ 결투장: <b style="color:#4ade80;">${rec.points.toLocaleString()}점</b> (${duelText})`;
       };
-      const renderRosterRebirthStars = (rebirthCount, transcendCount = 0, hunter = null) => {
+      const renderRosterGradeBadge = (hunter) => {
+        return (hunter && typeof getHunterGradeHtml === "function") ? getHunterGradeHtml(hunter) : "";
+      };
+      const renderRosterRebirthStars = (rebirthCount, transcendCount = 0) => {
         const count = Math.max(0, Math.min(LEVEL_REBIRTH_CONFIG.maxRebirths, Math.floor(Number(rebirthCount) || 0)));
         if (count <= 0) return '';
         const red = Math.max(0, Math.min(count, Math.floor(Number(transcendCount) || 0)));
         const redStars = red > 0 ? `<span style="color:#ef4444;text-shadow:0 0 6px rgba(239,68,68,0.6);">${'★'.repeat(red)}</span>` : '';
-        const gradeHtml = (hunter && typeof getHunterGradeHtml === "function") ? getHunterGradeHtml(hunter) + " " : "";
-        return `${gradeHtml}<span style="color:#facc15;font-weight:800;letter-spacing:1px;text-shadow:0 0 6px rgba(250,204,21,0.45);">${red > 0 ? "초월" : "환생"} ${redStars}${'★'.repeat(count - red)}</span>`;
+        return `<span style="color:#facc15;font-weight:800;letter-spacing:1px;text-shadow:0 0 6px rgba(250,204,21,0.45);">${red > 0 ? "초월" : "환생"} ${redStars}${'★'.repeat(count - red)}</span>`;
       };
       const canTranscendHere = (h) => typeof canUseTranscendTicketOn === 'function' && canUseTranscendTicketOn(h);
       const rosterList = getSortedRosterHunters();
@@ -1791,25 +1793,22 @@
           const equipTierSummary = `🛡️ 장비 T${avgTier} (무T${wTier}·갑T${aTier}·투T${hTier}·장T${accTier})${getRosterWingTag(h)}`;
           const canAltar = canCommandRebirthAltarHunt(h);
           const canDonate = gameState.gold >= 500;
-          const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h);
+          const gradeHtml = renderRosterGradeBadge(h);
+          const rebirthStarsHtml = renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0);
           const colRec = getColosseumRecord(h.id);
           return `
             <div class="roster-card ${h.id === gameState.selectedHunterId ? 'selected' : ''}${isRosterCardFolded(h.id) ? " folded" : ""}" data-roster-id="${h.id}">
-              <div class="roster-card-top">
+              <div class="roster-card-head">
                 <div class="roster-name-group">
-                  <span class="roster-hunter-name">${h.name}</span>
-                  <button type="button" class="btn-roster-lock${h.locked ? " locked" : ""}" data-lock-id="${h.id}" title="${h.locked ? "잠금 해제" : "잠그면 추방할 수 없습니다"}">${h.locked ? "🔒" : "🔓"}</button>
+                  <span class="roster-grade-name-wrap"><span class="roster-grade-inline" data-role="grade">${gradeHtml}</span><span class="roster-hunter-name">${h.name}</span></span>
+                  <span class="roster-rebirth-inline" data-role="rebirth">${rebirthStarsHtml}</span>
                   <span class="roster-job-badge" data-role="job-lv">${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}</span>
                   <span class="${alignInfo.badgeClass}" data-role="alignment">⚖️ ${alignInfo.label}</span>
                 </div>
+                <button type="button" class="btn-roster-lock${h.locked ? " locked" : ""}" data-lock-id="${h.id}" title="${h.locked ? "잠금 해제" : "잠그면 추방할 수 없습니다"}">${h.locked ? "🔒" : "🔓"}</button>
                 <span class="personality-tag-trait">${h.personality.icon} ${h.personality.name}</span>
-              </div>
-              <div class="roster-sub-row">
-                <span data-role="rebirth">${rebirthStarsHtml}</span>
-                <span class="roster-sub-right">
-                  <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${effP.effectText}</span>
-                  <button type="button" class="btn-roster-fold" data-fold-id="${h.id}" title="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}" aria-label="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}">${isRosterCardFolded(h.id) ? "▼" : "▲"}</button>
-                </span>
+                <span class="roster-personality-effect" style="color:${isTrait ? '#86efac' : '#fca5a5'};">${effP.effectText}</span>
+                <button type="button" class="btn-roster-fold" data-fold-id="${h.id}" title="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}" aria-label="${isRosterCardFolded(h.id) ? "펼치기" : "접기"}">${isRosterCardFolded(h.id) ? "▼" : "▲"}</button>
               </div>
               <div class="roster-card-meta" style="color:#fef08a;font-weight:700;">
                 <span data-role="colosseum-pts">${formatColosseumRosterHtml(colRec)}</span>
@@ -1868,8 +1867,11 @@
         const jobLvEl = card.querySelector('[data-role="job-lv"]');
         setTextIfChanged(jobLvEl, `${jIcon} ${h.currentJobName || h.job} · Lv.${h.level}`);
 
+        const gradeEl = card.querySelector('[data-role="grade"]');
+        setHtmlIfChanged(gradeEl, renderRosterGradeBadge(h));
+
         const rebirthEl = card.querySelector('[data-role="rebirth"]');
-        setHtmlIfChanged(rebirthEl, renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0, h));
+        setHtmlIfChanged(rebirthEl, renderRosterRebirthStars(h.rebirthCount, h.transcendCount || 0));
 
         const alignInfo = getAlignmentInfo(h.alignment);
         const alignEl = card.querySelector('[data-role="alignment"]');

@@ -105,7 +105,17 @@
         showToast(`🤖 자동 추방: '${name}' (5환생 Lv.99) 추방${newcomer ? ` → '${newcomer.name}' 영입, ${i + 1}번 슬롯에 넣었습니다` : ' · 새 헌터는 영입하지 못했습니다 (골드 또는 정원 부족)'}`);
       }
       if (changed) {
-        renderAutoBanishPanel(true);
+        // 패널이 열려 있는 동안에는 <select> 선택 슬라이드가 닫히지 않도록 box.innerHTML 재빌드를 하지 않는다
+        const box = document.getElementById('autoBanishPanel');
+        if (box && !box.hidden) {
+          st.slots.forEach((slot, i) => {
+            const stateEl = box.querySelector(`[data-ab-state="${i}"]`);
+            if (!stateEl) return;
+            const h = slot.id ? hunters.find(x => x.id === slot.id) : null;
+            const nextText = getAutoBanishSlotStateText(h, slot);
+            if (stateEl.textContent !== nextText) stateEl.textContent = nextText;
+          });
+        }
         applyAutoBanishCardMarks();
         if (typeof scheduleAutoSave === 'function') scheduleAutoSave(400);
       }
@@ -129,20 +139,10 @@
     function renderAutoBanishPanel(force = false) {
       const box = document.getElementById('autoBanishPanel');
       if (!box || box.hidden) return;
+      // 실시간 목록 갱신으로 <select> 드롭다운이 닫히지 않도록, 명시적 변경(force=true) 시에만 다시 그린다
+      if (!force) return;
       const st = normalizeAutoBanishSlots();
-      const key = JSON.stringify([st.minGrade, st.slots, hunters.map(h => `${h.id}:${h.name}:${h.rebirthCount || 0}:${h.level || 1}:${h.birthGrade || ''}:${h.locked ? 1 : 0}`)]);
-
-      if (!force && key === autoBanishPanelKey) {
-        // 구성은 그대로 → 상태 글자만 바꾼다 (펼쳐 둔 선택 상자가 닫히지 않게)
-        st.slots.forEach((slot, i) => {
-          const el = box.querySelector(`[data-ab-state="${i}"]`);
-          if (!el) return;
-          const text = getAutoBanishSlotStateText(slot.id ? hunters.find(x => x.id === slot.id) : null, slot);
-          if (el.textContent !== text) el.textContent = text;
-        });
-        return;
-      }
-      autoBanishPanelKey = key;
+      autoBanishPanelKey = JSON.stringify([st.minGrade, st.slots]);
 
       const used = new Set(st.slots.map(s => s.id).filter(Boolean));
       const gradeOptions = [`<option value="" ${!st.minGrade ? 'selected' : ''}>보호 안 함 (모두 추방)</option>`]

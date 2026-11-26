@@ -190,8 +190,8 @@
           { id: 'bsk_act_2', advTier: 0, icon: '🔥', name: '광전사의 포효', mpCost: 45, desc: '10초간 공격 속도 +40%, 공격력 +{power}% 폭주 상태 돌입', basePower: 30 }
         ],
         passives: [
-          { id: 'bsk_pas_1', advTier: 0, icon: '🩸', name: '전투의 갈증', desc: '기본 공격력 +{val}% 상승 및 처치 시 체력 일부 흡수', atkMult: 0.15 },
-          { id: 'bsk_pas_2', advTier: 0, icon: '💢', name: '불굴의 투지', desc: '체력이 낮을수록 방어력 +{val}% 및 치명타 피해 증폭', defMult: 0.10 }
+          { id: 'bsk_pas_1', advTier: 0, icon: '🩸', name: '전투의 갈증', desc: '공격력 +{val}% & 처치 시 최대 체력 3% 회복', atkMult: 0.15 },
+          { id: 'bsk_pas_2', advTier: 0, icon: '💢', name: '불굴의 투지', desc: '방어력 +{val}%', defMult: 0.10 }
         ]
       },
       '레인저': {
@@ -200,8 +200,8 @@
           { id: 'rng_act_2', advTier: 0, icon: '🌪️', name: '폭풍 화살비', mpCost: 50, desc: '넓은 범위에 화살비를 쏟아부어 {power}% 광역 제압', basePower: 190 }
         ],
         passives: [
-          { id: 'rng_pas_1', advTier: 0, icon: '🦅', name: '매의 눈', desc: '치명타 확률 +{val}% 영구 증가 및 사거리 향상', critBonus: 10 },
-          { id: 'rng_pas_2', advTier: 0, icon: '🍃', name: '바람의 발걸음', desc: '이동 속도 상승 및 공격력 +{val}% 상승', atkMult: 0.08, speedBonus: 12 }
+          { id: 'rng_pas_1', advTier: 0, icon: '🦅', name: '매의 눈', desc: '치명타 확률 +{val}%', critBonus: 10 },
+          { id: 'rng_pas_2', advTier: 0, icon: '🍃', name: '바람의 발걸음', desc: '이동 속도 +12 & 공격력 +{val}%', atkMult: 0.08, speedBonus: 12 }
         ]
       },
       '팔라딘': {
@@ -210,8 +210,8 @@
           { id: 'pld_act_2', advTier: 0, icon: '🛡️', name: '신성한 수호막', mpCost: 55, desc: '8초간 받는 피해 {power}% 감소 및 체력 지속 회복', basePower: 45 }
         ],
         passives: [
-          { id: 'pld_pas_1', advTier: 0, icon: '⚜️', name: '신념의 갑주', desc: '기본 방어력 +{val}% 및 최대 체력 +15% 영구 증가', defMult: 0.20, hpMult: 0.15 },
-          { id: 'pld_pas_2', advTier: 0, icon: '💖', name: '빛의 축복', desc: '피로도 누적 {val}% 감소 및 회복 효율 향상', fatigueResist: 0.75 }
+          { id: 'pld_pas_1', advTier: 0, icon: '⚜️', name: '신념의 갑주', desc: '방어력 +{val}% & 최대 체력 +15%', defMult: 0.20, hpMult: 0.15 },
+          { id: 'pld_pas_2', advTier: 0, icon: '💖', name: '빛의 축복', desc: '피로도 누적 -{val}%', fatigueResist: 0.75 }
         ]
       },
       '소서러': {
@@ -220,8 +220,8 @@
           { id: 'sor_act_2', advTier: 0, icon: '❄️', name: '빙결의 감옥', mpCost: 40, desc: '적들을 얼어붙게 만들어 {power}% 냉기 피해 및 이동 봉쇄', basePower: 180 }
         ],
         passives: [
-          { id: 'sor_pas_1', advTier: 0, icon: '🔮', name: '마력 증폭', desc: '마법 공격력 +{val}% 및 치명타 확률 +5% 증가', atkMult: 0.18, critBonus: 5 },
-          { id: 'sor_pas_2', advTier: 0, icon: '💧', name: '아스트랄 순환', desc: '최대 MP +{val}% 증가 및 던전 MP 소모 30% 절감', mpMult: 0.25, mpSave: 0.7 }
+          { id: 'sor_pas_1', advTier: 0, icon: '🔮', name: '마력 증폭', desc: '공격력 +{val}% & 치명타 확률 +5%', atkMult: 0.18, critBonus: 5 },
+          { id: 'sor_pas_2', advTier: 0, icon: '💧', name: '아스트랄 순환', desc: '최대 MP +{val}% & MP 소모 -30%', mpMult: 0.25, mpSave: 0.7 }
         ]
       }
     };
@@ -600,29 +600,29 @@
             if (tendency === 'offense') {
               const pct = 8 + tier * 2;
               passiveSkill.atkMult = pct / 100;
-              passiveSkill.desc = `[${tier}차 전직] 기본 공격력 +${pct}% 상승`;
+              passiveSkill.desc = `[${tier}차 전직] 공격력 +${pct}%`;
             } else if (tendency === 'defense') {
               const defPct = 9 + tier * 2;
               const hpPct = 6 + tier * 2;
               passiveSkill.defMult = defPct / 100;
               passiveSkill.hpMult = hpPct / 100;
-              passiveSkill.desc = `[${tier}차 전직] 방어력 +${defPct}% & 최대 체력 +${hpPct}% 상승`;
+              passiveSkill.desc = `[${tier}차 전직] 방어력 +${defPct}% & 최대 체력 +${hpPct}%`;
             } else if (tendency === 'crit') {
               const critVal = 4 + tier * 2;
               passiveSkill.critBonus = critVal;
-              passiveSkill.desc = `[${tier}차 전직] 치명타 확률 +${critVal}% 영구 상승`;
+              passiveSkill.desc = `[${tier}차 전직] 치명타 확률 +${critVal}%`;
             } else if (tendency === 'magic') {
               const mpPct = 10 + tier * 3;
               const atkPct = 6 + tier;
               passiveSkill.mpMult = mpPct / 100;
               passiveSkill.atkMult = atkPct / 100;
-              passiveSkill.desc = `[${tier}차 전직] 최대 MP +${mpPct}% & 공격력 +${atkPct}% 상승`;
+              passiveSkill.desc = `[${tier}차 전직] 최대 MP +${mpPct}% & 공격력 +${atkPct}%`;
             } else {
               const spdVal = 5 + tier * 2;
               const atkPct = 6 + tier;
               passiveSkill.speedBonus = spdVal;
               passiveSkill.atkMult = atkPct / 100;
-              passiveSkill.desc = `[${tier}차 전직] 이동 속도 +${spdVal} & 공격력 +${atkPct}% 상승`;
+              passiveSkill.desc = `[${tier}차 전직] 이동 속도 +${spdVal} & 공격력 +${atkPct}%`;
             }
 
             const activeSkill = {

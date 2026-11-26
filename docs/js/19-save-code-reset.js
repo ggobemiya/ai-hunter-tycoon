@@ -66,7 +66,7 @@
           eq: eqArr.length > 0 ? eqArr : undefined,
           rb: h.rebirthCount || 0,
           tc: h.transcendCount || undefined,
-          bg: h.birthGrade || undefined, // 태생 등급
+          bg: h.birthGrade || (typeof getHunterGrade === 'function' ? getHunterGrade(h).id : undefined), // 태생 등급 (모든 헌터)
           lk: h.locked ? 1 : undefined, // 🔒 잠금
           lv: h.level || 1,
           xp: h.exp || 0,

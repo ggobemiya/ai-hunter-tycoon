@@ -20,14 +20,21 @@
     // ■ 개인 우편: gameState.mailbox.personal (게임이 유저 한 명에게만 보내는 우편, 예: 1회성 패치 보상)
     // ============================================================================
     const MAILBOX_GLOBAL_MAILS = [
-      {
-        id: '2026-11-24-welcome-mailbox',
-        title: '📮 우편함이 생겼습니다',
-        body: '앞으로 운영자 보상과 이벤트 선물은 이 우편함으로 보내 드립니다. [받기]를 누르면 보상이 들어옵니다.',
-        from: '운영자',
-        sentAt: '2026-11-24',
-        rewards: [{ type: 'points', qty: 500 }]
-      }
+	{
+	  "id": "GIFT-20261126-K41H",
+	  "title": "🎁 운영자 버그 사과 보상입니다.",
+	  "body": "항상 플레이해 주셔서 감사합니다! 보상을 수령해 주세요.",
+	  "from": "운영자",
+	  "sentAt": "2026-11-26",
+	  "rewards": [
+	    {
+	      "type": "item",
+	      "itemId": "rebirth5_summon_ticket",
+	      "qty": 1
+	    }
+	  ],
+	  "expiresAt": "2026-11-27"
+	}
     ];
 
     const MAIL_LEDGER_KEY = 'aiht_mail_ledger_v1';
@@ -154,11 +161,103 @@
       document.getElementById('mailboxBody').addEventListener('click', (e) => {
         const one = e.target.closest('[data-mail-claim]');
         if (one) { claimMail(one.getAttribute('data-mail-claim')); return; }
-        if (e.target.closest('#btnClaimAllMail')) claimAllMails();
+        if (e.target.closest('#btnClaimAllMail')) { claimAllMails(); return; }
+        if (e.target.closest('#btnRedeemMailCode')) {
+          const inp = document.getElementById('mailCodeInput');
+          if (inp && redeemMailVoucherCode(inp.value)) inp.value = '';
+        }
+      });
+    }
+
+    // ---------- 발송 전용 페이지(mail-admin.html) 연동: 코드 등록 & 즉시 발송 수신 ----------
+    const ADMIN_MAIL_PENDING_KEY = 'aiht_admin_pending_mails_v1';
+    const ADMIN_CATALOG_SYNC_KEY = 'aiht_user_item_catalog_v1';
+
+    function syncUserItemCatalogForAdmin() {
+      if (typeof USER_ITEM_CATALOG === 'undefined') return;
+      try {
+        const list = Object.values(USER_ITEM_CATALOG).map(it => ({
+          id: it.id,
+          name: it.name || it.id,
+          icon: it.icon || '🎁',
+          desc: it.desc || ''
+        }));
+        localStorage.setItem(ADMIN_CATALOG_SYNC_KEY, JSON.stringify(list));
+      } catch (_) {}
+    }
+
+    function signMailVoucherB64(b64) {
+      let h = 0x811c9dc5;
+      const s = b64 + '|AIHT_MAIL_2026';
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 0x01000193);
+      }
+      return (h >>> 0).toString(16).padStart(8, '0');
+    }
+
+    function decodeMailVoucherCode(rawCode) {
+      const text = String(rawCode || '').trim();
+      const parts = text.split('.');
+      if (parts.length !== 3 || parts[0] !== 'AVMAIL1') return null;
+      const b64 = parts[1];
+      const sig = parts[2];
+      if (signMailVoucherB64(b64) !== sig) return null;
+      try {
+        const pad = b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4);
+        const bin = atob(pad);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        const json = new TextDecoder().decode(bytes);
+        const obj = JSON.parse(json);
+        if (!obj || typeof obj !== 'object' || !obj.id || !Array.isArray(obj.rewards)) return null;
+        return obj;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function redeemMailVoucherCode(rawCode) {
+      const mail = decodeMailVoucherCode(rawCode);
+      if (!mail) {
+        showToast('⚠️ 올바르지 않거나 손상된 우편 코드입니다.');
+        return false;
+      }
+      if (isMailExpired(mail)) {
+        showToast('⏳ 만료된 우편 코드입니다.');
+        return false;
+      }
+      if (isMailClaimed(mail.id) || getMailboxState().personal.some(m => m.id === mail.id)) {
+        showToast('📮 이미 등록되었거나 수령한 우편 코드입니다.');
+        return false;
+      }
+      sendPersonalMail(mail);
+      showToast(`🎟️ 우편 코드 '${mail.id}'가 우편함에 도착했습니다!`);
+      return true;
+    }
+
+    function ingestAdminPendingMails() {
+      let q = [];
+      try { q = JSON.parse(localStorage.getItem(ADMIN_MAIL_PENDING_KEY) || '[]'); } catch (_) {}
+      if (!Array.isArray(q) || q.length === 0) return 0;
+      let added = 0;
+      q.forEach((m) => {
+        if (m && m.id && sendPersonalMail(m)) added++;
+      });
+      try { localStorage.removeItem(ADMIN_MAIL_PENDING_KEY); } catch (_) {}
+      if (added > 0) showToast(`📮 운영자 우편 ${added}통이 도착했습니다!`);
+      return added;
+    }
+
+    if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+      window.addEventListener('storage', (e) => {
+        if (e && e.key === ADMIN_MAIL_PENDING_KEY) ingestAdminPendingMails();
       });
     }
 
     function renderMailbox() {
+      ingestAdminPendingMails();
+      syncUserItemCatalogForAdmin();
       const body = document.getElementById('mailboxBody');
       if (!body) return;
       const list = getPendingMails();
@@ -175,15 +274,21 @@
           </div>
         </div>
       `).join('');
-      body.innerHTML = list.length > 0
+      const codeBarHtml = `
+        <div class="mail-code-bar">
+          <input type="text" id="mailCodeInput" placeholder="🎟️ 우편 코드 입력 (AVMAIL1....)" autocomplete="off" />
+          <button type="button" class="dock-btn primary" id="btnRedeemMailCode" style="padding:6px 11px;font-size:11.5px;flex-shrink:0;">등록</button>
+        </div>
+      `;
+      body.innerHTML = codeBarHtml + (list.length > 0
         ? `
-          <div class="shop-head">
+          <div class="shop-head" style="margin-top:8px;">
             <span>받지 않은 우편 <b style="color:#fde047;">${list.length}통</b></span>
             <button type="button" class="dock-btn primary" id="btnClaimAllMail" style="padding:5px 10px;font-size:11.5px;">모두 받기</button>
           </div>
           <div class="shop-list" style="margin-top:8px;">${cards}</div>
         `
-        : '<div class="user-inv-detail">받을 우편이 없습니다.</div>';
+        : '<div class="user-inv-detail" style="margin-top:8px;">받을 우편이 없습니다.</div>');
     }
 
     function openMailbox() {
@@ -193,6 +298,8 @@
     }
 
     function refreshMailboxViews() {
+      ingestAdminPendingMails();
+      syncUserItemCatalogForAdmin();
       if (document.getElementById('mailboxBackdrop')?.classList.contains('open')) renderMailbox();
       const btn = document.getElementById('btnOpenMailbox');
       if (btn) {

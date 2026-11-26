@@ -5,20 +5,20 @@
       { id: 'cool', name: '냉철한', icon: '❄️', kind: 'trait', effectText: '치명타 확률 +9%', critBonus: 9 },
       { id: 'ironwall', name: '철벽같은', icon: '🛡️', kind: 'trait', effectText: '방어력 +18%', defMult: 0.18 },
       { id: 'agile', name: '민첩한', icon: '💨', kind: 'trait', effectText: '이동 속도 +18', speedBonus: 18 },
-      { id: 'lucky', name: '행운아', icon: '🍀', kind: 'trait', effectText: '던전 보상 +25%', lootMult: 1.25 },
+      { id: 'lucky', name: '행운아', icon: '🍀', kind: 'trait', effectText: '전리품 획득량 +25%', lootMult: 1.25 },
       { id: 'greedy', name: '탐욕스러운', icon: '💰', kind: 'trait', effectText: '던전 골드 +35%', goldMult: 1.35 },
       { id: 'collector', name: '수집광', icon: '📦', kind: 'trait', effectText: '전리품 재료 +2개 추가', extraMat: 2 },
       { id: 'steelmental', name: '강철멘탈', icon: '🧠', kind: 'trait', effectText: '피로도 누적 -30%', fatigueMult: 0.7 },
       { id: 'ascetic', name: '금욕적인', icon: '🧘', kind: 'trait', effectText: '포만감 소모 -35%', hungerMult: 0.65 },
       { id: 'manaaffinity', name: '마력친화', icon: '🔮', kind: 'trait', effectText: '최대 MP +25% & MP 소모 -25%', mpMult: 0.25, mpSave: 0.75 },
       { id: 'indomitable', name: '불굴의', icon: '❤️‍🔥', kind: 'trait', effectText: '최대 체력 +22%', hpMult: 0.22 },
-      { id: 'genius', name: '천재적인', icon: '✨', kind: 'trait', effectText: '공격력 +10% & 치명타 +5%', atkMult: 0.10, critBonus: 5 },
+      { id: 'genius', name: '천재적인', icon: '✨', kind: 'trait', effectText: '공격력 +10% & 치명타 확률 +5%', atkMult: 0.10, critBonus: 5 },
       { id: 'perfectionist', name: '완벽주의자', icon: '📐', kind: 'trait', effectText: '공격력 +8% & 방어력 +8%', atkMult: 0.08, defMult: 0.08 },
-      { id: 'curious', name: '호기심많은', icon: '🧭', kind: 'trait', effectText: '던전 탐험 속도 +20%', exploreSpeedMult: 0.8 },
+      { id: 'curious', name: '호기심많은', icon: '🧭', kind: 'trait', effectText: '던전 탐험 시간 -20%', exploreSpeedMult: 0.8 },
       { id: 'optimistic', name: '낙천적인', icon: '☀️', kind: 'trait', effectText: '시설 회복 효율 +30%', healMult: 1.3 },
       { id: 'charisma', name: '카리스마', icon: '👑', kind: 'trait', effectText: '개인 골드 정산 +30%', personalGoldMult: 1.3 },
-      { id: 'hardworker', name: '노력파', icon: '💪', kind: 'trait', effectText: '방어력 +12% & 체력 +10%', defMult: 0.12, hpMult: 0.10 },
-      { id: 'nocturnal', name: '야행성', icon: '🌙', kind: 'trait', effectText: '치명타 +6% & 이동 속도 +10', critBonus: 6, speedBonus: 10 },
+      { id: 'hardworker', name: '노력파', icon: '💪', kind: 'trait', effectText: '방어력 +12% & 최대 체력 +10%', defMult: 0.12, hpMult: 0.10 },
+      { id: 'nocturnal', name: '야행성', icon: '🌙', kind: 'trait', effectText: '치명타 확률 +6% & 이동 속도 +10', critBonus: 6, speedBonus: 10 },
 
       { id: 'lazy', name: '게으른', icon: '🦥', kind: 'penalty', effectText: '이동 속도 -14', speedBonus: -14 },
       { id: 'glutton', name: '대식가', icon: '🍖', kind: 'penalty', effectText: '포만감 소모 +45%', hungerMult: 1.45 },
@@ -27,9 +27,9 @@
       { id: 'unlucky', name: '불운아', icon: '🌧️', kind: 'penalty', effectText: '치명타 확률 -6%', critBonus: -6 },
       { id: 'glassmental', name: '유리멘탈', icon: '💔', kind: 'penalty', effectText: '피로도 누적 +35%', fatigueMult: 1.35 },
       { id: 'clumsy', name: '덜렁대는', icon: '💰', kind: 'penalty', effectText: '던전 골드 -20%', goldMult: 0.8 },
-      { id: 'sluggish', name: '둔중한', icon: '🐢', kind: 'penalty', effectText: '이동 속도 -10 & 치명타 -4%', speedBonus: -10, critBonus: -4 },
+      { id: 'sluggish', name: '둔중한', icon: '🐢', kind: 'penalty', effectText: '이동 속도 -10 & 치명타 확률 -4%', speedBonus: -10, critBonus: -4 },
       { id: 'extravagant', name: '사치스러운', icon: '💎', kind: 'penalty', effectText: '개인 골드 정산 -25%', personalGoldMult: 0.75 },
-      { id: 'manadrain', name: '마력고갈', icon: '🥀', kind: 'penalty', effectText: '던전 MP 소모 +35%', mpSave: 1.35 },
+      { id: 'manadrain', name: '마력고갈', icon: '🥀', kind: 'penalty', effectText: 'MP 소모 +35%', mpSave: 1.35 },
       { id: 'frail', name: '허약한', icon: '🩹', kind: 'penalty', effectText: '최대 체력 -18%', hpMult: -0.18 },
       { id: 'pessimistic', name: '비관적인', icon: '☁️', kind: 'penalty', effectText: '시설 회복 효율 -20%', healMult: 0.8 },
       { id: 'stubborn', name: '고집불통', icon: '🪨', kind: 'penalty', effectText: '던전 탐험 시간 +20%', exploreSpeedMult: 1.2 },
@@ -141,7 +141,7 @@
       if (personality.fatigueMult !== undefined) effectParts.push(`피로도 누적 -${Math.round((1 - fatigueMult) * 100)}%`);
       if (personality.goldMult !== undefined) effectParts.push(`던전 골드 +${Math.round((goldMult - 1) * 100)}%`);
       if (personality.personalGoldMult !== undefined) effectParts.push(`개인 골드 정산 +${Math.round((personalGoldMult - 1) * 100)}%`);
-      if (personality.mpSave !== undefined) effectParts.push(`던전 MP 소모 -${Math.round((1 - mpSave) * 100)}%`);
+      if (personality.mpSave !== undefined) effectParts.push(`MP 소모 -${Math.round((1 - mpSave) * 100)}%`);
       if (personality.healMult !== undefined) effectParts.push(`시설 회복 효율 +${Math.round((healMult - 1) * 100)}%`);
       if (personality.exploreSpeedMult !== undefined) effectParts.push(`던전 탐험 시간 -${Math.round((1 - exploreSpeedMult) * 100)}%`);
       if (personality.lootMult !== undefined) effectParts.push(`전리품 획득량 +${Math.round((lootMult - 1) * 100)}%`);
