@@ -145,6 +145,9 @@
       const gradeTag = fixedGrade ? `[${fixedGrade}] ` : '';
       interactionManager.spawnBubble(h, `${fixedGrade ? '🌟' : '📜'} ${gradeTag}5환생 ${h.currentJobName} 소환!`, '#fde047');
       showToast(`${fixedGrade ? '🌟' : '📜'} ${gradeTag}5환생 [${h.currentJobName}] '${h.name}' 헌터 소환! (${hunters.length} / ${getMaxHunterCapacity()}명)`);
+      document.getElementById('userInventoryBackdrop')?.classList.remove('open');
+      if (typeof camera !== 'undefined') { camera.targetX = h.x; camera.targetY = h.y; }
+      if (typeof openHunterPanel === 'function') openHunterPanel(h);
       if (typeof flushSyncBackup === 'function') flushSyncBackup();
       if (typeof scheduleAutoSave === 'function') scheduleAutoSave(300);
       return true;
