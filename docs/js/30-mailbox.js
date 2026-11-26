@@ -20,21 +20,23 @@
     // ■ 개인 우편: gameState.mailbox.personal (게임이 유저 한 명에게만 보내는 우편, 예: 1회성 패치 보상)
     // ============================================================================
     const MAILBOX_GLOBAL_MAILS = [
-	{
-	  "id": "GIFT-20261126-K41H",
-	  "title": "🎁 운영자 버그 사과 보상입니다.",
-	  "body": "항상 플레이해 주셔서 감사합니다! 보상을 수령해 주세요.",
-	  "from": "운영자",
-	  "sentAt": "2026-11-26",
-	  "rewards": [
-	    {
-	      "type": "item",
-	      "itemId": "rebirth5_summon_ticket",
-	      "qty": 1
-	    }
-	  ],
-	  "expiresAt": "2026-11-27"
-	}
+      {
+        id: '2026-11-26-SXC7FWJV-ex10',
+        targetUserCode: 'SXC7FWJV',
+        title: '🌟 운영자 특별 선물',
+        body: 'SXC7FWJV 마을 전용 보상입니다. [받기]를 눌러 EX 등급 5환생 소환권 10장을 수령해 주세요!',
+        from: '운영자',
+        sentAt: '2026-11-26',
+        rewards: [{ type: 'item', itemId: 'rebirth5_ex_summon_ticket', qty: 10 }]
+      },
+      {
+        id: '2026-11-24-welcome-mailbox',
+        title: '📮 우편함이 생겼습니다',
+        body: '앞으로 운영자 보상과 이벤트 선물은 이 우편함으로 보내 드립니다. [받기]를 누르면 보상이 들어옵니다.',
+        from: '운영자',
+        sentAt: '2026-11-24',
+        rewards: [{ type: 'points', qty: 500 }]
+      }
     ];
 
     const MAIL_LEDGER_KEY = 'aiht_mail_ledger_v1';
@@ -81,11 +83,54 @@
       return Number.isFinite(end.getTime()) && Date.now() > end.getTime();
     }
 
+    function getCurrentUserMailIds() {
+      const ids = new Set();
+      try {
+        if (typeof gameState !== 'undefined' && typeof gameState.userCode === 'string' && gameState.userCode.trim()) {
+          ids.add(gameState.userCode.trim().toUpperCase());
+        }
+      } catch (_) {}
+      try {
+        if (typeof getUserCode === 'function') {
+          const uc = String(getUserCode() || '').trim().toUpperCase();
+          if (uc) ids.add(uc);
+        }
+      } catch (_) {}
+      try {
+        const storedUc = String(localStorage.getItem('aiht_user_code_v1') || '').trim().toUpperCase();
+        if (storedUc) ids.add(storedUc);
+      } catch (_) {}
+      try {
+        const vk = String(mailVillageKey() || '').trim().toUpperCase();
+        if (vk && vk !== 'DEFAULT') ids.add(vk);
+      } catch (_) {}
+      return ids;
+    }
+
+    function isMailForCurrentUser(mail) {
+      if (!mail) return false;
+      const targets = [];
+      ['targetUserCode', 'targetVillageId'].forEach((k) => {
+        if (typeof mail[k] === 'string' && mail[k].trim()) targets.push(mail[k].trim().toUpperCase());
+      });
+      ['targetUserCodes', 'targetVillageIds'].forEach((k) => {
+        if (Array.isArray(mail[k])) {
+          mail[k].forEach((v) => {
+            const s = String(v || '').trim().toUpperCase();
+            if (s) targets.push(s);
+          });
+        }
+      });
+      if (targets.length === 0) return true;
+      const myIds = getCurrentUserMailIds();
+      return targets.some((t) => myIds.has(t));
+    }
+
     // 받을 수 있는 우편 (전체 + 개인, 최신순)
     function getPendingMails() {
       const all = [...getMailboxState().personal, ...MAILBOX_GLOBAL_MAILS];
       return all
-        .filter(m => m && m.id && !isMailClaimed(m.id) && !isMailExpired(m))
+        .filter(m => m && m.id && isMailForCurrentUser(m) && !isMailClaimed(m.id) && !isMailExpired(m))
         .sort((a, b) => String(b.sentAt || '').localeCompare(String(a.sentAt || '')));
     }
 
@@ -221,6 +266,10 @@
       const mail = decodeMailVoucherCode(rawCode);
       if (!mail) {
         showToast('⚠️ 올바르지 않거나 손상된 우편 코드입니다.');
+        return false;
+      }
+      if (!isMailForCurrentUser(mail)) {
+        showToast('⚠️ 이 우편 코드는 지정된 유저 ID 전용입니다.');
         return false;
       }
       if (isMailExpired(mail)) {
